@@ -14,12 +14,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronRight, Plus, Trash } from "lucide-react";
+import { ChevronRight, Plus, Trash, GripVertical } from "lucide-react";
 
-import {
-  DndContext,
-  closestCenter,
-} from "@dnd-kit/core";
+import { DndContext, closestCenter } from "@dnd-kit/core";
 import {
   SortableContext,
   useSortable,
@@ -126,11 +123,17 @@ const hideTaskById = (tasks, taskId) =>
     };
   });
 
-/* -------------------- sortable wrappers -------------------- */
+/* -------------------- Sortable wrapper -------------------- */
 
-const SortableItem = ({ id, children }) => {
-  const { setNodeRef, transform, transition, attributes, listeners } =
-    useSortable({ id });
+const Sortable = ({ id, children }) => {
+  const {
+    setNodeRef,
+    setActivatorNodeRef,
+    attributes,
+    listeners,
+    transform,
+    transition,
+  } = useSortable({ id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -138,17 +141,16 @@ const SortableItem = ({ id, children }) => {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      {children}
+    <div ref={setNodeRef} style={style}>
+      {children({ setActivatorNodeRef, attributes, listeners })}
     </div>
   );
 };
 
-/* -------------------- TaskItem (recursive + DnD) -------------------- */
+/* -------------------- TaskItem -------------------- */
 
 const TaskItem = ({
   task,
-  parentId,
   onAddSubtask,
   onDelete,
   onHide,
@@ -174,7 +176,11 @@ const TaskItem = ({
       <div className="absolute left-2 top-0 bottom-0 w-px bg-border" />
 
       <Collapsible open={open} onOpenChange={setOpen}>
-        <div className="group flex items-center gap-1 py-1 cursor-grab">
+        <div className="flex items-center gap-1 py-1">
+          <span className="cursor-grab text-muted-foreground">
+            <GripVertical className="h-4 w-4" />
+          </span>
+
           {task.tasks.length > 0 ? (
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -189,31 +195,18 @@ const TaskItem = ({
             <div className="w-6" />
           )}
 
-          <span className="text-sm leading-6">{task.name}</span>
+          <span className="text-sm">{task.name}</span>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="ml-1 h-6 w-6 opacity-0 group-hover:opacity-100"
-            title="Done for today"
-            onClick={() => onHide(task.id)}
-          >
+          <Button size="icon" variant="ghost" onClick={() => onHide(task.id)}>
             ✔
           </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 opacity-0 group-hover:opacity-100"
-            onClick={() => setAdding(v => !v)}
-          >
+          <Button size="icon" variant="ghost" onClick={() => setAdding(v => !v)}>
             <Plus className="h-4 w-4" />
           </Button>
-
           <Button
-            variant="ghost"
             size="icon"
-            className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100"
+            variant="ghost"
+            className="text-destructive"
             onClick={() => onDelete(task.id)}
           >
             <Trash className="h-4 w-4" />
@@ -221,7 +214,7 @@ const TaskItem = ({
         </div>
 
         {adding && (
-          <form onSubmit={submit} className="ml-7 mb-1 flex gap-2">
+          <form onSubmit={submit} className="ml-7 flex gap-2">
             <Input
               autoFocus
               value={name}
@@ -249,16 +242,25 @@ const TaskItem = ({
                 .slice()
                 .sort((a, b) => a.order - b.order)
                 .map(child => (
-                  <SortableItem key={child.id} id={child.id}>
-                    <TaskItem
-                      task={child}
-                      parentId={task.id}
-                      onAddSubtask={onAddSubtask}
-                      onDelete={onDelete}
-                      onHide={onHide}
-                      onReorder={onReorder}
-                    />
-                  </SortableItem>
+                  <Sortable key={child.id} id={child.id}>
+                    {({ setActivatorNodeRef, attributes, listeners }) => (
+                      <div>
+                        <div
+                          ref={setActivatorNodeRef}
+                          {...attributes}
+                          {...listeners}
+                          className="inline-block"
+                        />
+                        <TaskItem
+                          task={child}
+                          onAddSubtask={onAddSubtask}
+                          onDelete={onDelete}
+                          onHide={onHide}
+                          onReorder={onReorder}
+                        />
+                      </div>
+                    )}
+                  </Sortable>
                 ))}
             </SortableContext>
           </DndContext>
@@ -312,73 +314,96 @@ const GroupItem = ({ group, setGroups }) => {
     });
 
   return (
-    <Card className="border-muted bg-muted/30 mb-4">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold tracking-wide">
-          {group.name}
-        </CardTitle>
-      </CardHeader>
+    <Sortable id={group.id}>
+      {({ setActivatorNodeRef, attributes, listeners }) => (
+        <Card className="mb-4 bg-muted/30">
+          <CardHeader className="flex flex-row items-center gap-2">
+            <span
+              ref={setActivatorNodeRef}
+              {...attributes}
+              {...listeners}
+              className="cursor-grab text-muted-foreground"
+            >
+              <GripVertical className="h-4 w-4" />
+            </span>
+            <CardTitle className="text-sm">{group.name}</CardTitle>
+          </CardHeader>
 
-      <CardContent className="space-y-2">
-        <form onSubmit={addRootTask} className="flex gap-2">
-          <Input
-            value={taskName}
-            onChange={e => setTaskName(e.target.value)}
-            placeholder="Add task"
-          />
-          <Button>
-            <Plus className="h-4 w-4 mr-1" />
-            Add
-          </Button>
-        </form>
+          <CardContent className="space-y-2">
+            <form onSubmit={addRootTask} className="flex gap-2">
+              <Input
+                value={taskName}
+                onChange={e => setTaskName(e.target.value)}
+                placeholder="Add task"
+              />
+              <Button>
+                <Plus className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            </form>
 
-        <DndContext
-          collisionDetection={closestCenter}
-          onDragEnd={({ active, over }) => {
-            if (!over || active.id === over.id) return;
-            updateTasks(tasks =>
-              reorderTasksByParent(tasks, null, active.id, over.id)
-            );
-          }}
-        >
-          <SortableContext
-            items={group.tasks.map(t => t.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            {group.tasks
-              .slice()
-              .sort((a, b) => a.order - b.order)
-              .map(task => (
-                <SortableItem key={task.id} id={task.id}>
-                  <TaskItem
-                    task={task}
-                    parentId={null}
-                    onAddSubtask={(id, name) =>
-                      updateTasks(tasks => addSubtaskById(tasks, id, name))
-                    }
-                    onDelete={id =>
-                      updateTasks(tasks => deleteTaskById(tasks, id))
-                    }
-                    onHide={id =>
-                      updateTasks(tasks => hideTaskById(tasks, id))
-                    }
-                    onReorder={(parentId, activeId, overId) =>
-                      updateTasks(tasks =>
-                        reorderTasksByParent(
-                          tasks,
-                          parentId,
-                          activeId,
-                          overId
-                        )
-                      )
-                    }
-                  />
-                </SortableItem>
-              ))}
-          </SortableContext>
-        </DndContext>
-      </CardContent>
-    </Card>
+            <DndContext
+              collisionDetection={closestCenter}
+              onDragEnd={({ active, over }) => {
+                if (!over || active.id === over.id) return;
+                updateTasks(tasks =>
+                  reorderTasksByParent(tasks, null, active.id, over.id)
+                );
+              }}
+            >
+              <SortableContext
+                items={group.tasks.map(t => t.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {group.tasks
+                  .slice()
+                  .sort((a, b) => a.order - b.order)
+                  .map(task => (
+                    <Sortable key={task.id} id={task.id}>
+                      {({ setActivatorNodeRef, attributes, listeners }) => (
+                        <div>
+                          <div
+                            ref={setActivatorNodeRef}
+                            {...attributes}
+                            {...listeners}
+                            className="inline-block"
+                          />
+                          <TaskItem
+                            task={task}
+                            onAddSubtask={(id, name) =>
+                              updateTasks(tasks =>
+                                addSubtaskById(tasks, id, name)
+                              )
+                            }
+                            onDelete={id =>
+                              updateTasks(tasks =>
+                                deleteTaskById(tasks, id)
+                              )
+                            }
+                            onHide={id =>
+                              updateTasks(tasks => hideTaskById(tasks, id))
+                            }
+                            onReorder={(parentId, activeId, overId) =>
+                              updateTasks(tasks =>
+                                reorderTasksByParent(
+                                  tasks,
+                                  parentId,
+                                  activeId,
+                                  overId
+                                )
+                              )
+                            }
+                          />
+                        </div>
+                      )}
+                    </Sortable>
+                  ))}
+              </SortableContext>
+            </DndContext>
+          </CardContent>
+        </Card>
+      )}
+    </Sortable>
   );
 };
 
@@ -390,10 +415,7 @@ export default function App() {
 
   useEffect(() => {
     const stored = localStorage.getItem("data");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setGroups(parsed.map((g, i) => ({ ...g, order: i })));
-    }
+    if (stored) setGroups(JSON.parse(stored));
   }, []);
 
   const createGroup = e => {
@@ -403,12 +425,7 @@ export default function App() {
     setGroups(prev => {
       const next = [
         ...prev,
-        {
-          id: crypto.randomUUID(),
-          name: groupName,
-          order: prev.length,
-          tasks: [],
-        },
+        { id: crypto.randomUUID(), name: groupName, tasks: [] },
       ];
       localStorage.setItem("data", JSON.stringify(next));
       return next;
@@ -428,36 +445,18 @@ export default function App() {
         <Button>Create</Button>
       </form>
 
-      <DndContext
-        collisionDetection={closestCenter}
-        onDragEnd={({ active, over }) => {
-          if (!over || active.id === over.id) return;
-
-          setGroups(prev => {
-            const oldIndex = prev.findIndex(g => g.id === active.id);
-            const newIndex = prev.findIndex(g => g.id === over.id);
-
-            const reordered = arrayMove(prev, oldIndex, newIndex).map(
-              (g, i) => ({ ...g, order: i })
-            );
-
-            localStorage.setItem("data", JSON.stringify(reordered));
-            return reordered;
-          });
-        }}
-      >
+      <DndContext collisionDetection={closestCenter}>
         <SortableContext
           items={groups.map(g => g.id)}
           strategy={verticalListSortingStrategy}
         >
-          {groups
-            .slice()
-            .sort((a, b) => a.order - b.order)
-            .map(group => (
-              <SortableItem key={group.id} id={group.id}>
-                <GroupItem group={group} setGroups={setGroups} />
-              </SortableItem>
-            ))}
+          {groups.map(group => (
+            <GroupItem
+              key={group.id}
+              group={group}
+              setGroups={setGroups}
+            />
+          ))}
         </SortableContext>
       </DndContext>
     </div>
