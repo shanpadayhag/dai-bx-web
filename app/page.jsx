@@ -128,7 +128,6 @@ const hideTaskById = (tasks, taskId) =>
 const Sortable = ({ id, children }) => {
   const {
     setNodeRef,
-    setActivatorNodeRef,
     attributes,
     listeners,
     transform,
@@ -142,7 +141,7 @@ const Sortable = ({ id, children }) => {
 
   return (
     <div ref={setNodeRef} style={style}>
-      {children({ setActivatorNodeRef, attributes, listeners })}
+      {children({ attributes, listeners })}
     </div>
   );
 };
@@ -155,6 +154,7 @@ const TaskItem = ({
   onDelete,
   onHide,
   onReorder,
+  dragHandleProps,
 }) => {
   const [open, setOpen] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -172,61 +172,74 @@ const TaskItem = ({
   };
 
   return (
-    <div className="relative pl-6">
-      <div className="absolute left-2 top-0 bottom-0 w-px bg-border" />
+    <div className="relative pl-4">
+      <div className="absolute left-1 top-0 bottom-0 w-px bg-border" />
 
       <Collapsible open={open} onOpenChange={setOpen}>
-        <div className="flex items-center gap-1 py-1">
-          <span className="cursor-grab text-muted-foreground">
-            <GripVertical className="h-4 w-4" />
+        <div className="flex items-center gap-0.5 py-0.5">
+          <span
+            {...dragHandleProps}
+            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+          >
+            <GripVertical className="h-3 w-3" />
           </span>
 
           {task.tasks.length > 0 ? (
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
+              <Button variant="ghost" size="icon" className="h-5 w-5 p-0">
                 <ChevronRight
-                  className={`h-4 w-4 transition-transform ${
+                  className={`h-3 w-3 transition-transform ${
                     open ? "rotate-90" : ""
                   }`}
                 />
               </Button>
             </CollapsibleTrigger>
           ) : (
-            <div className="w-6" />
+            <div className="w-5" />
           )}
 
-          <span className="text-sm">{task.name}</span>
+          <span className="text-sm flex-1">{task.name}</span>
 
-          <Button size="icon" variant="ghost" onClick={() => onHide(task.id)}>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-5 w-5 p-0 text-xs"
+            onClick={() => onHide(task.id)}
+          >
             ✔
-          </Button>
-          <Button size="icon" variant="ghost" onClick={() => setAdding(v => !v)}>
-            <Plus className="h-4 w-4" />
           </Button>
           <Button
             size="icon"
             variant="ghost"
-            className="text-destructive"
+            className="h-5 w-5 p-0"
+            onClick={() => setAdding(v => !v)}
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-5 w-5 p-0 text-destructive"
             onClick={() => onDelete(task.id)}
           >
-            <Trash className="h-4 w-4" />
+            <Trash className="h-3 w-3" />
           </Button>
         </div>
 
         {adding && (
-          <form onSubmit={submit} className="ml-7 flex gap-2">
+          <form onSubmit={submit} className="ml-5 flex gap-2 mt-1">
             <Input
               autoFocus
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="New subtask"
-              className="h-8"
+              className="h-7 text-sm"
             />
-            <Button size="sm">Add</Button>
+            <Button size="sm" className="h-7">Add</Button>
           </form>
         )}
 
-        <CollapsibleContent className="ml-4">
+        <CollapsibleContent className="ml-2">
           <DndContext
             collisionDetection={closestCenter}
             onDragEnd={({ active, over }) => {
@@ -243,22 +256,15 @@ const TaskItem = ({
                 .sort((a, b) => a.order - b.order)
                 .map(child => (
                   <Sortable key={child.id} id={child.id}>
-                    {({ setActivatorNodeRef, attributes, listeners }) => (
-                      <div>
-                        <div
-                          ref={setActivatorNodeRef}
-                          {...attributes}
-                          {...listeners}
-                          className="inline-block"
-                        />
-                        <TaskItem
-                          task={child}
-                          onAddSubtask={onAddSubtask}
-                          onDelete={onDelete}
-                          onHide={onHide}
-                          onReorder={onReorder}
-                        />
-                      </div>
+                    {({ attributes, listeners }) => (
+                      <TaskItem
+                        task={child}
+                        onAddSubtask={onAddSubtask}
+                        onDelete={onDelete}
+                        onHide={onHide}
+                        onReorder={onReorder}
+                        dragHandleProps={{ ...attributes, ...listeners }}
+                      />
                     )}
                   </Sortable>
                 ))}
@@ -315,28 +321,28 @@ const GroupItem = ({ group, setGroups }) => {
 
   return (
     <Sortable id={group.id}>
-      {({ setActivatorNodeRef, attributes, listeners }) => (
-        <Card className="mb-4 bg-muted/30">
-          <CardHeader className="flex flex-row items-center gap-2">
+      {({ attributes, listeners }) => (
+        <Card className="mb-3 bg-muted/30">
+          <CardHeader className="flex flex-row items-center gap-2 py-3">
             <span
-              ref={setActivatorNodeRef}
               {...attributes}
               {...listeners}
-              className="cursor-grab text-muted-foreground"
+              className="cursor-grab text-muted-foreground hover:text-foreground"
             >
               <GripVertical className="h-4 w-4" />
             </span>
             <CardTitle className="text-sm">{group.name}</CardTitle>
           </CardHeader>
 
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-1 pt-0">
             <form onSubmit={addRootTask} className="flex gap-2">
               <Input
                 value={taskName}
                 onChange={e => setTaskName(e.target.value)}
                 placeholder="Add task"
+                className="h-8"
               />
-              <Button>
+              <Button className="h-8">
                 <Plus className="h-4 w-4 mr-1" />
                 Add
               </Button>
@@ -360,41 +366,34 @@ const GroupItem = ({ group, setGroups }) => {
                   .sort((a, b) => a.order - b.order)
                   .map(task => (
                     <Sortable key={task.id} id={task.id}>
-                      {({ setActivatorNodeRef, attributes, listeners }) => (
-                        <div>
-                          <div
-                            ref={setActivatorNodeRef}
-                            {...attributes}
-                            {...listeners}
-                            className="inline-block"
-                          />
-                          <TaskItem
-                            task={task}
-                            onAddSubtask={(id, name) =>
-                              updateTasks(tasks =>
-                                addSubtaskById(tasks, id, name)
+                      {({ attributes, listeners }) => (
+                        <TaskItem
+                          task={task}
+                          onAddSubtask={(id, name) =>
+                            updateTasks(tasks =>
+                              addSubtaskById(tasks, id, name)
+                            )
+                          }
+                          onDelete={id =>
+                            updateTasks(tasks =>
+                              deleteTaskById(tasks, id)
+                            )
+                          }
+                          onHide={id =>
+                            updateTasks(tasks => hideTaskById(tasks, id))
+                          }
+                          onReorder={(parentId, activeId, overId) =>
+                            updateTasks(tasks =>
+                              reorderTasksByParent(
+                                tasks,
+                                parentId,
+                                activeId,
+                                overId
                               )
-                            }
-                            onDelete={id =>
-                              updateTasks(tasks =>
-                                deleteTaskById(tasks, id)
-                              )
-                            }
-                            onHide={id =>
-                              updateTasks(tasks => hideTaskById(tasks, id))
-                            }
-                            onReorder={(parentId, activeId, overId) =>
-                              updateTasks(tasks =>
-                                reorderTasksByParent(
-                                  tasks,
-                                  parentId,
-                                  activeId,
-                                  overId
-                                )
-                              )
-                            }
-                          />
-                        </div>
+                            )
+                          }
+                          dragHandleProps={{ ...attributes, ...listeners }}
+                        />
                       )}
                     </Sortable>
                   ))}
@@ -434,18 +433,37 @@ export default function App() {
     setGroupName("");
   };
 
+  const reorderGroups = ({ active, over }) => {
+    if (!over || active.id === over.id) return;
+
+    setGroups(prev => {
+      const oldIndex = prev.findIndex(g => g.id === active.id);
+      const newIndex = prev.findIndex(g => g.id === over.id);
+
+      if (oldIndex === -1 || newIndex === -1) return prev;
+
+      const next = arrayMove(prev, oldIndex, newIndex);
+      localStorage.setItem("data", JSON.stringify(next));
+      return next;
+    });
+  };
+
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-4">
+    <div className="max-w-2xl mx-auto p-4 space-y-3">
       <form onSubmit={createGroup} className="flex gap-2">
         <Input
           value={groupName}
           onChange={e => setGroupName(e.target.value)}
           placeholder="New group"
+          className="h-9"
         />
-        <Button>Create</Button>
+        <Button className="h-9">Create</Button>
       </form>
 
-      <DndContext collisionDetection={closestCenter}>
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragEnd={reorderGroups}
+      >
         <SortableContext
           items={groups.map(g => g.id)}
           strategy={verticalListSortingStrategy}
