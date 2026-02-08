@@ -12,7 +12,7 @@
   --border: oklch(0% 0 0);
   --ring: oklch(0% 0 0);
   --overlay: oklch(0% 0 0 / 0.8);
-  --shadow: 4px 4px 0px 0px var(--border);
+  --shadow: -4px 4px 0px 0px var(--border);
   --chart-1: #5294FF;
   --chart-2: #FF4D50;
   --chart-3: #FACC00;
@@ -29,7 +29,7 @@
   --main: oklch(67.47% 0.1726 259.49);
   --border: oklch(0% 0 0);
   --ring: oklch(100% 0 0);
-  --shadow: 4px 4px 0px 0px var(--border);
+  --shadow: -4px 4px 0px 0px var(--border);
   --chart-1: #5294FF;
   --chart-2: #FF6669;
   --chart-3: #E0B700;
@@ -53,9 +53,9 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
-  --spacing-boxShadowX: 4px;
+  --spacing-boxShadowX: -4px;
   --spacing-boxShadowY: 4px;
-  --spacing-reverseBoxShadowX: -4px;
+  --spacing-reverseBoxShadowX: --4px;
   --spacing-reverseBoxShadowY: -4px;
   --radius-base: 5px;
   --shadow-shadow: var(--shadow);
