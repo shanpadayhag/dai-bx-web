@@ -17,7 +17,8 @@ import {
   Check,
   Circle,
   Folder,
-  FolderOpen
+  FolderOpen,
+  Undo2
 } from "lucide-react";
 
 import { DndContext, closestCenter } from "@dnd-kit/core";
@@ -95,6 +96,7 @@ const addSubtaskById = (tasks, parentId, name) =>
             name,
             order: task.tasks.length,
             hiddenUntil: null,
+            completedDate: null,
             tasks: [],
           },
         ],
@@ -115,17 +117,32 @@ const deleteTaskById = (tasks, taskId) =>
       tasks: deleteTaskById(task.tasks, taskId),
     }));
 
-const hideTaskById = (tasks, taskId) =>
-  tasks.map(task => {
+const toggleTaskCompletionById = (tasks, taskId) => {
+  // Helper function to recursively set completion status for all children
+  const setAllChildrenCompletion = (tasks, completedDate) =>
+    tasks.map(task => ({
+      ...task,
+      completedDate,
+      tasks: setAllChildrenCompletion(task.tasks, completedDate),
+    }));
+
+  return tasks.map(task => {
     if (task.id === taskId) {
-      return { ...task, hiddenUntil: tomorrow() };
+      const newCompletedDate = task.completedDate ? null : today();
+      return {
+        ...task,
+        completedDate: newCompletedDate,
+        // Also update all children to have the same completion status
+        tasks: setAllChildrenCompletion(task.tasks, newCompletedDate),
+      };
     }
 
     return {
       ...task,
-      tasks: hideTaskById(task.tasks, taskId),
+      tasks: toggleTaskCompletionById(task.tasks, taskId),
     };
   });
+};
 
 /* -------------------- Sortable wrapper -------------------- */
 
@@ -158,17 +175,22 @@ const TaskItem = ({
   task,
   onAddSubtask,
   onDelete,
-  onHide,
+  onToggleCompletion,
   onReorder,
+  onToggleOpen,
   dragHandleProps,
   depth = 0,
 }) => {
-  const [open, setOpen] = useState(true);
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [isHovered, setIsHovered] = useState(false);
 
+  // Task is open by default, stored in task.isOpen (defaults to true if undefined)
+  const open = task.isOpen !== undefined ? task.isOpen : true;
+
   if (!isVisibleToday(task)) return null;
+
+  const isCompleted = task.completedDate && task.completedDate === today();
 
   const submit = e => {
     e.preventDefault();
@@ -176,14 +198,13 @@ const TaskItem = ({
     onAddSubtask(task.id, name);
     setName("");
     setAdding(false);
-    setOpen(true);
   };
 
   const hasSubtasks = task.tasks.length > 0;
 
   return (
     <div className="group/task">
-      <Collapsible open={open} onOpenChange={setOpen}>
+      <Collapsible open={open} onOpenChange={(newOpen) => onToggleOpen(task.id, newOpen)}>
         <div
           className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-accent/50 transition-colors"
           onMouseEnter={() => setIsHovered(true)}
@@ -216,17 +237,31 @@ const TaskItem = ({
             </div>
           )}
 
-          <span className="text-sm flex-1 font-medium">{task.name}</span>
+          <span
+            className={`text-sm flex-1 font-medium transition-all ${
+              isCompleted ? 'line-through text-muted-foreground/60' : ''
+            }`}
+          >
+            {task.name}
+          </span>
 
           <div className={`flex items-center gap-1 transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
             <Button
               size="icon"
               variant="ghost"
-              className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
-              onClick={() => onHide(task.id)}
-              title="Mark as done"
+              className={`h-7 w-7 ${
+                isCompleted
+                  ? 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'
+                  : 'text-green-600 hover:text-green-700 hover:bg-green-50'
+              }`}
+              onClick={() => onToggleCompletion(task.id)}
+              title={isCompleted ? "Undo completion" : "Mark as done"}
             >
-              <Check className="h-4 w-4" />
+              {isCompleted ? (
+                <Undo2 className="h-4 w-4" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
             </Button>
             <Button
               size="icon"
@@ -290,8 +325,9 @@ const TaskItem = ({
                           task={child}
                           onAddSubtask={onAddSubtask}
                           onDelete={onDelete}
-                          onHide={onHide}
+                          onToggleCompletion={onToggleCompletion}
                           onReorder={onReorder}
+                          onToggleOpen={onToggleOpen}
                           dragHandleProps={{ ...attributes, ...listeners }}
                           depth={depth + 1}
                         />
@@ -311,10 +347,12 @@ const TaskItem = ({
 
 const GroupItem = ({ group, setGroups, onDelete }) => {
   const [taskName, setTaskName] = useState("");
-  const [isOpen, setIsOpen] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(group.name);
+
+  // Group is open by default, stored in group.isOpen (defaults to true if undefined)
+  const isOpen = group.isOpen !== undefined ? group.isOpen : true;
 
   const addRootTask = e => {
     e.preventDefault();
@@ -332,6 +370,8 @@ const GroupItem = ({ group, setGroups, onDelete }) => {
                   name: taskName,
                   order: g.tasks.length,
                   hiddenUntil: null,
+                  completedDate: null,
+                  isOpen: true,
                   tasks: [],
                 },
               ],
@@ -353,6 +393,31 @@ const GroupItem = ({ group, setGroups, onDelete }) => {
       localStorage.setItem("data", JSON.stringify(next));
       return next;
     });
+
+  const toggleTaskOpen = (taskId, newOpen) => {
+    const toggleOpenById = (tasks, targetId) =>
+      tasks.map(task => {
+        if (task.id === targetId) {
+          return { ...task, isOpen: newOpen };
+        }
+        return {
+          ...task,
+          tasks: toggleOpenById(task.tasks, targetId),
+        };
+      });
+
+    updateTasks(tasks => toggleOpenById(tasks, taskId));
+  };
+
+  const toggleGroupOpen = (newOpen) => {
+    setGroups(prev => {
+      const next = prev.map(g =>
+        g.id === group.id ? { ...g, isOpen: newOpen } : g
+      );
+      localStorage.setItem("data", JSON.stringify(next));
+      return next;
+    });
+  };
 
   const saveGroupName = () => {
     if (!editedName.trim()) {
@@ -380,7 +445,7 @@ const GroupItem = ({ group, setGroups, onDelete }) => {
           className="mb-4 border-2 overflow-hidden shadow-sm hover:shadow-md transition-all py-0"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}>
-          <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <Collapsible open={isOpen} onOpenChange={toggleGroupOpen}>
             <div className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
               <div className="flex items-center gap-3 px-4 py-3">
                 <span
@@ -499,8 +564,10 @@ const GroupItem = ({ group, setGroups, onDelete }) => {
                                       deleteTaskById(tasks, id)
                                     )
                                   }
-                                  onHide={id =>
-                                    updateTasks(tasks => hideTaskById(tasks, id))
+                                  onToggleCompletion={id =>
+                                    updateTasks(tasks =>
+                                      toggleTaskCompletionById(tasks, id)
+                                    )
                                   }
                                   onReorder={(parentId, activeId, overId) =>
                                     updateTasks(tasks =>
@@ -512,6 +579,7 @@ const GroupItem = ({ group, setGroups, onDelete }) => {
                                       )
                                     )
                                   }
+                                  onToggleOpen={toggleTaskOpen}
                                   dragHandleProps={{ ...attributes, ...listeners }}
                                 />
                               )}
@@ -552,7 +620,7 @@ export default function App() {
     setGroups(prev => {
       const next = [
         ...prev,
-        { id: crypto.randomUUID(), name: groupName, tasks: [] },
+        { id: crypto.randomUUID(), name: groupName, isOpen: true, tasks: [] },
       ];
       localStorage.setItem("data", JSON.stringify(next));
       return next;
