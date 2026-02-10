@@ -9,6 +9,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 import {
   ChevronDown,
   Plus,
@@ -225,9 +226,8 @@ const TaskItem = ({
                 className="h-6 w-6 p-0 hover:bg-accent"
               >
                 <ChevronDown
-                  className={`h-4 w-4 transition-transform duration-200 ${
-                    open ? "" : "-rotate-90"
-                  }`}
+                  className={`h-4 w-4 transition-transform duration-200 ${open ? "" : "-rotate-90"
+                    }`}
                 />
               </Button>
             </CollapsibleTrigger>
@@ -237,11 +237,8 @@ const TaskItem = ({
             </div>
           )}
 
-          <span
-            className={`text-sm flex-1 font-medium transition-all ${
-              isCompleted ? 'line-through text-muted-foreground/60' : ''
-            }`}
-          >
+          <span className={cn(`text-sm flex-1 font-medium transition-all`,
+            isCompleted && 'line-through text-foreground/40')}>
             {task.name}
           </span>
 
@@ -249,11 +246,10 @@ const TaskItem = ({
             <Button
               size="icon"
               variant="ghost"
-              className={`h-7 w-7 ${
-                isCompleted
-                  ? 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'
-                  : 'text-green-600 hover:text-green-700 hover:bg-green-50'
-              }`}
+              className={`h-7 w-7 ${isCompleted
+                ? 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'
+                : 'text-green-600 hover:text-green-700 hover:bg-green-50'
+                }`}
               onClick={() => onToggleCompletion(task.id)}
               title={isCompleted ? "Undo completion" : "Mark as done"}
             >
@@ -362,20 +358,20 @@ const GroupItem = ({ group, setGroups, onDelete }) => {
       const next = prev.map(g =>
         g.id === group.id
           ? {
-              ...g,
-              tasks: [
-                ...g.tasks,
-                {
-                  id: crypto.randomUUID(),
-                  name: taskName,
-                  order: g.tasks.length,
-                  hiddenUntil: null,
-                  completedDate: null,
-                  isOpen: true,
-                  tasks: [],
-                },
-              ],
-            }
+            ...g,
+            tasks: [
+              ...g.tasks,
+              {
+                id: crypto.randomUUID(),
+                name: taskName,
+                order: g.tasks.length,
+                hiddenUntil: null,
+                completedDate: null,
+                isOpen: true,
+                tasks: [],
+              },
+            ],
+          }
           : g
       );
       localStorage.setItem("data", JSON.stringify(next));
@@ -504,9 +500,8 @@ const GroupItem = ({ group, setGroups, onDelete }) => {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className={`h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-opacity ${
-                      isHovered ? 'opacity-100' : 'opacity-0'
-                    }`}
+                    className={`h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0'
+                      }`}
                     onClick={() => onDelete(group.id)}
                     title="Delete group"
                   >
