@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DaiBX | A Task Manager",
+  title: "DaiBX | A Vibe Coded Task Manager by Shan Padayhag",
   description: "Organize your tasks into groups and stay productive",
 };
 
