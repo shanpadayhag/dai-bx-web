@@ -129,7 +129,9 @@ const toggleTaskCompletionById = (tasks, taskId) => {
 
   return tasks.map(task => {
     if (task.id === taskId) {
-      const newCompletedDate = task.completedDate ? null : today();
+      // Check if task is currently marked as completed TODAY
+      const isCompletedToday = task.completedDate && task.completedDate === today();
+      const newCompletedDate = isCompletedToday ? null : today();
       return {
         ...task,
         completedDate: newCompletedDate,
