@@ -16,6 +16,7 @@ export class AlarmFiringModalComponent {
 
   protected readonly firing = this.scheduler.firing;
   protected readonly hasFiring = computed(() => this.firing() !== null);
+  protected readonly firingTaskName = computed(() => this.firing()?.task.name ?? '');
 
   protected onDone(): void {
     const f = this.firing();

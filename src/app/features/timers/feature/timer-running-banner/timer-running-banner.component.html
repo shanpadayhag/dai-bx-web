@@ -9,9 +9,9 @@
         class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border-2 border-border bg-primary text-primary-foreground shadow-brutal-sm"
       >
         <lucide-icon
-          [name]="run().status === 'running' ? 'timer' : run().status === 'completed' ? 'check-circle-2' : 'bell-ring'"
+          [name]="statusIcon()"
           class="h-4 w-4"
-          [class.animate-pulse]="run().status !== 'running'"
+          [class.animate-pulse]="!isRunning()"
         />
       </span>
       <div class="min-w-0 flex-1">

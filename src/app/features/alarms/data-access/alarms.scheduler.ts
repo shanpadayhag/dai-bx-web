@@ -25,10 +25,11 @@ export class AlarmsScheduler implements OnDestroy {
     const fired = this._firedKeys();
     let best: { task: Task; groupId: string; at: number; key: string } | null = null;
     for (const entry of this.tasksState.tasksWithAlarm()) {
-      const firesAt = entry.task.alarm!.firesAt;
-      const key = `${entry.task.id}:${firesAt}`;
+      const alarm = entry.task.alarm;
+      if (!alarm) continue;
+      const key = `${entry.task.id}:${alarm.firesAt}`;
       if (fired.has(key)) continue;
-      const at = Date.parse(firesAt);
+      const at = Date.parse(alarm.firesAt);
       if (Number.isNaN(at)) continue;
       if (!best || at < best.at) best = { ...entry, at, key };
     }

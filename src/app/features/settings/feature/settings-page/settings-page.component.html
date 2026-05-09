@@ -66,7 +66,7 @@
               <div class="flex-1 min-w-0">
                 <p class="font-bold tracking-tight truncate">{{ sound.name }}</p>
                 <p class="text-xs font-medium text-muted-foreground font-mono tabular-nums">
-                  {{ formatSize(sound.sizeBytes) }}
+                  {{ sound.sizeBytes | bytes }}
                 </p>
               </div>
 

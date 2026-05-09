@@ -20,6 +20,15 @@ export class TimerRunningBannerComponent {
   protected readonly remainingSeconds = this.runner.remainingSeconds;
 
   protected readonly isVisible = computed(() => this.run().status !== 'idle');
+  protected readonly isRunning = computed(() => this.run().status === 'running');
+  protected readonly isCompleted = computed(() => this.run().status === 'completed');
+
+  protected readonly statusIcon = computed<'timer' | 'check-circle-2' | 'bell-ring'>(() => {
+    const status = this.run().status;
+    if (status === 'running') return 'timer';
+    if (status === 'completed') return 'check-circle-2';
+    return 'bell-ring';
+  });
 
   protected readonly remainingLabel = computed(() => {
     const s = this.remainingSeconds();
