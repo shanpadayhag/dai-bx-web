@@ -1,4 +1,5 @@
 import type { AlarmSpec } from '@features/alarms/data-access/alarms.types';
+import type { TimerSet } from '@features/timers/data-access/timers.types';
 
 export interface Task {
   id: string;
@@ -8,6 +9,8 @@ export interface Task {
   completedDate: string | null;
   isOpen: boolean;
   alarm: AlarmSpec | null;
+  timerSets: TimerSet[];
+  activeTimerSetId: string | null;
   tasks: Task[];
 }
 
@@ -21,4 +24,6 @@ export interface TaskRow {
   completedDate: string | null;
   isOpen: boolean;
   alarm: AlarmSpec | null;
+  timerSets: TimerSet[];
+  activeTimerSetId: string | null;
 }

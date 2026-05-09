@@ -104,6 +104,8 @@ describe('WorkspaceState', () => {
         completedDate: null,
         isOpen: true,
         alarm: null,
+        timerSets: [],
+        activeTimerSetId: null,
       });
     });
     expect(state.groups().length).toBe(1);
@@ -130,6 +132,8 @@ describe('WorkspaceState', () => {
         completedDate: null,
         isOpen: true,
         alarm: null,
+        timerSets: [],
+        activeTimerSetId: null,
       });
     });
 

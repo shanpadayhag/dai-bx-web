@@ -61,6 +61,8 @@ describe('TasksState', () => {
       completedDate: null,
       isOpen: true,
       alarm: null,
+      timerSets: [],
+      activeTimerSetId: null,
     });
     repo.rows.set('t1-1', {
       id: 't1-1',
@@ -72,6 +74,8 @@ describe('TasksState', () => {
       completedDate: null,
       isOpen: true,
       alarm: null,
+      timerSets: [],
+      activeTimerSetId: null,
     });
     repo.rows.set('t2', {
       id: 't2',
@@ -83,6 +87,8 @@ describe('TasksState', () => {
       completedDate: null,
       isOpen: true,
       alarm: null,
+      timerSets: [],
+      activeTimerSetId: null,
     });
 
     await state.loadAll();
@@ -159,5 +165,37 @@ describe('TasksState', () => {
     state.clearForGroup('g1');
     expect(state.tasksFor('g1')).toEqual([]);
     expect(state.tasksFor('g2').map((t) => t.name)).toEqual(['b']);
+  });
+
+  it('setTimerSets persists the new sets and selects a default active id', () => {
+    state.addRoot('g', 'parent');
+    const id = state.tasksFor('g')[0].id;
+    state.setTimerSets('g', id, [
+      { id: 's1', name: 'Standard', order: 0, autoAdvance: true, soundId: null, timers: [] },
+      { id: 's2', name: 'Long', order: 1, autoAdvance: true, soundId: null, timers: [] },
+    ]);
+    const task = state.tasksFor('g')[0];
+    expect(task.timerSets.map((s) => s.id)).toEqual(['s1', 's2']);
+    expect(task.activeTimerSetId).toBe('s1');
+    expect(repo.rows.get(id)?.timerSets.length).toBe(2);
+  });
+
+  it('setActiveTimerSetId switches between sets', () => {
+    state.addRoot('g', 'parent');
+    const id = state.tasksFor('g')[0].id;
+    state.setTimerSets('g', id, [
+      { id: 's1', name: 'a', order: 0, autoAdvance: true, soundId: null, timers: [] },
+      { id: 's2', name: 'b', order: 1, autoAdvance: true, soundId: null, timers: [] },
+    ]);
+    state.setActiveTimerSetId('g', id, 's2');
+    expect(state.tasksFor('g')[0].activeTimerSetId).toBe('s2');
+  });
+
+  it('findTask locates a task across groups', () => {
+    state.addRoot('g1', 'one');
+    state.addRoot('g2', 'two');
+    const id = state.tasksFor('g2')[0].id;
+    expect(state.findTask(id)?.groupId).toBe('g2');
+    expect(state.findTask('missing')).toBeNull();
   });
 });

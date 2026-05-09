@@ -13,6 +13,10 @@ import { AlarmPickerComponent } from '@features/alarms/ui/alarm-picker/alarm-pic
 import type { AlarmSpec } from '@features/alarms/data-access/alarms.types';
 import type { Task } from '@features/tasks/data-access/tasks.types';
 import { isVisibleToday } from '@features/tasks/data-access/tasks.tree';
+import { TimerEditorComponent } from '@features/timers/feature/timer-editor/timer-editor.component';
+import { TimerBadgeComponent } from '@features/timers/ui/timer-badge/timer-badge.component';
+import { sortedSets } from '@features/timers/data-access/timer-format';
+import type { TimerSet } from '@features/timers/data-access/timers.types';
 import { WorkspaceState } from '@features/workspace/data-access/workspace.state';
 
 @Component({
@@ -30,6 +34,8 @@ import { WorkspaceState } from '@features/workspace/data-access/workspace.state'
     InputDirective,
     AlarmBadgeComponent,
     AlarmPickerComponent,
+    TimerEditorComponent,
+    TimerBadgeComponent,
   ],
   templateUrl: './task-item.component.html',
   host: {
@@ -46,6 +52,16 @@ export class TaskItemComponent {
   protected readonly adding = signal(false);
   protected readonly newSubtaskName = signal('');
   protected readonly pickingAlarm = signal(false);
+  protected readonly pickingTimer = signal(false);
+
+  protected readonly hasTimers = computed(() => this.task().timerSets.length > 0);
+
+  protected readonly activeTimerSet = computed<TimerSet | null>(() => {
+    const sets = sortedSets(this.task().timerSets);
+    if (sets.length === 0) return null;
+    const id = this.task().activeTimerSetId;
+    return sets.find((s) => s.id === id) ?? sets[0];
+  });
 
   protected readonly alarmOverlayPositions: ConnectedPosition[] = [
     {
@@ -156,6 +172,29 @@ export class TaskItemComponent {
     if (event.key === 'Escape') {
       event.stopPropagation();
       this.onAlarmPickerClose();
+    }
+  }
+
+  protected toggleTimerPicker(): void {
+    this.pickingTimer.update((v) => !v);
+  }
+
+  protected onTimerSetsChange(sets: TimerSet[]): void {
+    this.state.setTaskTimerSets(this.groupId(), this.task().id, sets);
+  }
+
+  protected onActiveTimerSetIdChange(id: string | null): void {
+    this.state.setTaskActiveTimerSetId(this.groupId(), this.task().id, id);
+  }
+
+  protected onTimerPickerClose(): void {
+    this.pickingTimer.set(false);
+  }
+
+  protected onTimerOverlayKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      this.onTimerPickerClose();
     }
   }
 

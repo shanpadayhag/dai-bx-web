@@ -12,11 +12,14 @@ import {
   getSiblingsOf,
   insertSubtask,
   reorderTasksByParent,
+  setActiveTimerSetIdById,
   setTaskAlarmById,
+  setTaskTimerSetsById,
   toTaskRow,
   toggleTaskCompletionById,
   toggleTaskOpenById,
 } from '@features/tasks/data-access/tasks.tree';
+import type { TimerSet } from '@features/timers/data-access/timers.types';
 
 @Injectable({ providedIn: 'root' })
 export class TasksState {
@@ -38,6 +41,26 @@ export class TasksState {
     for (const [gid, tree] of this._trees()) walk(tree, gid);
     return out;
   });
+
+  readonly tasksWithTimers = computed<{ task: Task; groupId: string }[]>(() => {
+    const out: { task: Task; groupId: string }[] = [];
+    const walk = (nodes: Task[], groupId: string): void => {
+      for (const t of nodes) {
+        if (t.timerSets.length > 0) out.push({ task: t, groupId });
+        if (t.tasks.length) walk(t.tasks, groupId);
+      }
+    };
+    for (const [gid, tree] of this._trees()) walk(tree, gid);
+    return out;
+  });
+
+  findTask(taskId: string): { task: Task; groupId: string } | null {
+    for (const [gid, tree] of this._trees()) {
+      const found = findTaskInTree(tree, taskId);
+      if (found) return { task: found.task, groupId: gid };
+    }
+    return null;
+  }
 
   tasksFor(groupId: string): Task[] {
     return this._trees().get(groupId) ?? [];
@@ -89,6 +112,8 @@ export class TasksState {
       completedDate: null,
       isOpen: true,
       alarm: null,
+      timerSets: [],
+      activeTimerSetId: null,
       tasks: [],
     };
     this.replaceTree(groupId, [...tree, newTask]);
@@ -109,6 +134,8 @@ export class TasksState {
       completedDate: null,
       isOpen: true,
       alarm: null,
+      timerSets: [],
+      activeTimerSetId: null,
       tasks: [],
     };
     this.replaceTree(groupId, insertSubtask(tree, parentTaskId, newTask));
@@ -141,6 +168,20 @@ export class TasksState {
 
   setAlarm(groupId: string, taskId: string, alarm: AlarmSpec | null): void {
     const next = setTaskAlarmById(this.tasksFor(groupId), taskId, alarm);
+    this.replaceTree(groupId, next);
+    const found = findTaskInTree(next, taskId);
+    if (found) void this.repository.put(toTaskRow(found.task, groupId, found.parentId));
+  }
+
+  setTimerSets(groupId: string, taskId: string, timerSets: TimerSet[]): void {
+    const next = setTaskTimerSetsById(this.tasksFor(groupId), taskId, timerSets);
+    this.replaceTree(groupId, next);
+    const found = findTaskInTree(next, taskId);
+    if (found) void this.repository.put(toTaskRow(found.task, groupId, found.parentId));
+  }
+
+  setActiveTimerSetId(groupId: string, taskId: string, activeTimerSetId: string | null): void {
+    const next = setActiveTimerSetIdById(this.tasksFor(groupId), taskId, activeTimerSetId);
     this.replaceTree(groupId, next);
     const found = findTaskInTree(next, taskId);
     if (found) void this.repository.put(toTaskRow(found.task, groupId, found.parentId));

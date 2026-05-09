@@ -1,0 +1,89 @@
+@if (isVisible()) {
+  <div
+    class="fixed bottom-4 right-4 z-50 w-72 rounded-md border-2 border-border bg-background shadow-brutal p-3 space-y-2"
+    role="status"
+    aria-live="polite"
+  >
+    <div class="flex items-center gap-2">
+      <span
+        class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border-2 border-border bg-primary text-primary-foreground shadow-brutal-sm"
+      >
+        <lucide-icon
+          [name]="run().status === 'running' ? 'timer' : run().status === 'completed' ? 'check-circle-2' : 'bell-ring'"
+          class="h-4 w-4"
+          [class.animate-pulse]="run().status !== 'running'"
+        />
+      </span>
+      <div class="min-w-0 flex-1">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-subtle-foreground">Timer</p>
+        <p class="text-sm font-bold tracking-tight truncate">{{ taskName() }}</p>
+      </div>
+    </div>
+
+    @switch (run().status) {
+      @case ('running') {
+        <div class="flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <p class="text-[10px] font-semibold uppercase tracking-wider text-subtle-foreground truncate">
+              {{ stepLabel() }}
+            </p>
+            <p class="text-2xl font-black font-mono tabular-nums tracking-tight leading-tight">
+              {{ remainingLabel() }}
+            </p>
+          </div>
+          <button
+            appButton
+            variant="destructive"
+            size="icon-sm"
+            (click)="onCancel()"
+            title="Cancel timer"
+            type="button"
+          >
+            <lucide-icon name="x" class="h-4 w-4" />
+          </button>
+        </div>
+      }
+      @case ('awaitingAdvance') {
+        <p class="text-xs font-semibold">Step done. Tap Next to continue.</p>
+        <div class="flex gap-1.5">
+          <button
+            appButton
+            variant="success"
+            size="sm"
+            btnClass="flex-1 h-9"
+            (click)="onAdvance()"
+            type="button"
+          >
+            <lucide-icon name="arrow-right" class="h-4 w-4" />
+            Next
+          </button>
+          <button
+            appButton
+            variant="neutral"
+            size="icon-sm"
+            btnClass="h-9 w-9"
+            (click)="onCancel()"
+            title="Cancel timer"
+            type="button"
+          >
+            <lucide-icon name="x" class="h-4 w-4" />
+          </button>
+        </div>
+      }
+      @case ('completed') {
+        <p class="text-xs font-semibold">All steps complete.</p>
+        <button
+          appButton
+          variant="success"
+          size="sm"
+          btnClass="w-full h-9"
+          (click)="onDone()"
+          type="button"
+        >
+          <lucide-icon name="check" class="h-4 w-4" />
+          Done
+        </button>
+      }
+    }
+  </div>
+}
