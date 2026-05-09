@@ -53,8 +53,19 @@ export class TaskItemComponent {
   protected readonly newSubtaskName = signal('');
   protected readonly pickingAlarm = signal(false);
   protected readonly pickingTimer = signal(false);
+  protected readonly pickingActions = signal(false);
 
   protected readonly hasTimers = computed(() => this.task().timerSets.length > 0);
+
+  protected readonly alarmMenuLabel = computed(() =>
+    this.task().alarm ? 'Change alarm' : 'Set alarm',
+  );
+
+  protected readonly alarmMenuIcon = computed(() => (this.task().alarm ? 'bell-ring' : 'bell'));
+
+  protected readonly timerMenuLabel = computed(() =>
+    this.hasTimers() ? 'Edit timer' : 'Set timer',
+  );
 
   protected readonly activeTimerSet = computed<TimerSet | null>(() => {
     const sets = sortedSets(this.task().timerSets);
@@ -115,10 +126,15 @@ export class TaskItemComponent {
     ),
   );
 
+  protected readonly actionsVisible = computed(
+    () =>
+      this.hovered() || this.pickingActions() || this.pickingAlarm() || this.pickingTimer(),
+  );
+
   protected readonly actionsClass = computed(() =>
     cn(
       'flex items-center gap-1.5 transition-opacity',
-      this.hovered() ? 'opacity-100' : 'opacity-40',
+      this.actionsVisible() ? 'opacity-100' : 'opacity-40',
     ),
   );
 
@@ -196,6 +212,41 @@ export class TaskItemComponent {
       event.stopPropagation();
       this.onTimerPickerClose();
     }
+  }
+
+  protected toggleActions(): void {
+    this.pickingActions.update((v) => !v);
+  }
+
+  protected onActionsClose(): void {
+    this.pickingActions.set(false);
+  }
+
+  protected onActionsKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      this.onActionsClose();
+    }
+  }
+
+  protected openAlarmFromMenu(): void {
+    this.pickingActions.set(false);
+    this.pickingAlarm.set(true);
+  }
+
+  protected openTimerFromMenu(): void {
+    this.pickingActions.set(false);
+    this.pickingTimer.set(true);
+  }
+
+  protected addSubtaskFromMenu(): void {
+    this.pickingActions.set(false);
+    this.adding.set(true);
+  }
+
+  protected deleteFromMenu(): void {
+    this.pickingActions.set(false);
+    this.deleteTask();
   }
 
   protected onChildrenDrop(event: CdkDragDrop<Task[]>): void {

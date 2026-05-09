@@ -51,30 +51,6 @@
     }
 
     <div [class]="actionsClass()">
-      <button
-        #alarmTrigger="cdkOverlayOrigin"
-        cdkOverlayOrigin
-        appButton
-        [variant]="task().alarm ? 'warning' : 'neutral'"
-        size="icon-sm"
-        (click)="toggleAlarmPicker()"
-        [title]="task().alarm ? 'Change alarm' : 'Set alarm'"
-        type="button"
-      >
-        <lucide-icon [name]="task().alarm ? 'bell-ring' : 'bell'" class="h-4 w-4" />
-      </button>
-      <button
-        #timerTrigger="cdkOverlayOrigin"
-        cdkOverlayOrigin
-        appButton
-        [variant]="hasTimers() ? 'default' : 'neutral'"
-        size="icon-sm"
-        (click)="toggleTimerPicker()"
-        [title]="hasTimers() ? 'Edit timer' : 'Set timer'"
-        type="button"
-      >
-        <lucide-icon name="timer" class="h-4 w-4" />
-      </button>
       @if (isCompleted()) {
         <button
           appButton
@@ -99,31 +75,80 @@
         </button>
       }
       <button
+        #menuTrigger="cdkOverlayOrigin"
+        cdkOverlayOrigin
         appButton
         variant="neutral"
         size="icon-sm"
-        (click)="toggleAdding()"
-        title="Add subtask"
+        (click)="toggleActions()"
+        [attr.aria-expanded]="pickingActions()"
+        aria-haspopup="menu"
+        title="More actions"
         type="button"
       >
-        <lucide-icon name="plus" class="h-4 w-4" />
-      </button>
-      <button
-        appButton
-        variant="destructive"
-        size="icon-sm"
-        (click)="deleteTask()"
-        title="Delete task"
-        type="button"
-      >
-        <lucide-icon name="trash-2" class="h-4 w-4" />
+        <lucide-icon name="more-vertical" class="h-4 w-4" />
       </button>
     </div>
   </div>
 
   <ng-template
     cdkConnectedOverlay
-    [cdkConnectedOverlayOrigin]="alarmTrigger"
+    [cdkConnectedOverlayOrigin]="menuTrigger"
+    [cdkConnectedOverlayOpen]="pickingActions()"
+    [cdkConnectedOverlayPositions]="alarmOverlayPositions"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+    (backdropClick)="onActionsClose()"
+    (detach)="onActionsClose()"
+    (overlayKeydown)="onActionsKeydown($event)"
+  >
+    <div
+      class="min-w-44 rounded-md border-2 border-border bg-background shadow-brutal overflow-hidden py-1"
+      role="menu"
+    >
+      <button
+        type="button"
+        role="menuitem"
+        class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold tracking-tight hover:bg-secondary-background transition-colors cursor-pointer"
+        (click)="openAlarmFromMenu()"
+      >
+        <lucide-icon [name]="alarmMenuIcon()" class="h-4 w-4 shrink-0" />
+        <span>{{ alarmMenuLabel() }}</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold tracking-tight hover:bg-secondary-background transition-colors cursor-pointer"
+        (click)="openTimerFromMenu()"
+      >
+        <lucide-icon name="timer" class="h-4 w-4 shrink-0" />
+        <span>{{ timerMenuLabel() }}</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold tracking-tight hover:bg-secondary-background transition-colors cursor-pointer"
+        (click)="addSubtaskFromMenu()"
+      >
+        <lucide-icon name="plus" class="h-4 w-4 shrink-0" />
+        <span>Add subtask</span>
+      </button>
+      <div class="my-1 h-px bg-border" role="separator"></div>
+      <button
+        type="button"
+        role="menuitem"
+        class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold tracking-tight text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+        (click)="deleteFromMenu()"
+      >
+        <lucide-icon name="trash-2" class="h-4 w-4 shrink-0" />
+        <span>Delete task</span>
+      </button>
+    </div>
+  </ng-template>
+
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="menuTrigger"
     [cdkConnectedOverlayOpen]="pickingAlarm()"
     [cdkConnectedOverlayPositions]="alarmOverlayPositions"
     [cdkConnectedOverlayHasBackdrop]="true"
@@ -141,7 +166,7 @@
 
   <ng-template
     cdkConnectedOverlay
-    [cdkConnectedOverlayOrigin]="timerTrigger"
+    [cdkConnectedOverlayOrigin]="menuTrigger"
     [cdkConnectedOverlayOpen]="pickingTimer()"
     [cdkConnectedOverlayPositions]="alarmOverlayPositions"
     [cdkConnectedOverlayHasBackdrop]="true"
