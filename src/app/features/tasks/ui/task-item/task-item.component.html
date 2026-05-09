@@ -1,0 +1,102 @@
+@if (visible()) {
+  <div
+    class="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-accent/50 transition-colors"
+    (mouseenter)="hovered.set(true)"
+    (mouseleave)="hovered.set(false)"
+  >
+    <span
+      cdkDragHandle
+      class="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+    >
+      <lucide-icon name="grip-vertical" class="h-4 w-4" />
+    </span>
+
+    @if (hasSubtasks()) {
+      <button
+        appButton
+        variant="ghost"
+        size="icon"
+        btnClass="h-6 w-6 hover:bg-accent"
+        (click)="toggleOpen()"
+        [attr.aria-expanded]="task().isOpen"
+        type="button"
+      >
+        <lucide-icon name="chevron-down" [class]="chevronClass()" />
+      </button>
+    } @else {
+      <span class="w-6 flex items-center justify-center">
+        <lucide-icon name="circle" class="h-3 w-3 text-muted-foreground/30" />
+      </span>
+    }
+
+    <span [class]="nameClass()">{{ task().name }}</span>
+
+    <div [class]="actionsClass()">
+      <button
+        appButton
+        variant="ghost"
+        size="icon"
+        [btnClass]="completionBtnClass()"
+        (click)="toggleCompletion()"
+        [title]="isCompleted() ? 'Undo completion' : 'Mark as done'"
+        type="button"
+      >
+        @if (isCompleted()) {
+          <lucide-icon name="undo-2" class="h-4 w-4" />
+        } @else {
+          <lucide-icon name="check" class="h-4 w-4" />
+        }
+      </button>
+      <button
+        appButton
+        variant="ghost"
+        size="icon"
+        btnClass="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-accent"
+        (click)="toggleAdding()"
+        title="Add subtask"
+        type="button"
+      >
+        <lucide-icon name="plus" class="h-4 w-4" />
+      </button>
+      <button
+        appButton
+        variant="ghost"
+        size="icon"
+        btnClass="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+        (click)="deleteTask()"
+        title="Delete task"
+        type="button"
+      >
+        <lucide-icon name="trash-2" class="h-4 w-4" />
+      </button>
+    </div>
+  </div>
+
+  @if (adding()) {
+    <form (submit)="submitSubtask($event)" class="flex gap-2 mt-2 ml-12 mr-3 mb-2">
+      <input
+        appInput
+        appAutofocus
+        [ngModel]="newSubtaskName()"
+        (ngModelChange)="newSubtaskName.set($event)"
+        name="subtaskName"
+        placeholder="Subtask name..."
+        class="h-9 text-sm border-dashed"
+        (blur)="onSubtaskBlur()"
+      />
+      <button appButton size="sm" btnClass="h-9 px-4" type="submit">Add</button>
+    </form>
+  }
+
+  @if (task().isOpen && hasSubtasks()) {
+    <div class="ml-6 mt-1 border-l-2 border-border/40 pl-3">
+      <div cdkDropList (cdkDropListDropped)="onChildrenDrop($event)">
+        @for (child of sortedChildren(); track child.id) {
+          <div cdkDrag>
+            <app-task-item [task]="child" [groupId]="groupId()" />
+          </div>
+        }
+      </div>
+    </div>
+  }
+}

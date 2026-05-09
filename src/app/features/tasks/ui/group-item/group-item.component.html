@@ -1,0 +1,106 @@
+<app-card
+  class="mb-4 border-2 overflow-hidden shadow-sm hover:shadow-md transition-all"
+  (mouseenter)="hovered.set(true)"
+  (mouseleave)="hovered.set(false)"
+>
+  <div class="bg-gradient-to-r from-primary/5 to-primary/10 border-b border-border">
+    <div class="flex items-center gap-3 px-4 py-3">
+      <span
+        cdkDragHandle
+        class="cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+      >
+        <lucide-icon name="grip-vertical" class="h-5 w-5" />
+      </span>
+
+      <button
+        appButton
+        variant="ghost"
+        size="icon"
+        btnClass="h-8 w-8 hover:bg-primary/10"
+        (click)="toggleOpen()"
+        [attr.aria-expanded]="group().isOpen"
+        type="button"
+      >
+        @if (group().isOpen) {
+          <lucide-icon name="folder-open" class="h-5 w-5 text-primary" />
+        } @else {
+          <lucide-icon name="folder" class="h-5 w-5 text-primary" />
+        }
+      </button>
+
+      @if (editing()) {
+        <input
+          appInput
+          appAutofocus
+          [ngModel]="editedName()"
+          (ngModelChange)="editedName.set($event)"
+          name="groupName"
+          (blur)="saveName()"
+          (keydown)="onEditKey($event)"
+          class="h-8 font-semibold text-base flex-1"
+        />
+      } @else {
+        <h3
+          class="font-semibold text-base flex-1 cursor-pointer hover:text-primary transition-colors"
+          (dblclick)="startEditing()"
+        >
+          {{ group().name }}
+        </h3>
+      }
+
+      <div class="flex items-center gap-2">
+        @if (visibleTaskCount() > 0) {
+          <span class="text-xs font-medium px-2 py-1 rounded-full bg-primary/20 text-primary">
+            {{ visibleTaskCount() }}
+            {{ visibleTaskCount() === 1 ? 'task' : 'tasks' }}
+          </span>
+        }
+
+        <button
+          appButton
+          variant="ghost"
+          size="icon"
+          [btnClass]="deleteBtnClass()"
+          (click)="delete()"
+          title="Delete group"
+          type="button"
+        >
+          <lucide-icon name="trash-2" class="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (group().isOpen) {
+    <app-card-content>
+      <form (submit)="addTask($event)" class="flex gap-2 mb-4">
+        <input
+          appInput
+          [ngModel]="newTaskName()"
+          (ngModelChange)="newTaskName.set($event)"
+          name="taskName"
+          placeholder="Add a new task..."
+          class="h-10 border-dashed"
+        />
+        <button appButton btnClass="h-10 px-5" type="submit">
+          <lucide-icon name="plus" class="h-4 w-4" />
+          Add
+        </button>
+      </form>
+
+      @if (visibleTasks().length > 0) {
+        <div cdkDropList (cdkDropListDropped)="onTaskDrop($event)" class="space-y-1">
+          @for (task of visibleTasks(); track task.id) {
+            <div cdkDrag>
+              <app-task-item [task]="task" [groupId]="group().id" />
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="text-center py-8 text-muted-foreground text-sm">
+          No tasks yet. Add one above to get started.
+        </div>
+      }
+    </app-card-content>
+  }
+</app-card>
