@@ -1,19 +1,21 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { LucideAngularModule } from 'lucide-angular';
 import { ButtonDirective } from '@shared/ui/button/button.directive';
 import { InputDirective } from '@shared/ui/input/input.directive';
 import { CardComponent, CardContentComponent } from '@shared/ui/card/card.component';
-import { TaskStateService } from '@features/tasks/data-access/tasks.state';
-import type { Group } from '@features/tasks/data-access/tasks.types';
-import { GroupItemComponent } from '@features/tasks/ui/group-item/group-item.component';
+import type { Group } from '@features/groups/data-access/groups.types';
+import { WorkspaceState } from '@features/workspace/data-access/workspace.state';
+import { GroupItemComponent } from '@features/workspace/ui/group-item/group-item.component';
 
 @Component({
-  selector: 'app-tasks-page',
+  selector: 'app-workspace-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
+    RouterLink,
     CdkDrag,
     CdkDropList,
     LucideAngularModule,
@@ -23,10 +25,10 @@ import { GroupItemComponent } from '@features/tasks/ui/group-item/group-item.com
     CardContentComponent,
     GroupItemComponent,
   ],
-  templateUrl: './tasks-page.component.html',
+  templateUrl: './workspace-page.component.html',
 })
-export class TasksPageComponent {
-  protected readonly state = inject(TaskStateService);
+export class WorkspacePageComponent {
+  protected readonly state = inject(WorkspaceState);
   protected readonly groupName = signal('');
 
   protected createGroup(event: Event): void {

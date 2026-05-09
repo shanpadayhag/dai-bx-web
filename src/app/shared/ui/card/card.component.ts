@@ -5,7 +5,8 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<ng-content />`,
   host: {
-    class: 'rounded-lg border bg-card text-card-foreground shadow-sm flex flex-col',
+    class:
+      'block rounded-lg border-2 border-border bg-secondary-background text-foreground shadow-brutal',
   },
 })
 export class CardComponent {}
@@ -15,7 +16,7 @@ export class CardComponent {}
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<ng-content />`,
   host: {
-    class: 'p-6',
+    class: 'block p-5',
   },
 })
 export class CardContentComponent {}

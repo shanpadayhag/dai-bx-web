@@ -7,9 +7,9 @@ import { ButtonDirective } from '@shared/ui/button/button.directive';
 import { InputDirective } from '@shared/ui/input/input.directive';
 import { cn } from '@shared/utils/cn';
 import { todayIso } from '@shared/utils/dates';
-import { TaskStateService } from '@features/tasks/data-access/tasks.state';
-import { isVisibleToday } from '@features/tasks/data-access/tasks.tree';
 import type { Task } from '@features/tasks/data-access/tasks.types';
+import { isVisibleToday } from '@features/tasks/data-access/tasks.tree';
+import { WorkspaceState } from '@features/workspace/data-access/workspace.state';
 
 @Component({
   selector: 'app-task-item',
@@ -30,7 +30,7 @@ import type { Task } from '@features/tasks/data-access/tasks.types';
   },
 })
 export class TaskItemComponent {
-  private readonly state = inject(TaskStateService);
+  private readonly state = inject(WorkspaceState);
 
   readonly task = input.required<Task>();
   readonly groupId = input.required<string>();
@@ -51,25 +51,31 @@ export class TaskItemComponent {
 
   protected readonly hasSubtasks = computed(() => this.task().tasks.length > 0);
 
+  protected readonly rowClass = computed(() =>
+    cn(
+      'flex items-center gap-2 py-2 px-2 rounded-md border-2 transition-colors',
+      this.isCompleted()
+        ? 'border-transparent bg-transparent'
+        : 'border-transparent hover:border-border hover:bg-secondary-background',
+    ),
+  );
+
   protected readonly nameClass = computed(() =>
     cn(
-      'text-sm flex-1 font-medium transition-all',
-      this.isCompleted() && 'line-through text-foreground/40',
+      'text-sm flex-1 font-semibold tracking-tight transition-all',
+      this.isCompleted() && 'line-through text-subtle-foreground',
     ),
   );
 
   protected readonly actionsClass = computed(() =>
-    cn('flex items-center gap-1 transition-opacity', this.hovered() ? 'opacity-100' : 'opacity-0'),
+    cn(
+      'flex items-center gap-1.5 transition-opacity',
+      this.hovered() ? 'opacity-100' : 'opacity-0',
+    ),
   );
 
   protected readonly chevronClass = computed(() =>
     cn('h-4 w-4 transition-transform duration-200', !this.task().isOpen && '-rotate-90'),
-  );
-
-  protected readonly completionBtnClass = computed(() =>
-    this.isCompleted()
-      ? 'h-7 w-7 text-orange-600 hover:text-orange-700 hover:bg-orange-50'
-      : 'h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50',
   );
 
   protected toggleOpen(): void {

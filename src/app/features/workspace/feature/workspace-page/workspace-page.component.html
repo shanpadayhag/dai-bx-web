@@ -1,0 +1,86 @@
+<div class="min-h-screen">
+  <div class="max-w-3xl mx-auto px-5 py-10">
+    <header class="mb-10">
+      <h1 class="text-5xl sm:text-6xl font-black tracking-tighter text-foreground leading-none">
+        DaiBX
+      </h1>
+      <p class="mt-3 text-base font-medium text-muted-foreground max-w-md">
+        Organize your tasks into groups and stay productive.
+      </p>
+    </header>
+
+    @if (state.hasLegacyData()) {
+      <div
+        class="mb-6 rounded-md border-2 border-border bg-warning shadow-brutal p-4 flex items-center gap-3"
+      >
+        <lucide-icon name="folder" class="h-5 w-5 shrink-0" />
+        <p class="flex-1 text-sm font-semibold text-warning-foreground">
+          Old data was detected from a previous version.
+        </p>
+        <a appButton variant="neutral" size="sm" routerLink="/import">Review &amp; import</a>
+      </div>
+    }
+
+    <app-card class="mb-8">
+      <app-card-content>
+        <form (submit)="createGroup($event)" class="flex gap-3">
+          <input
+            appInput
+            [ngModel]="groupName()"
+            (ngModelChange)="groupName.set($event)"
+            name="groupName"
+            placeholder="Create a new group…"
+            class="h-11 text-base"
+          />
+          <button appButton size="lg" type="submit">
+            <lucide-icon name="plus" class="h-5 w-5" />
+            New group
+          </button>
+        </form>
+      </app-card-content>
+    </app-card>
+
+    @if (!state.isLoaded()) {
+      <div class="space-y-5" aria-busy="true" aria-label="Loading your tasks">
+        <div
+          class="h-28 rounded-lg border-2 border-border bg-secondary-background shadow-brutal animate-pulse"
+        ></div>
+        <div
+          class="h-28 rounded-lg border-2 border-border bg-secondary-background shadow-brutal animate-pulse"
+        ></div>
+      </div>
+    } @else if (state.hasGroups()) {
+      @defer (on idle) {
+        <div cdkDropList (cdkDropListDropped)="onGroupDrop($event)" class="space-y-5">
+          @for (group of state.groups(); track group.id) {
+            <div cdkDrag>
+              <app-group-item [group]="group" />
+            </div>
+          }
+        </div>
+      } @placeholder {
+        <div class="space-y-5">
+          @for (group of state.groups(); track group.id) {
+            <div
+              class="h-28 rounded-lg border-2 border-border bg-secondary-background shadow-brutal animate-pulse"
+            ></div>
+          }
+        </div>
+      }
+    } @else {
+      <div
+        class="text-center rounded-lg border-2 border-dashed border-border/50 bg-secondary-background/40 py-16 px-6"
+      >
+        <div
+          class="mx-auto mb-5 inline-flex h-16 w-16 items-center justify-center rounded-lg border-2 border-border bg-warning shadow-brutal"
+        >
+          <lucide-icon name="folder" class="h-8 w-8 text-warning-foreground" />
+        </div>
+        <h3 class="text-xl font-bold tracking-tight text-foreground mb-2">No groups yet</h3>
+        <p class="text-sm text-muted-foreground font-medium">
+          Create your first group above to start organizing your tasks.
+        </p>
+      </div>
+    }
+  </div>
+</div>
