@@ -1,8 +1,9 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { LegacyDataService, type LegacyGroupShape } from '@core/db/legacy-data.service';
 import { GroupsRepository } from '@features/groups/data-access/groups.repository';
 import { GroupsState } from '@features/groups/data-access/groups.state';
 import type { Group } from '@features/groups/data-access/groups.types';
+import type { AlarmSpec } from '@features/alarms/data-access/alarms.types';
 import { TasksRepository } from '@features/tasks/data-access/tasks.repository';
 import { TasksState } from '@features/tasks/data-access/tasks.state';
 import type { Task } from '@features/tasks/data-access/tasks.types';
@@ -35,6 +36,17 @@ export class WorkspaceState {
   readonly hasGroups = this.groupsState.hasGroups;
   readonly hasLegacyData = this._hasLegacyData.asReadonly();
   readonly isLoaded = this._isLoaded.asReadonly();
+
+  readonly nextAlarm = computed<{ task: Task; groupId: string; at: number } | null>(() => {
+    const now = Date.now();
+    let best: { task: Task; groupId: string; at: number } | null = null;
+    for (const entry of this.tasksState.tasksWithAlarm()) {
+      const at = Date.parse(entry.task.alarm!.firesAt);
+      if (Number.isNaN(at) || at < now) continue;
+      if (!best || at < best.at) best = { ...entry, at };
+    }
+    return best;
+  });
 
   constructor() {
     void this.initialize();
@@ -99,6 +111,10 @@ export class WorkspaceState {
 
   toggleTaskOpen(groupId: string, taskId: string, isOpen: boolean): void {
     this.tasksState.toggleOpen(groupId, taskId, isOpen);
+  }
+
+  setTaskAlarm(groupId: string, taskId: string, alarm: AlarmSpec | null): void {
+    this.tasksState.setAlarm(groupId, taskId, alarm);
   }
 
   reorderTasks(

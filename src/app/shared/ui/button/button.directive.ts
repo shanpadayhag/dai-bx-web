@@ -6,7 +6,7 @@ export type ButtonVariant = 'default' | 'neutral' | 'ghost' | 'destructive' | 's
 export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon' | 'icon-sm';
 
 const BASE =
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap font-bold tracking-tight rounded-md text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 cursor-pointer select-none';
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap font-bold tracking-tight rounded-md text-sm disabled:pointer-events-none disabled:opacity-50 cursor-pointer select-none';
 
 const BORDERED = 'border-2 border-border shadow-brutal brutal-press';
 

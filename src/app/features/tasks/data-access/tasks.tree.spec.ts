@@ -23,6 +23,7 @@ const makeTask = (overrides: Partial<Task> = {}): Task => ({
   hiddenUntil: overrides.hiddenUntil ?? null,
   completedDate: overrides.completedDate ?? null,
   isOpen: overrides.isOpen ?? true,
+  alarm: overrides.alarm ?? null,
   tasks: overrides.tasks ?? [],
 });
 
@@ -193,6 +194,7 @@ describe('toTaskRow', () => {
       hiddenUntil: null,
       completedDate: null,
       isOpen: true,
+      alarm: null,
     });
   });
 });
@@ -224,6 +226,7 @@ describe('buildTreeFromRows', () => {
         hiddenUntil: null,
         completedDate: null,
         isOpen: true,
+        alarm: null,
       },
       {
         id: 'a',
@@ -234,6 +237,7 @@ describe('buildTreeFromRows', () => {
         hiddenUntil: null,
         completedDate: null,
         isOpen: true,
+        alarm: null,
       },
       {
         id: 'b',
@@ -244,6 +248,7 @@ describe('buildTreeFromRows', () => {
         hiddenUntil: null,
         completedDate: null,
         isOpen: true,
+        alarm: null,
       },
       {
         id: 'a0',
@@ -254,6 +259,7 @@ describe('buildTreeFromRows', () => {
         hiddenUntil: null,
         completedDate: null,
         isOpen: true,
+        alarm: null,
       },
     ];
     const tree = buildTreeFromRows(rows);

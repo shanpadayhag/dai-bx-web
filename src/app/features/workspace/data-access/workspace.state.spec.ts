@@ -103,6 +103,7 @@ describe('WorkspaceState', () => {
         hiddenUntil: null,
         completedDate: null,
         isOpen: true,
+        alarm: null,
       });
     });
     expect(state.groups().length).toBe(1);
@@ -128,6 +129,7 @@ describe('WorkspaceState', () => {
         hiddenUntil: null,
         completedDate: null,
         isOpen: true,
+        alarm: null,
       });
     });
 

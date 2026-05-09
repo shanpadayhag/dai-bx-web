@@ -1,12 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList } from '@angular/cdk/drag-drop';
+import { OverlayModule, type ConnectedPosition } from '@angular/cdk/overlay';
 import { LucideAngularModule } from 'lucide-angular';
 import { AutofocusDirective } from '@shared/ui/autofocus/autofocus.directive';
 import { ButtonDirective } from '@shared/ui/button/button.directive';
 import { InputDirective } from '@shared/ui/input/input.directive';
 import { cn } from '@shared/utils/cn';
 import { todayIso } from '@shared/utils/dates';
+import { AlarmBadgeComponent } from '@features/alarms/ui/alarm-badge/alarm-badge.component';
+import { AlarmPickerComponent } from '@features/alarms/ui/alarm-picker/alarm-picker.component';
+import type { AlarmSpec } from '@features/alarms/data-access/alarms.types';
 import type { Task } from '@features/tasks/data-access/tasks.types';
 import { isVisibleToday } from '@features/tasks/data-access/tasks.tree';
 import { WorkspaceState } from '@features/workspace/data-access/workspace.state';
@@ -19,10 +23,13 @@ import { WorkspaceState } from '@features/workspace/data-access/workspace.state'
     CdkDrag,
     CdkDragHandle,
     CdkDropList,
+    OverlayModule,
     LucideAngularModule,
     AutofocusDirective,
     ButtonDirective,
     InputDirective,
+    AlarmBadgeComponent,
+    AlarmPickerComponent,
   ],
   templateUrl: './task-item.component.html',
   host: {
@@ -38,6 +45,31 @@ export class TaskItemComponent {
   protected readonly hovered = signal(false);
   protected readonly adding = signal(false);
   protected readonly newSubtaskName = signal('');
+  protected readonly pickingAlarm = signal(false);
+
+  protected readonly alarmOverlayPositions: ConnectedPosition[] = [
+    {
+      originX: 'end',
+      originY: 'bottom',
+      overlayX: 'end',
+      overlayY: 'top',
+      offsetY: 6,
+    },
+    {
+      originX: 'end',
+      originY: 'top',
+      overlayX: 'end',
+      overlayY: 'bottom',
+      offsetY: -6,
+    },
+    {
+      originX: 'start',
+      originY: 'bottom',
+      overlayX: 'start',
+      overlayY: 'top',
+      offsetY: 6,
+    },
+  ];
 
   protected readonly visible = computed(() => isVisibleToday(this.task()));
 
@@ -53,7 +85,7 @@ export class TaskItemComponent {
 
   protected readonly rowClass = computed(() =>
     cn(
-      'flex items-center gap-2 py-2 px-2 rounded-md border-2 transition-colors',
+      'flex items-center gap-2 py-1.5 px-2 rounded-md border-2 transition-colors',
       this.isCompleted()
         ? 'border-transparent bg-transparent'
         : 'border-transparent hover:border-border hover:bg-secondary-background',
@@ -70,7 +102,7 @@ export class TaskItemComponent {
   protected readonly actionsClass = computed(() =>
     cn(
       'flex items-center gap-1.5 transition-opacity',
-      this.hovered() ? 'opacity-100' : 'opacity-0',
+      this.hovered() ? 'opacity-100' : 'opacity-40',
     ),
   );
 
@@ -106,6 +138,25 @@ export class TaskItemComponent {
 
   protected onSubtaskBlur(): void {
     if (!this.newSubtaskName().trim()) this.adding.set(false);
+  }
+
+  protected toggleAlarmPicker(): void {
+    this.pickingAlarm.update((v) => !v);
+  }
+
+  protected onAlarmChange(alarm: AlarmSpec | null): void {
+    this.state.setTaskAlarm(this.groupId(), this.task().id, alarm);
+  }
+
+  protected onAlarmPickerClose(): void {
+    this.pickingAlarm.set(false);
+  }
+
+  protected onAlarmOverlayKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      this.onAlarmPickerClose();
+    }
   }
 
   protected onChildrenDrop(event: CdkDragDrop<Task[]>): void {

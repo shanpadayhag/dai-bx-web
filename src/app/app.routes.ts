@@ -6,6 +6,11 @@ export const routes: Routes = [
     loadChildren: () => import('@features/import/import.routes').then((m) => m.IMPORT_ROUTES),
   },
   {
+    path: 'settings',
+    loadChildren: () =>
+      import('@features/settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
+  },
+  {
     path: '',
     loadChildren: () =>
       import('@features/workspace/workspace.routes').then((m) => m.WORKSPACE_ROUTES),

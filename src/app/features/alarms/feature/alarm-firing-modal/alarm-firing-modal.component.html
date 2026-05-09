@@ -1,0 +1,49 @@
+@if (hasFiring()) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+    role="dialog"
+    aria-modal="true"
+  >
+    <div
+      class="w-full max-w-md rounded-md border-2 border-border bg-background shadow-brutal p-6 space-y-5 text-center"
+    >
+      <div class="flex justify-center">
+        <span
+          class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-warning text-warning-foreground border-2 border-border shadow-brutal"
+        >
+          <lucide-icon name="bell-ring" class="h-8 w-8 animate-pulse" />
+        </span>
+      </div>
+
+      <div class="space-y-1">
+        <p class="text-xs font-bold tracking-tight uppercase text-subtle-foreground">Alarm</p>
+        <h2 class="text-xl font-bold tracking-tight break-words">{{ firing()?.task?.name }}</h2>
+      </div>
+
+      <div class="flex gap-2 justify-center">
+        <button
+          appButton
+          variant="success"
+          size="lg"
+          btnClass="flex-1"
+          (click)="onDone()"
+          type="button"
+        >
+          <lucide-icon name="check" class="h-5 w-5" />
+          Done
+        </button>
+        <button
+          appButton
+          variant="neutral"
+          size="lg"
+          btnClass="flex-1"
+          (click)="onDismiss()"
+          type="button"
+        >
+          <lucide-icon name="x" class="h-5 w-5" />
+          Dismiss
+        </button>
+      </div>
+    </div>
+  </div>
+}
