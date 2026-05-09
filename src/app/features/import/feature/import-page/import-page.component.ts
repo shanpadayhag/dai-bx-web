@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ButtonDirective } from '@shared/ui/button/button.directive';
+import { PluralPipe } from '@shared/ui/plural/plural.pipe';
 import { CardComponent, CardContentComponent } from '@shared/ui/card/card.component';
 import type { Task } from '@features/tasks/data-access/tasks.types';
 import {
@@ -14,7 +15,14 @@ type Status = 'loading' | 'available' | 'empty' | 'imported' | 'error';
 @Component({
   selector: 'app-import-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule, ButtonDirective, CardComponent, CardContentComponent],
+  imports: [
+    RouterLink,
+    LucideAngularModule,
+    ButtonDirective,
+    PluralPipe,
+    CardComponent,
+    CardContentComponent,
+  ],
   templateUrl: './import-page.component.html',
 })
 export class ImportPageComponent {

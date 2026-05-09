@@ -10,6 +10,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ButtonDirective } from '@shared/ui/button/button.directive';
+import { BytesPipe } from '@shared/ui/bytes/bytes.pipe';
 import { CardComponent, CardContentComponent } from '@shared/ui/card/card.component';
 import {
   primeAudio,
@@ -18,16 +19,17 @@ import {
 } from '@features/alarms/data-access/alarm-sound';
 import { SoundsState } from '@features/sounds/data-access/sounds.state';
 
-const formatSize = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 102.4) / 10} KB`;
-  return `${Math.round(bytes / 104857.6) / 10} MB`;
-};
-
 @Component({
   selector: 'app-settings-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule, ButtonDirective, CardComponent, CardContentComponent],
+  imports: [
+    RouterLink,
+    LucideAngularModule,
+    ButtonDirective,
+    BytesPipe,
+    CardComponent,
+    CardContentComponent,
+  ],
   templateUrl: './settings-page.component.html',
 })
 export class SettingsPageComponent {
@@ -42,10 +44,6 @@ export class SettingsPageComponent {
   protected readonly defaultSoundId = this.state.defaultSoundId;
 
   protected readonly hasSounds = computed(() => this.sounds().length > 0);
-
-  protected formatSize(bytes: number): string {
-    return formatSize(bytes);
-  }
 
   protected onUploadClick(): void {
     this.fileInput()?.nativeElement.click();

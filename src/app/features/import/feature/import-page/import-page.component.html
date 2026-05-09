@@ -83,7 +83,7 @@
                       <span class="font-semibold tracking-tight">{{ group.name }}</span>
                       <span class="text-xs font-bold text-muted-foreground">
                         {{ group.tasks.length }}
-                        {{ group.tasks.length === 1 ? 'task' : 'tasks' }}
+                        {{ group.tasks.length | plural: 'task' : 'tasks' }}
                       </span>
                     </li>
                   }

@@ -5,6 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { AutofocusDirective } from '@shared/ui/autofocus/autofocus.directive';
 import { ButtonDirective } from '@shared/ui/button/button.directive';
 import { InputDirective } from '@shared/ui/input/input.directive';
+import { PluralPipe } from '@shared/ui/plural/plural.pipe';
 import { CardComponent, CardContentComponent } from '@shared/ui/card/card.component';
 import { cn } from '@shared/utils/cn';
 import type { Group } from '@features/groups/data-access/groups.types';
@@ -25,6 +26,7 @@ import { TaskItemComponent } from '@features/workspace/ui/task-item/task-item.co
     AutofocusDirective,
     ButtonDirective,
     InputDirective,
+    PluralPipe,
     CardComponent,
     CardContentComponent,
     TaskItemComponent,

@@ -66,11 +66,6 @@ export class TasksState {
     return this._trees().get(groupId) ?? [];
   }
 
-  /** Reactive accessor for a group's tasks. */
-  signalFor(groupId: string) {
-    return computed(() => this._trees().get(groupId) ?? []);
-  }
-
   async loadAll(): Promise<void> {
     const rows = await this.repository.listAll();
     this.hydrateFromRows(rows);

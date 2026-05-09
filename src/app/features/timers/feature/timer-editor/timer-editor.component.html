@@ -73,9 +73,10 @@
         class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-subtle-foreground cursor-pointer"
       >
         <input
+          #autoAdvanceCheckbox
           type="checkbox"
           [checked]="set.autoAdvance"
-          (change)="toggleAutoAdvance($any($event.target).checked)"
+          (change)="toggleAutoAdvance(autoAdvanceCheckbox.checked)"
           class="h-4 w-4"
         />
         Auto-advance between steps

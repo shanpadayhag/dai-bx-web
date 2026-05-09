@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { todayIso } from '@shared/utils/dates';
 import { LegacyDataService, type LegacyGroupShape } from '@core/db/legacy-data.service';
 import { GroupsRepository } from '@features/groups/data-access/groups.repository';
 import { GroupsState } from '@features/groups/data-access/groups.state';
@@ -42,7 +43,9 @@ export class WorkspaceState {
     const now = Date.now();
     let best: { task: Task; groupId: string; at: number } | null = null;
     for (const entry of this.tasksState.tasksWithAlarm()) {
-      const at = Date.parse(entry.task.alarm!.firesAt);
+      const alarm = entry.task.alarm;
+      if (!alarm) continue;
+      const at = Date.parse(alarm.firesAt);
       if (Number.isNaN(at) || at < now) continue;
       if (!best || at < best.at) best = { ...entry, at };
     }
@@ -58,9 +61,10 @@ export class WorkspaceState {
   }
 
   visibleTaskCount(group: Group): number {
+    const today = todayIso();
     return this.tasksState
       .tasksFor(group.id)
-      .filter((t) => !t.hiddenUntil || t.hiddenUntil <= new Date().toISOString().slice(0, 10))
+      .filter((t) => !t.hiddenUntil || t.hiddenUntil <= today)
       .length;
   }
 
