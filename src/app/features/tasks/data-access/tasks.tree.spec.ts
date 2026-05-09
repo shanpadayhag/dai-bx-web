@@ -8,11 +8,14 @@ import {
   insertSubtask,
   isVisibleToday,
   reorderTasksByParent,
+  setActiveTimerSetIdById,
+  setTaskTimerSetsById,
   toTaskRow,
   toggleTaskCompletionById,
   toggleTaskOpenById,
 } from '@features/tasks/data-access/tasks.tree';
 import type { Task, TaskRow } from '@features/tasks/data-access/tasks.types';
+import type { TimerSet } from '@features/timers/data-access/timers.types';
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -24,7 +27,18 @@ const makeTask = (overrides: Partial<Task> = {}): Task => ({
   completedDate: overrides.completedDate ?? null,
   isOpen: overrides.isOpen ?? true,
   alarm: overrides.alarm ?? null,
+  timerSets: overrides.timerSets ?? [],
+  activeTimerSetId: overrides.activeTimerSetId ?? null,
   tasks: overrides.tasks ?? [],
+});
+
+const makeSet = (id: string, order = 0): TimerSet => ({
+  id,
+  name: id,
+  order,
+  autoAdvance: true,
+  soundId: null,
+  timers: [],
 });
 
 describe('isVisibleToday', () => {
@@ -195,7 +209,98 @@ describe('toTaskRow', () => {
       completedDate: null,
       isOpen: true,
       alarm: null,
+      timerSets: [],
+      activeTimerSetId: null,
     });
+  });
+
+  it('preserves timer sets and active id', () => {
+    const sets = [makeSet('a'), makeSet('b', 1)];
+    const row = toTaskRow(
+      makeTask({ id: 't', timerSets: sets, activeTimerSetId: 'b' }),
+      'g',
+      null,
+    );
+    expect(row.timerSets).toEqual(sets);
+    expect(row.activeTimerSetId).toBe('b');
+  });
+
+  it('defaults missing timer fields when source omits them (legacy boundary)', () => {
+    const legacyTask = { ...makeTask({ id: 't' }) } as Task & {
+      timerSets?: undefined;
+      activeTimerSetId?: undefined;
+    };
+    delete (legacyTask as { timerSets?: unknown }).timerSets;
+    delete (legacyTask as { activeTimerSetId?: unknown }).activeTimerSetId;
+    const row = toTaskRow(legacyTask, 'g', null);
+    expect(row.timerSets).toEqual([]);
+    expect(row.activeTimerSetId).toBeNull();
+  });
+});
+
+describe('setTaskTimerSetsById', () => {
+  it('replaces timer sets and keeps the active id when it still exists', () => {
+    const tasks: Task[] = [
+      makeTask({
+        id: 't',
+        timerSets: [makeSet('a'), makeSet('b', 1)],
+        activeTimerSetId: 'b',
+      }),
+    ];
+    const next = setTaskTimerSetsById(tasks, 't', [makeSet('a'), makeSet('b', 1), makeSet('c', 2)]);
+    expect(next[0].timerSets.map((s) => s.id)).toEqual(['a', 'b', 'c']);
+    expect(next[0].activeTimerSetId).toBe('b');
+  });
+
+  it('falls back to the first set when the active id is no longer valid', () => {
+    const tasks: Task[] = [
+      makeTask({
+        id: 't',
+        timerSets: [makeSet('a'), makeSet('b', 1)],
+        activeTimerSetId: 'b',
+      }),
+    ];
+    const next = setTaskTimerSetsById(tasks, 't', [makeSet('c'), makeSet('d', 1)]);
+    expect(next[0].activeTimerSetId).toBe('c');
+  });
+
+  it('clears the active id when all sets are removed', () => {
+    const tasks: Task[] = [
+      makeTask({
+        id: 't',
+        timerSets: [makeSet('a')],
+        activeTimerSetId: 'a',
+      }),
+    ];
+    const next = setTaskTimerSetsById(tasks, 't', []);
+    expect(next[0].timerSets).toEqual([]);
+    expect(next[0].activeTimerSetId).toBeNull();
+  });
+});
+
+describe('setActiveTimerSetIdById', () => {
+  it('switches the active set when the target exists', () => {
+    const tasks: Task[] = [
+      makeTask({
+        id: 't',
+        timerSets: [makeSet('a'), makeSet('b', 1)],
+        activeTimerSetId: 'a',
+      }),
+    ];
+    const next = setActiveTimerSetIdById(tasks, 't', 'b');
+    expect(next[0].activeTimerSetId).toBe('b');
+  });
+
+  it('coerces an unknown id to the first available set', () => {
+    const tasks: Task[] = [
+      makeTask({
+        id: 't',
+        timerSets: [makeSet('a'), makeSet('b', 1)],
+        activeTimerSetId: 'a',
+      }),
+    ];
+    const next = setActiveTimerSetIdById(tasks, 't', 'missing');
+    expect(next[0].activeTimerSetId).toBe('a');
   });
 });
 
@@ -227,6 +332,8 @@ describe('buildTreeFromRows', () => {
         completedDate: null,
         isOpen: true,
         alarm: null,
+        timerSets: [],
+        activeTimerSetId: null,
       },
       {
         id: 'a',
@@ -238,6 +345,8 @@ describe('buildTreeFromRows', () => {
         completedDate: null,
         isOpen: true,
         alarm: null,
+        timerSets: [],
+        activeTimerSetId: null,
       },
       {
         id: 'b',
@@ -249,6 +358,8 @@ describe('buildTreeFromRows', () => {
         completedDate: null,
         isOpen: true,
         alarm: null,
+        timerSets: [],
+        activeTimerSetId: null,
       },
       {
         id: 'a0',
@@ -260,6 +371,8 @@ describe('buildTreeFromRows', () => {
         completedDate: null,
         isOpen: true,
         alarm: null,
+        timerSets: [],
+        activeTimerSetId: null,
       },
     ];
     const tree = buildTreeFromRows(rows);

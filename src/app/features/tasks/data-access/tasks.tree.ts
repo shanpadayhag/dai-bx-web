@@ -1,6 +1,7 @@
 import { todayIso } from '@shared/utils/dates';
 import type { AlarmSpec } from '@features/alarms/data-access/alarms.types';
 import type { Task, TaskRow } from '@features/tasks/data-access/tasks.types';
+import type { TimerSet } from '@features/timers/data-access/timers.types';
 
 export const isVisibleToday = (task: Task): boolean =>
   !task.hiddenUntil || task.hiddenUntil <= todayIso();
@@ -70,6 +71,45 @@ export const setTaskAlarmById = (
     return { ...task, tasks: setTaskAlarmById(task.tasks, taskId, alarm) };
   });
 
+const sanitizeActiveTimerSetId = (sets: TimerSet[], activeId: string | null): string | null => {
+  if (activeId && sets.some((s) => s.id === activeId)) return activeId;
+  return sets[0]?.id ?? null;
+};
+
+export const setTaskTimerSetsById = (
+  tasks: Task[],
+  taskId: string,
+  timerSets: TimerSet[],
+): Task[] =>
+  tasks.map((task) => {
+    if (task.id === taskId) {
+      return {
+        ...task,
+        timerSets,
+        activeTimerSetId: sanitizeActiveTimerSetId(timerSets, task.activeTimerSetId),
+      };
+    }
+    return { ...task, tasks: setTaskTimerSetsById(task.tasks, taskId, timerSets) };
+  });
+
+export const setActiveTimerSetIdById = (
+  tasks: Task[],
+  taskId: string,
+  activeTimerSetId: string | null,
+): Task[] =>
+  tasks.map((task) => {
+    if (task.id === taskId) {
+      return {
+        ...task,
+        activeTimerSetId: sanitizeActiveTimerSetId(task.timerSets, activeTimerSetId),
+      };
+    }
+    return {
+      ...task,
+      tasks: setActiveTimerSetIdById(task.tasks, taskId, activeTimerSetId),
+    };
+  });
+
 export const reorderTasksByParent = (
   tasks: Task[],
   parentId: string | null,
@@ -132,6 +172,8 @@ export const toTaskRow = (task: Task, groupId: string, parentId: string | null):
   completedDate: task.completedDate,
   isOpen: task.isOpen,
   alarm: task.alarm,
+  timerSets: task.timerSets ?? [],
+  activeTimerSetId: task.activeTimerSetId ?? null,
 });
 
 export const flattenTasks = (
@@ -155,6 +197,7 @@ const sortRecursive = (tasks: Task[]): void => {
 export const buildTreeFromRows = (rows: TaskRow[]): Task[] => {
   const byId = new Map<string, Task>();
   for (const r of rows) {
+    const timerSets = r.timerSets ?? [];
     byId.set(r.id, {
       id: r.id,
       name: r.name,
@@ -163,6 +206,8 @@ export const buildTreeFromRows = (rows: TaskRow[]): Task[] => {
       completedDate: r.completedDate,
       isOpen: r.isOpen,
       alarm: r.alarm ?? null,
+      timerSets,
+      activeTimerSetId: sanitizeActiveTimerSetId(timerSets, r.activeTimerSetId ?? null),
       tasks: [],
     });
   }

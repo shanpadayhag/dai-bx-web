@@ -8,6 +8,7 @@ import { TasksRepository } from '@features/tasks/data-access/tasks.repository';
 import { TasksState } from '@features/tasks/data-access/tasks.state';
 import type { Task } from '@features/tasks/data-access/tasks.types';
 import { flattenTasks } from '@features/tasks/data-access/tasks.tree';
+import type { TimerSet } from '@features/timers/data-access/timers.types';
 
 export interface LegacyGroupView extends Group {
   tasks: Task[];
@@ -115,6 +116,14 @@ export class WorkspaceState {
 
   setTaskAlarm(groupId: string, taskId: string, alarm: AlarmSpec | null): void {
     this.tasksState.setAlarm(groupId, taskId, alarm);
+  }
+
+  setTaskTimerSets(groupId: string, taskId: string, timerSets: TimerSet[]): void {
+    this.tasksState.setTimerSets(groupId, taskId, timerSets);
+  }
+
+  setTaskActiveTimerSetId(groupId: string, taskId: string, activeTimerSetId: string | null): void {
+    this.tasksState.setActiveTimerSetId(groupId, taskId, activeTimerSetId);
   }
 
   reorderTasks(

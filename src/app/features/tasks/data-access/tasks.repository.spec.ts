@@ -23,6 +23,8 @@ const makeRow = (overrides: Partial<TaskRow>): TaskRow => ({
   completedDate: overrides.completedDate ?? null,
   isOpen: overrides.isOpen ?? true,
   alarm: overrides.alarm ?? null,
+  timerSets: overrides.timerSets ?? [],
+  activeTimerSetId: overrides.activeTimerSetId ?? null,
 });
 
 describe('TasksRepository', () => {

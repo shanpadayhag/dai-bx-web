@@ -67,6 +67,8 @@ describe('GroupsRepository', () => {
         completedDate: null,
         isOpen: true,
         alarm: null,
+        timerSets: [],
+        activeTimerSetId: null,
       },
       {
         id: 't2',
@@ -78,6 +80,8 @@ describe('GroupsRepository', () => {
         completedDate: null,
         isOpen: true,
         alarm: null,
+        timerSets: [],
+        activeTimerSetId: null,
       },
       {
         id: 't3',
@@ -89,6 +93,8 @@ describe('GroupsRepository', () => {
         completedDate: null,
         isOpen: true,
         alarm: null,
+        timerSets: [],
+        activeTimerSetId: null,
       },
     ];
     await tasksRepo.putBatch(tasks);
