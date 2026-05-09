@@ -60,6 +60,7 @@ describe('TasksState', () => {
       hiddenUntil: null,
       completedDate: null,
       isOpen: true,
+      alarm: null,
     });
     repo.rows.set('t1-1', {
       id: 't1-1',
@@ -70,6 +71,7 @@ describe('TasksState', () => {
       hiddenUntil: null,
       completedDate: null,
       isOpen: true,
+      alarm: null,
     });
     repo.rows.set('t2', {
       id: 't2',
@@ -80,6 +82,7 @@ describe('TasksState', () => {
       hiddenUntil: null,
       completedDate: null,
       isOpen: true,
+      alarm: null,
     });
 
     await state.loadAll();

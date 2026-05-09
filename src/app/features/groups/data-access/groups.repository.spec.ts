@@ -66,6 +66,7 @@ describe('GroupsRepository', () => {
         hiddenUntil: null,
         completedDate: null,
         isOpen: true,
+        alarm: null,
       },
       {
         id: 't2',
@@ -76,6 +77,7 @@ describe('GroupsRepository', () => {
         hiddenUntil: null,
         completedDate: null,
         isOpen: true,
+        alarm: null,
       },
       {
         id: 't3',
@@ -86,6 +88,7 @@ describe('GroupsRepository', () => {
         hiddenUntil: null,
         completedDate: null,
         isOpen: true,
+        alarm: null,
       },
     ];
     await tasksRepo.putBatch(tasks);

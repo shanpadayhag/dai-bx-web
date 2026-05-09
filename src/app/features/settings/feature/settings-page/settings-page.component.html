@@ -1,0 +1,123 @@
+<div class="min-h-screen">
+  <div class="max-w-2xl mx-auto px-5 py-10">
+    <header class="mb-8 flex items-start justify-between gap-4">
+      <div class="flex items-start gap-4 flex-1 min-w-0">
+        <div
+          class="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border-2 border-border bg-primary text-primary-foreground shadow-brutal"
+          aria-hidden="true"
+        >
+          <lucide-icon name="settings" class="h-7 w-7" />
+        </div>
+        <div class="min-w-0">
+          <h1 class="text-4xl font-black tracking-tighter text-foreground leading-none">Settings</h1>
+          <p class="mt-2 text-sm font-medium text-muted-foreground">
+            Manage alarm sounds. Set a default that plays when a task has no sound of its own.
+          </p>
+        </div>
+      </div>
+      <a appButton variant="neutral" routerLink="/">Back</a>
+    </header>
+
+    <app-card class="mb-6">
+      <app-card-content>
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h2 class="text-base font-bold tracking-tight">Sound library</h2>
+            <p class="text-xs font-medium text-muted-foreground mt-0.5">
+              Upload MP3, WAV, OGG, or M4A files.
+            </p>
+          </div>
+          <input
+            #fileInput
+            type="file"
+            accept="audio/*"
+            multiple
+            (change)="onFileChange($event)"
+            class="hidden"
+          />
+          <button appButton (click)="onUploadClick()" [disabled]="busy()" type="button">
+            <lucide-icon name="upload" class="h-4 w-4" />
+            Add sound
+          </button>
+        </div>
+      </app-card-content>
+    </app-card>
+
+    @if (hasSounds()) {
+      <app-card>
+        <ul class="divide-y-2 divide-border">
+          @for (sound of sounds(); track sound.id) {
+            <li class="flex items-center gap-3 px-5 py-3">
+              <button
+                appButton
+                variant="neutral"
+                size="icon-sm"
+                (click)="onPreview(sound.id)"
+                [title]="playingId() === sound.id ? 'Stop preview' : 'Preview sound'"
+                type="button"
+              >
+                @if (playingId() === sound.id) {
+                  <lucide-icon name="square" class="h-4 w-4" />
+                } @else {
+                  <lucide-icon name="play" class="h-4 w-4" />
+                }
+              </button>
+
+              <div class="flex-1 min-w-0">
+                <p class="font-bold tracking-tight truncate">{{ sound.name }}</p>
+                <p class="text-xs font-medium text-muted-foreground font-mono tabular-nums">
+                  {{ formatSize(sound.sizeBytes) }}
+                </p>
+              </div>
+
+              @if (defaultSoundId() === sound.id) {
+                <span
+                  class="inline-flex items-center gap-1 rounded-md border-2 border-border bg-warning text-warning-foreground px-2 py-1 text-xs font-bold tracking-tight shadow-brutal-sm"
+                >
+                  <lucide-icon name="star" class="h-3.5 w-3.5" />
+                  Default
+                </span>
+              }
+
+              <button
+                appButton
+                [variant]="defaultSoundId() === sound.id ? 'warning' : 'ghost'"
+                size="icon-sm"
+                (click)="onSetDefault(sound.id)"
+                [title]="defaultSoundId() === sound.id ? 'Unset as default' : 'Set as default'"
+                type="button"
+              >
+                <lucide-icon name="star" class="h-4 w-4" />
+              </button>
+
+              <button
+                appButton
+                variant="destructive"
+                size="icon-sm"
+                (click)="onDelete(sound.id)"
+                title="Delete sound"
+                type="button"
+              >
+                <lucide-icon name="trash-2" class="h-4 w-4" />
+              </button>
+            </li>
+          }
+        </ul>
+      </app-card>
+    } @else {
+      <div
+        class="text-center rounded-lg border-2 border-dashed border-border/50 bg-secondary-background/40 py-14 px-6"
+      >
+        <div
+          class="mx-auto mb-5 inline-flex h-14 w-14 items-center justify-center rounded-md border-2 border-border bg-warning shadow-brutal"
+        >
+          <lucide-icon name="music" class="h-7 w-7 text-warning-foreground" />
+        </div>
+        <h3 class="text-lg font-bold tracking-tight mb-1">No sounds yet</h3>
+        <p class="text-sm text-muted-foreground font-medium max-w-sm mx-auto">
+          Upload a sound above. Without a custom sound, alarms play a built-in beep.
+        </p>
+      </div>
+    }
+  </div>
+</div>

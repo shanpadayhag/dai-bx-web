@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
@@ -6,6 +6,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ButtonDirective } from '@shared/ui/button/button.directive';
 import { InputDirective } from '@shared/ui/input/input.directive';
 import { CardComponent, CardContentComponent } from '@shared/ui/card/card.component';
+import { formatAlarmTime } from '@features/alarms/data-access/alarm-format';
 import type { Group } from '@features/groups/data-access/groups.types';
 import { WorkspaceState } from '@features/workspace/data-access/workspace.state';
 import { GroupItemComponent } from '@features/workspace/ui/group-item/group-item.component';
@@ -30,6 +31,15 @@ import { GroupItemComponent } from '@features/workspace/ui/group-item/group-item
 export class WorkspacePageComponent {
   protected readonly state = inject(WorkspaceState);
   protected readonly groupName = signal('');
+
+  protected readonly nextAlarmLabel = computed(() => {
+    const next = this.state.nextAlarm();
+    if (!next || !next.task.alarm) return null;
+    return {
+      time: formatAlarmTime(next.task.alarm.firesAt),
+      taskName: next.task.name,
+    };
+  });
 
   protected createGroup(event: Event): void {
     event.preventDefault();

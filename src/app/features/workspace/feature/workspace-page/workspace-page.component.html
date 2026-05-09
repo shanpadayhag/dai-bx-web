@@ -1,12 +1,44 @@
 <div class="min-h-screen">
   <div class="max-w-3xl mx-auto px-5 py-10">
     <header class="mb-10">
-      <h1 class="text-5xl sm:text-6xl font-black tracking-tighter text-foreground leading-none">
-        DaiBX
-      </h1>
-      <p class="mt-3 text-base font-medium text-muted-foreground max-w-md">
-        Organize your tasks into groups and stay productive.
-      </p>
+      <div class="flex items-start gap-5">
+        <img
+          src="/icon.svg"
+          alt="DaiBX"
+          class="h-20 w-20 shrink-0 rounded-lg border-2 border-border shadow-brutal"
+        />
+        <div class="flex-1 min-w-0 pt-1">
+          <h1 class="text-5xl sm:text-6xl font-black tracking-tighter text-foreground leading-none">
+            DaiBX
+          </h1>
+          <p class="mt-3 text-base font-medium text-muted-foreground max-w-md">
+            Organize your tasks into groups and stay productive.
+          </p>
+        </div>
+        <a
+          appButton
+          variant="neutral"
+          size="icon"
+          routerLink="/settings"
+          title="Settings"
+          aria-label="Settings"
+          class="shrink-0"
+        >
+          <lucide-icon name="settings" class="h-5 w-5" />
+        </a>
+      </div>
+
+      @if (nextAlarmLabel(); as next) {
+        <div
+          class="mt-5 inline-flex max-w-full items-center gap-2 rounded-md border-2 border-border bg-warning text-warning-foreground px-3 py-1.5 shadow-brutal-sm font-bold tracking-tight text-sm"
+        >
+          <lucide-icon name="bell-ring" class="h-4 w-4 shrink-0" />
+          <span class="text-xs uppercase tracking-wider opacity-70">Next</span>
+          <span class="font-mono tabular-nums">{{ next.time }}</span>
+          <span class="opacity-50" aria-hidden="true">·</span>
+          <span class="truncate min-w-0">{{ next.taskName }}</span>
+        </div>
+      }
     </header>
 
     @if (state.hasLegacyData()) {

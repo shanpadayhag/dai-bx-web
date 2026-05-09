@@ -1,0 +1,88 @@
+<div class="flex items-stretch justify-center gap-2 select-none">
+  <div class="flex flex-col items-center gap-1">
+    <button
+      type="button"
+      tabindex="-1"
+      (click)="adjustHour(1)"
+      class="inline-flex h-7 w-12 items-center justify-center rounded-md text-foreground hover:bg-foreground/5 transition-colors cursor-pointer"
+      aria-label="Increase hour"
+    >
+      <lucide-icon name="chevron-up" class="h-4 w-4" />
+    </button>
+    <input
+      #hourInput
+      type="text"
+      inputmode="numeric"
+      maxlength="2"
+      [attr.value]="hourDisplay()"
+      (input)="onHourInput($event)"
+      (focus)="onSegmentFocus($event)"
+      (blur)="onSegmentBlur($event, 'hour')"
+      (keydown.arrowup)="adjustHour(1); $event.preventDefault()"
+      (keydown.arrowdown)="adjustHour(-1); $event.preventDefault()"
+      (keydown.space)="toggleMeridiem(); $event.preventDefault()"
+      class="h-14 w-12 rounded-md border-2 border-border bg-secondary-background text-center text-3xl font-bold tabular-nums tracking-tight"
+      aria-label="Hour"
+    />
+    <button
+      type="button"
+      tabindex="-1"
+      (click)="adjustHour(-1)"
+      class="inline-flex h-7 w-12 items-center justify-center rounded-md text-foreground hover:bg-foreground/5 transition-colors cursor-pointer"
+      aria-label="Decrease hour"
+    >
+      <lucide-icon name="chevron-down" class="h-4 w-4" />
+    </button>
+  </div>
+
+  <div class="flex items-center text-3xl font-bold">:</div>
+
+  <div class="flex flex-col items-center gap-1">
+    <button
+      type="button"
+      tabindex="-1"
+      (click)="adjustMinute(1)"
+      class="inline-flex h-7 w-12 items-center justify-center rounded-md text-foreground hover:bg-foreground/5 transition-colors cursor-pointer"
+      aria-label="Increase minute"
+    >
+      <lucide-icon name="chevron-up" class="h-4 w-4" />
+    </button>
+    <input
+      #minuteInput
+      type="text"
+      inputmode="numeric"
+      maxlength="2"
+      [attr.value]="minuteDisplay()"
+      (input)="onMinuteInput($event)"
+      (focus)="onSegmentFocus($event)"
+      (blur)="onSegmentBlur($event, 'minute')"
+      (keydown.arrowup)="adjustMinute(1); $event.preventDefault()"
+      (keydown.arrowdown)="adjustMinute(-1); $event.preventDefault()"
+      (keydown.space)="toggleMeridiem(); $event.preventDefault()"
+      class="h-14 w-12 rounded-md border-2 border-border bg-secondary-background text-center text-3xl font-bold tabular-nums tracking-tight"
+      aria-label="Minute"
+    />
+    <button
+      type="button"
+      tabindex="-1"
+      (click)="adjustMinute(-1)"
+      class="inline-flex h-7 w-12 items-center justify-center rounded-md text-foreground hover:bg-foreground/5 transition-colors cursor-pointer"
+      aria-label="Decrease minute"
+    >
+      <lucide-icon name="chevron-down" class="h-4 w-4" />
+    </button>
+  </div>
+
+  <div class="flex flex-col items-center gap-1">
+    <div class="h-7 w-12" aria-hidden="true"></div>
+    <button
+      type="button"
+      [class]="meridiemClass()"
+      (click)="toggleMeridiem()"
+      [attr.aria-label]="isPm() ? 'Switch to AM' : 'Switch to PM'"
+    >
+      {{ isPm() ? 'PM' : 'AM' }}
+    </button>
+    <div class="h-7 w-12" aria-hidden="true"></div>
+  </div>
+</div>

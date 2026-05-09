@@ -1,4 +1,5 @@
 import { todayIso } from '@shared/utils/dates';
+import type { AlarmSpec } from '@features/alarms/data-access/alarms.types';
 import type { Task, TaskRow } from '@features/tasks/data-access/tasks.types';
 
 export const isVisibleToday = (task: Task): boolean =>
@@ -57,6 +58,16 @@ export const toggleTaskOpenById = (tasks: Task[], taskId: string, isOpen: boolea
   tasks.map((task) => {
     if (task.id === taskId) return { ...task, isOpen };
     return { ...task, tasks: toggleTaskOpenById(task.tasks, taskId, isOpen) };
+  });
+
+export const setTaskAlarmById = (
+  tasks: Task[],
+  taskId: string,
+  alarm: AlarmSpec | null,
+): Task[] =>
+  tasks.map((task) => {
+    if (task.id === taskId) return { ...task, alarm };
+    return { ...task, tasks: setTaskAlarmById(task.tasks, taskId, alarm) };
   });
 
 export const reorderTasksByParent = (
@@ -120,6 +131,7 @@ export const toTaskRow = (task: Task, groupId: string, parentId: string | null):
   hiddenUntil: task.hiddenUntil,
   completedDate: task.completedDate,
   isOpen: task.isOpen,
+  alarm: task.alarm,
 });
 
 export const flattenTasks = (
@@ -150,6 +162,7 @@ export const buildTreeFromRows = (rows: TaskRow[]): Task[] => {
       hiddenUntil: r.hiddenUntil,
       completedDate: r.completedDate,
       isOpen: r.isOpen,
+      alarm: r.alarm ?? null,
       tasks: [],
     });
   }

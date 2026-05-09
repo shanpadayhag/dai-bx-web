@@ -28,7 +28,30 @@
 
     <span [class]="nameClass()">{{ task().name }}</span>
 
+    @if (task().alarm; as alarm) {
+      <button
+        type="button"
+        class="cursor-pointer"
+        (click)="toggleAlarmPicker()"
+        title="Change alarm"
+      >
+        <app-alarm-badge [alarm]="alarm" />
+      </button>
+    }
+
     <div [class]="actionsClass()">
+      <button
+        #alarmTrigger="cdkOverlayOrigin"
+        cdkOverlayOrigin
+        appButton
+        [variant]="task().alarm ? 'warning' : 'neutral'"
+        size="icon-sm"
+        (click)="toggleAlarmPicker()"
+        [title]="task().alarm ? 'Change alarm' : 'Set alarm'"
+        type="button"
+      >
+        <lucide-icon [name]="task().alarm ? 'bell-ring' : 'bell'" class="h-4 w-4" />
+      </button>
       @if (isCompleted()) {
         <button
           appButton
@@ -74,6 +97,24 @@
       </button>
     </div>
   </div>
+
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="alarmTrigger"
+    [cdkConnectedOverlayOpen]="pickingAlarm()"
+    [cdkConnectedOverlayPositions]="alarmOverlayPositions"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+    (backdropClick)="onAlarmPickerClose()"
+    (detach)="onAlarmPickerClose()"
+    (overlayKeydown)="onAlarmOverlayKeydown($event)"
+  >
+    <app-alarm-picker
+      [alarm]="task().alarm"
+      (alarmChange)="onAlarmChange($event)"
+      (close)="onAlarmPickerClose()"
+    />
+  </ng-template>
 
   @if (adding()) {
     <form (submit)="submitSubtask($event)" class="flex gap-2 mt-2 ml-10 mr-2 mb-2">

@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '@angular/cdk/overlay-prebuilt.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -94,11 +95,14 @@ body {
   font-family: var(--font-sans);
   font-weight: 500;
   margin: 0;
-  background-image:
-    radial-gradient(circle at 0% 0%, oklch(85% 0.07 259 / 0.5), transparent 45%),
-    radial-gradient(circle at 100% 0%, oklch(85% 0.18 90 / 0.4), transparent 40%),
-    radial-gradient(circle at 100% 100%, oklch(85% 0.12 320 / 0.35), transparent 45%);
+  background-image: radial-gradient(circle at 1px 1px, oklch(0% 0 0 / 0.06) 1px, transparent 0);
+  background-size: 22px 22px;
   background-attachment: fixed;
+}
+
+:where(button, input, textarea, select, a, [tabindex]):focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 0;
 }
 
 h1,

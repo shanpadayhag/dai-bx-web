@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { uid } from '@shared/utils/uid';
+import type { AlarmSpec } from '@features/alarms/data-access/alarms.types';
 import { TasksRepository } from '@features/tasks/data-access/tasks.repository';
 import type { Task, TaskRow } from '@features/tasks/data-access/tasks.types';
 import {
@@ -11,6 +12,7 @@ import {
   getSiblingsOf,
   insertSubtask,
   reorderTasksByParent,
+  setTaskAlarmById,
   toTaskRow,
   toggleTaskCompletionById,
   toggleTaskOpenById,
@@ -24,6 +26,18 @@ export class TasksState {
   private readonly _isLoaded = signal(false);
 
   readonly isLoaded = this._isLoaded.asReadonly();
+
+  readonly tasksWithAlarm = computed<{ task: Task; groupId: string }[]>(() => {
+    const out: { task: Task; groupId: string }[] = [];
+    const walk = (nodes: Task[], groupId: string): void => {
+      for (const t of nodes) {
+        if (t.alarm) out.push({ task: t, groupId });
+        if (t.tasks.length) walk(t.tasks, groupId);
+      }
+    };
+    for (const [gid, tree] of this._trees()) walk(tree, gid);
+    return out;
+  });
 
   tasksFor(groupId: string): Task[] {
     return this._trees().get(groupId) ?? [];
@@ -74,6 +88,7 @@ export class TasksState {
       hiddenUntil: null,
       completedDate: null,
       isOpen: true,
+      alarm: null,
       tasks: [],
     };
     this.replaceTree(groupId, [...tree, newTask]);
@@ -93,6 +108,7 @@ export class TasksState {
       hiddenUntil: null,
       completedDate: null,
       isOpen: true,
+      alarm: null,
       tasks: [],
     };
     this.replaceTree(groupId, insertSubtask(tree, parentTaskId, newTask));
@@ -118,6 +134,13 @@ export class TasksState {
 
   toggleOpen(groupId: string, taskId: string, isOpen: boolean): void {
     const next = toggleTaskOpenById(this.tasksFor(groupId), taskId, isOpen);
+    this.replaceTree(groupId, next);
+    const found = findTaskInTree(next, taskId);
+    if (found) void this.repository.put(toTaskRow(found.task, groupId, found.parentId));
+  }
+
+  setAlarm(groupId: string, taskId: string, alarm: AlarmSpec | null): void {
+    const next = setTaskAlarmById(this.tasksFor(groupId), taskId, alarm);
     this.replaceTree(groupId, next);
     const found = findTaskInTree(next, taskId);
     if (found) void this.repository.put(toTaskRow(found.task, groupId, found.parentId));

@@ -1,3 +1,5 @@
+import type { AlarmSpec } from '@features/alarms/data-access/alarms.types';
+
 export interface Task {
   id: string;
   name: string;
@@ -5,6 +7,7 @@ export interface Task {
   hiddenUntil: string | null;
   completedDate: string | null;
   isOpen: boolean;
+  alarm: AlarmSpec | null;
   tasks: Task[];
 }
 
@@ -17,4 +20,5 @@ export interface TaskRow {
   hiddenUntil: string | null;
   completedDate: string | null;
   isOpen: boolean;
+  alarm: AlarmSpec | null;
 }
