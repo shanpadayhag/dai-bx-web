@@ -1,51 +1,60 @@
-import { Injectable } from '@angular/core';
-import { type IDBPDatabase, openDB } from 'idb';
-import type { Group } from '@features/tasks/data-access/tasks.types';
-
-const DB_NAME = 'daibx';
-const DB_VERSION = 1;
-const STORE_NAME = 'app-state';
-const GROUPS_KEY = 'groups';
+import { Injectable, inject } from '@angular/core';
+import { DatabaseService } from '@core/db/database.service';
+import { STORES, TASK_INDEXES } from '@core/db/database.schema';
+import type { TaskRow } from '@features/tasks/data-access/tasks.types';
 
 @Injectable({ providedIn: 'root' })
 export class TasksRepository {
-  private dbPromise: Promise<IDBPDatabase> | null = null;
+  private readonly database = inject(DatabaseService);
 
-  async loadGroups(): Promise<Group[]> {
+  async listAll(): Promise<TaskRow[]> {
     try {
-      const db = await this.db();
-      const all = (await db.getAll(STORE_NAME)) as unknown[];
-      const value = all[0];
-      return Array.isArray(value) ? (value as Group[]) : [];
+      const db = await this.database.db();
+      return (await db.getAll(STORES.tasks)) as TaskRow[];
     } catch {
       return [];
     }
   }
 
-  async saveGroups(groups: Group[]): Promise<void> {
+  async listByGroup(groupId: string): Promise<TaskRow[]> {
     try {
-      const db = await this.db();
-      await db.put(STORE_NAME, groups, GROUPS_KEY);
+      const db = await this.database.db();
+      return (await db.getAllFromIndex(STORES.tasks, TASK_INDEXES.byGroup, groupId)) as TaskRow[];
     } catch {
-      /* quota or unavailable storage — ignore */
+      return [];
     }
   }
 
-  async close(): Promise<void> {
-    if (!this.dbPromise) return;
-    const db = await this.dbPromise;
-    db.close();
-    this.dbPromise = null;
+  async put(row: TaskRow): Promise<void> {
+    try {
+      const db = await this.database.db();
+      await db.put(STORES.tasks, row);
+    } catch {
+      /* ignore */
+    }
   }
 
-  private db(): Promise<IDBPDatabase> {
-    if (!this.dbPromise) {
-      this.dbPromise = openDB(DB_NAME, DB_VERSION, {
-        upgrade(db) {
-          db.createObjectStore(STORE_NAME);
-        },
-      });
+  async putBatch(rows: TaskRow[]): Promise<void> {
+    if (rows.length === 0) return;
+    try {
+      const db = await this.database.db();
+      const tx = db.transaction(STORES.tasks, 'readwrite');
+      for (const row of rows) await tx.store.put(row);
+      await tx.done;
+    } catch {
+      /* ignore */
     }
-    return this.dbPromise;
+  }
+
+  async deleteByIds(taskIds: string[]): Promise<void> {
+    if (taskIds.length === 0) return;
+    try {
+      const db = await this.database.db();
+      const tx = db.transaction(STORES.tasks, 'readwrite');
+      for (const id of taskIds) await tx.store.delete(id);
+      await tx.done;
+    } catch {
+      /* ignore */
+    }
   }
 }

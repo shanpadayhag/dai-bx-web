@@ -1,63 +1,72 @@
+import { provideZonelessChangeDetection } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { DatabaseService } from '@core/db/database.service';
+import { DB_NAME } from '@core/db/database.schema';
 import { TasksRepository } from '@features/tasks/data-access/tasks.repository';
-import type { Group } from '@features/tasks/data-access/tasks.types';
+import type { TaskRow } from '@features/tasks/data-access/tasks.types';
 
 const wipe = (): Promise<void> =>
   new Promise((resolve) => {
-    const req = indexedDB.deleteDatabase('daibx');
+    const req = indexedDB.deleteDatabase(DB_NAME);
     req.onsuccess = () => resolve();
     req.onerror = () => resolve();
     req.onblocked = () => resolve();
   });
 
-describe('TasksRepository (IndexedDB)', () => {
-  let repository: TasksRepository;
+const makeRow = (overrides: Partial<TaskRow>): TaskRow => ({
+  id: overrides.id ?? 't',
+  groupId: overrides.groupId ?? 'g',
+  parentId: overrides.parentId ?? null,
+  name: overrides.name ?? 'Task',
+  order: overrides.order ?? 0,
+  hiddenUntil: overrides.hiddenUntil ?? null,
+  completedDate: overrides.completedDate ?? null,
+  isOpen: overrides.isOpen ?? true,
+});
+
+describe('TasksRepository', () => {
+  let repo: TasksRepository;
+  let database: DatabaseService;
 
   beforeEach(async () => {
     await wipe();
-    repository = new TasksRepository();
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection()],
+    });
+    database = TestBed.inject(DatabaseService);
+    repo = TestBed.inject(TasksRepository);
   });
 
   afterEach(async () => {
-    await repository.close();
+    await database.close();
     await wipe();
   });
 
-  it('returns an empty array when nothing has been saved', async () => {
-    const groups = await repository.loadGroups();
-    expect(groups).toEqual([]);
+  it('listAll returns an empty array when nothing has been written', async () => {
+    expect(await repo.listAll()).toEqual([]);
   });
 
-  it('round-trips groups through the database', async () => {
-    const groups: Group[] = [
-      {
-        id: 'g1',
-        name: 'Demo',
-        isOpen: true,
-        tasks: [
-          {
-            id: 't1',
-            name: 'Buy milk',
-            order: 0,
-            hiddenUntil: null,
-            completedDate: null,
-            isOpen: true,
-            tasks: [],
-          },
-        ],
-      },
-    ];
+  it("put then listByGroup returns only that group's rows", async () => {
+    await repo.put(makeRow({ id: 't1', groupId: 'g1' }));
+    await repo.put(makeRow({ id: 't2', groupId: 'g2' }));
+    await repo.put(makeRow({ id: 't3', groupId: 'g1', parentId: 't1' }));
 
-    await repository.saveGroups(groups);
-    const loaded = await repository.loadGroups();
-    expect(loaded).toEqual(groups);
+    const inG1 = await repo.listByGroup('g1');
+    expect(inG1.map((t) => t.id).sort()).toEqual(['t1', 't3']);
   });
 
-  it('overwrites previously persisted groups on each save', async () => {
-    await repository.saveGroups([{ id: 'a', name: 'A', isOpen: true, tasks: [] }]);
-    await repository.saveGroups([{ id: 'b', name: 'B', isOpen: true, tasks: [] }]);
+  it('putBatch upserts many rows in one transaction', async () => {
+    await repo.putBatch([
+      makeRow({ id: 'a', groupId: 'g', order: 0 }),
+      makeRow({ id: 'b', groupId: 'g', order: 1 }),
+      makeRow({ id: 'c', groupId: 'g', order: 2 }),
+    ]);
+    expect((await repo.listAll()).length).toBe(3);
+  });
 
-    const loaded = await repository.loadGroups();
-    expect(loaded.length).toBe(1);
-    expect(loaded[0].id).toBe('b');
+  it('deleteByIds removes only the named rows', async () => {
+    await repo.putBatch([makeRow({ id: 'a' }), makeRow({ id: 'b' }), makeRow({ id: 'c' })]);
+    await repo.deleteByIds(['a', 'c']);
+    expect((await repo.listAll()).map((t) => t.id)).toEqual(['b']);
   });
 });

@@ -7,10 +7,11 @@ import { ButtonDirective } from '@shared/ui/button/button.directive';
 import { InputDirective } from '@shared/ui/input/input.directive';
 import { CardComponent, CardContentComponent } from '@shared/ui/card/card.component';
 import { cn } from '@shared/utils/cn';
+import type { Group } from '@features/groups/data-access/groups.types';
+import type { Task } from '@features/tasks/data-access/tasks.types';
 import { isVisibleToday } from '@features/tasks/data-access/tasks.tree';
-import { TaskStateService } from '@features/tasks/data-access/tasks.state';
-import type { Group, Task } from '@features/tasks/data-access/tasks.types';
-import { TaskItemComponent } from '@features/tasks/ui/task-item/task-item.component';
+import { WorkspaceState } from '@features/workspace/data-access/workspace.state';
+import { TaskItemComponent } from '@features/workspace/ui/task-item/task-item.component';
 
 @Component({
   selector: 'app-group-item',
@@ -34,7 +35,7 @@ import { TaskItemComponent } from '@features/tasks/ui/task-item/task-item.compon
   },
 })
 export class GroupItemComponent {
-  private readonly state = inject(TaskStateService);
+  private readonly state = inject(WorkspaceState);
 
   readonly group = input.required<Group>();
 
@@ -44,8 +45,9 @@ export class GroupItemComponent {
   protected readonly newTaskName = signal('');
 
   protected readonly visibleTasks = computed(() =>
-    this.group()
-      .tasks.filter(isVisibleToday)
+    this.state
+      .tasksFor(this.group().id)
+      .filter(isVisibleToday)
       .slice()
       .sort((a, b) => a.order - b.order),
   );
@@ -53,10 +55,7 @@ export class GroupItemComponent {
   protected readonly visibleTaskCount = computed(() => this.visibleTasks().length);
 
   protected readonly deleteBtnClass = computed(() =>
-    cn(
-      'h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-opacity',
-      this.hovered() ? 'opacity-100' : 'opacity-0',
-    ),
+    cn('transition-opacity', this.hovered() ? 'opacity-100' : 'opacity-0'),
   );
 
   protected toggleOpen(): void {

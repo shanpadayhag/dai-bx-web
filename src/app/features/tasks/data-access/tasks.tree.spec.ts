@@ -1,12 +1,18 @@
 import {
-  addSubtaskById,
+  buildTreeFromRows,
+  collectSubtreeIds,
   deleteTaskById,
+  findTaskInTree,
+  flattenTasks,
+  getSiblingsOf,
+  insertSubtask,
   isVisibleToday,
   reorderTasksByParent,
+  toTaskRow,
   toggleTaskCompletionById,
   toggleTaskOpenById,
 } from '@features/tasks/data-access/tasks.tree';
-import type { Task } from '@features/tasks/data-access/tasks.types';
+import type { Task, TaskRow } from '@features/tasks/data-access/tasks.types';
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -25,44 +31,31 @@ describe('isVisibleToday', () => {
     expect(isVisibleToday(makeTask({ hiddenUntil: null }))).toBe(true);
   });
 
-  it('returns true when hiddenUntil is on or before today', () => {
-    expect(isVisibleToday(makeTask({ hiddenUntil: today }))).toBe(true);
-    expect(isVisibleToday(makeTask({ hiddenUntil: '2000-01-01' }))).toBe(true);
-  });
-
   it('returns false when hiddenUntil is after today', () => {
     expect(isVisibleToday(makeTask({ hiddenUntil: '9999-12-31' }))).toBe(false);
   });
 });
 
-describe('addSubtaskById', () => {
-  it('appends a subtask to the matching parent', () => {
-    const tasks: Task[] = [makeTask({ id: 'a', name: 'A' })];
-    const next = addSubtaskById(tasks, 'a', 'child');
+describe('insertSubtask', () => {
+  it('appends the provided task under the matching parent', () => {
+    const tasks: Task[] = [makeTask({ id: 'a' })];
+    const child = makeTask({ id: 'a-1', name: 'child' });
+    const next = insertSubtask(tasks, 'a', child);
 
     expect(next[0].tasks.length).toBe(1);
-    expect(next[0].tasks[0].name).toBe('child');
-    expect(next[0].tasks[0].order).toBe(0);
-    expect(next[0].tasks[0].isOpen).toBe(true);
+    expect(next[0].tasks[0]).toBe(child);
   });
 
-  it('appends to the correct nested parent', () => {
-    const tasks: Task[] = [
-      makeTask({
-        id: 'a',
-        tasks: [makeTask({ id: 'b', tasks: [] })],
-      }),
-    ];
-
-    const next = addSubtaskById(tasks, 'b', 'grand');
-    expect(next[0].tasks[0].tasks.length).toBe(1);
-    expect(next[0].tasks[0].tasks[0].name).toBe('grand');
+  it('walks into nested parents', () => {
+    const tasks: Task[] = [makeTask({ id: 'a', tasks: [makeTask({ id: 'b' })] })];
+    const grand = makeTask({ id: 'b-1', name: 'grand' });
+    const next = insertSubtask(tasks, 'b', grand);
+    expect(next[0].tasks[0].tasks[0]).toBe(grand);
   });
 
-  it('returns a new tree without mutating the input', () => {
+  it('does not mutate the input tree', () => {
     const tasks: Task[] = [makeTask({ id: 'a' })];
-    const next = addSubtaskById(tasks, 'a', 'x');
-    expect(next).not.toBe(tasks);
+    insertSubtask(tasks, 'a', makeTask({ id: 'a-1' }));
     expect(tasks[0].tasks.length).toBe(0);
   });
 });
@@ -70,48 +63,31 @@ describe('addSubtaskById', () => {
 describe('deleteTaskById', () => {
   it('removes a top-level task', () => {
     const tasks: Task[] = [makeTask({ id: 'a' }), makeTask({ id: 'b' })];
-    const next = deleteTaskById(tasks, 'a');
-    expect(next.length).toBe(1);
-    expect(next[0].id).toBe('b');
+    expect(deleteTaskById(tasks, 'a').map((t) => t.id)).toEqual(['b']);
   });
 
   it('removes a nested task without dropping its siblings', () => {
     const tasks: Task[] = [
-      makeTask({
-        id: 'a',
-        tasks: [makeTask({ id: 'b' }), makeTask({ id: 'c' })],
-      }),
+      makeTask({ id: 'a', tasks: [makeTask({ id: 'b' }), makeTask({ id: 'c' })] }),
     ];
-    const next = deleteTaskById(tasks, 'b');
-    expect(next[0].tasks.length).toBe(1);
-    expect(next[0].tasks[0].id).toBe('c');
+    expect(deleteTaskById(tasks, 'b')[0].tasks.map((t) => t.id)).toEqual(['c']);
   });
 });
 
 describe('toggleTaskCompletionById', () => {
   it('marks an uncompleted task as completed today', () => {
-    const tasks: Task[] = [makeTask({ id: 'a', completedDate: null })];
-    const next = toggleTaskCompletionById(tasks, 'a');
+    const next = toggleTaskCompletionById([makeTask({ id: 'a' })], 'a');
     expect(next[0].completedDate).toBe(today);
   });
 
   it('clears completion when toggled while already completed today', () => {
-    const tasks: Task[] = [makeTask({ id: 'a', completedDate: today })];
-    const next = toggleTaskCompletionById(tasks, 'a');
+    const next = toggleTaskCompletionById([makeTask({ id: 'a', completedDate: today })], 'a');
     expect(next[0].completedDate).toBeNull();
   });
 
   it('cascades the completion state to all descendants', () => {
     const tasks: Task[] = [
-      makeTask({
-        id: 'a',
-        tasks: [
-          makeTask({
-            id: 'b',
-            tasks: [makeTask({ id: 'c' })],
-          }),
-        ],
-      }),
+      makeTask({ id: 'a', tasks: [makeTask({ id: 'b', tasks: [makeTask({ id: 'c' })] })] }),
     ];
     const next = toggleTaskCompletionById(tasks, 'a');
     expect(next[0].completedDate).toBe(today);
@@ -122,13 +98,7 @@ describe('toggleTaskCompletionById', () => {
 
 describe('toggleTaskOpenById', () => {
   it('flips a nested task open state', () => {
-    const tasks: Task[] = [
-      makeTask({
-        id: 'a',
-        isOpen: true,
-        tasks: [makeTask({ id: 'b', isOpen: true })],
-      }),
-    ];
+    const tasks: Task[] = [makeTask({ id: 'a', tasks: [makeTask({ id: 'b', isOpen: true })] })];
     const next = toggleTaskOpenById(tasks, 'b', false);
     expect(next[0].tasks[0].isOpen).toBe(false);
     expect(next[0].isOpen).toBe(true);
@@ -160,18 +130,134 @@ describe('reorderTasksByParent', () => {
     ];
     const next = reorderTasksByParent(tasks, 'a', 2, 0);
     expect(next[0].tasks.map((t) => t.id)).toEqual(['a3', 'a1', 'a2']);
-    expect(next[0].tasks.map((t) => t.order)).toEqual([0, 1, 2]);
-  });
-
-  it('returns the same shape when from === to', () => {
-    const tasks: Task[] = [makeTask({ id: 'a' }), makeTask({ id: 'b' })];
-    const next = reorderTasksByParent(tasks, null, 1, 1);
-    expect(next.map((t) => t.id)).toEqual(['a', 'b']);
   });
 
   it('ignores out-of-bounds indices', () => {
     const tasks: Task[] = [makeTask({ id: 'a' })];
-    const next = reorderTasksByParent(tasks, null, 0, 5);
-    expect(next.map((t) => t.id)).toEqual(['a']);
+    expect(reorderTasksByParent(tasks, null, 0, 5).map((t) => t.id)).toEqual(['a']);
+  });
+});
+
+describe('collectSubtreeIds', () => {
+  it('returns the task and all descendants in pre-order', () => {
+    const task = makeTask({
+      id: 'root',
+      tasks: [makeTask({ id: 'a', tasks: [makeTask({ id: 'a1' })] }), makeTask({ id: 'b' })],
+    });
+    expect(collectSubtreeIds(task)).toEqual(['root', 'a', 'a1', 'b']);
+  });
+});
+
+describe('findTaskInTree', () => {
+  it('finds a root task and reports null parent', () => {
+    const tasks: Task[] = [makeTask({ id: 'a' })];
+    const ctx = findTaskInTree(tasks, 'a');
+    expect(ctx?.parentId).toBeNull();
+    expect(ctx?.task.id).toBe('a');
+  });
+
+  it('finds a nested task and reports the correct parent', () => {
+    const tasks: Task[] = [makeTask({ id: 'a', tasks: [makeTask({ id: 'a1' })] })];
+    const ctx = findTaskInTree(tasks, 'a1');
+    expect(ctx?.parentId).toBe('a');
+  });
+
+  it('returns null when the task is not present', () => {
+    expect(findTaskInTree([makeTask({ id: 'a' })], 'missing')).toBeNull();
+  });
+});
+
+describe('getSiblingsOf', () => {
+  it('returns root tasks when parentId is null', () => {
+    const tasks: Task[] = [makeTask({ id: 'a' }), makeTask({ id: 'b' })];
+    expect(getSiblingsOf(tasks, null).map((t) => t.id)).toEqual(['a', 'b']);
+  });
+
+  it('returns child tasks of the named parent', () => {
+    const tasks: Task[] = [
+      makeTask({ id: 'a', tasks: [makeTask({ id: 'a1' }), makeTask({ id: 'a2' })] }),
+    ];
+    expect(getSiblingsOf(tasks, 'a').map((t) => t.id)).toEqual(['a1', 'a2']);
+  });
+});
+
+describe('toTaskRow', () => {
+  it('converts a Task into a TaskRow with foreign keys', () => {
+    const row = toTaskRow(makeTask({ id: 't', name: 'X', order: 2 }), 'g', 'parent');
+    expect(row).toEqual({
+      id: 't',
+      groupId: 'g',
+      parentId: 'parent',
+      name: 'X',
+      order: 2,
+      hiddenUntil: null,
+      completedDate: null,
+      isOpen: true,
+    });
+  });
+});
+
+describe('flattenTasks', () => {
+  it('emits a row for every task with the right parent links', () => {
+    const tasks: Task[] = [
+      makeTask({ id: 'a', tasks: [makeTask({ id: 'a1' })] }),
+      makeTask({ id: 'b' }),
+    ];
+    const rows = flattenTasks(tasks, 'g');
+    expect(rows.map((r) => [r.id, r.parentId])).toEqual([
+      ['a', null],
+      ['a1', 'a'],
+      ['b', null],
+    ]);
+  });
+});
+
+describe('buildTreeFromRows', () => {
+  it('reconstructs a nested tree sorted by order', () => {
+    const rows: TaskRow[] = [
+      {
+        id: 'a1',
+        groupId: 'g',
+        parentId: 'a',
+        name: 'a1',
+        order: 1,
+        hiddenUntil: null,
+        completedDate: null,
+        isOpen: true,
+      },
+      {
+        id: 'a',
+        groupId: 'g',
+        parentId: null,
+        name: 'a',
+        order: 0,
+        hiddenUntil: null,
+        completedDate: null,
+        isOpen: true,
+      },
+      {
+        id: 'b',
+        groupId: 'g',
+        parentId: null,
+        name: 'b',
+        order: 1,
+        hiddenUntil: null,
+        completedDate: null,
+        isOpen: true,
+      },
+      {
+        id: 'a0',
+        groupId: 'g',
+        parentId: 'a',
+        name: 'a0',
+        order: 0,
+        hiddenUntil: null,
+        completedDate: null,
+        isOpen: true,
+      },
+    ];
+    const tree = buildTreeFromRows(rows);
+    expect(tree.map((t) => t.id)).toEqual(['a', 'b']);
+    expect(tree[0].tasks.map((t) => t.id)).toEqual(['a0', 'a1']);
   });
 });

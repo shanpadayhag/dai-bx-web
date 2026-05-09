@@ -8,9 +8,13 @@ export interface Task {
   tasks: Task[];
 }
 
-export interface Group {
+export interface TaskRow {
   id: string;
+  groupId: string;
+  parentId: string | null;
   name: string;
+  order: number;
+  hiddenUntil: string | null;
+  completedDate: string | null;
   isOpen: boolean;
-  tasks: Task[];
 }

@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { LucideIconConfig } from 'lucide-angular';
 
 @Component({
   selector: 'app-root',
@@ -7,4 +8,9 @@ import { RouterOutlet } from '@angular/router';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<router-outlet />`,
 })
-export class App {}
+export class App {
+  constructor() {
+    const lucide = inject(LucideIconConfig);
+    lucide.strokeWidth = 2.25;
+  }
+}

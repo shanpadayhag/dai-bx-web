@@ -1,175 +1,160 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { TaskStateService } from '@features/tasks/data-access/tasks.state';
 import { TasksRepository } from '@features/tasks/data-access/tasks.repository';
-import type { Group } from '@features/tasks/data-access/tasks.types';
+import { TasksState } from '@features/tasks/data-access/tasks.state';
+import type { TaskRow } from '@features/tasks/data-access/tasks.types';
 
-class InMemoryRepository implements Pick<TasksRepository, 'loadGroups' | 'saveGroups'> {
-  private store: Group[] = [];
-  saveCallCount = 0;
+class FakeTasksRepository implements Pick<
+  TasksRepository,
+  'listAll' | 'listByGroup' | 'put' | 'putBatch' | 'deleteByIds'
+> {
+  rows = new Map<string, TaskRow>();
+  putCalls = 0;
+  putBatchCalls = 0;
+  deleteByIdsCalls = 0;
 
-  async loadGroups(): Promise<Group[]> {
-    return JSON.parse(JSON.stringify(this.store)) as Group[];
+  async listAll(): Promise<TaskRow[]> {
+    return Array.from(this.rows.values());
   }
-
-  async saveGroups(groups: Group[]): Promise<void> {
-    this.saveCallCount++;
-    this.store = JSON.parse(JSON.stringify(groups)) as Group[];
+  async listByGroup(groupId: string): Promise<TaskRow[]> {
+    return Array.from(this.rows.values()).filter((t) => t.groupId === groupId);
   }
-
-  seed(groups: Group[]): void {
-    this.store = JSON.parse(JSON.stringify(groups)) as Group[];
+  async put(row: TaskRow): Promise<void> {
+    this.putCalls++;
+    this.rows.set(row.id, { ...row });
+  }
+  async putBatch(rows: TaskRow[]): Promise<void> {
+    this.putBatchCalls++;
+    for (const r of rows) this.rows.set(r.id, { ...r });
+  }
+  async deleteByIds(ids: string[]): Promise<void> {
+    this.deleteByIdsCalls++;
+    for (const id of ids) this.rows.delete(id);
   }
 }
 
-const waitForLoaded = async (state: TaskStateService): Promise<void> => {
-  for (let i = 0; i < 50 && !state.isLoaded(); i++) {
-    await Promise.resolve();
-  }
-};
+describe('TasksState', () => {
+  let state: TasksState;
+  let repo: FakeTasksRepository;
 
-describe('TaskStateService', () => {
-  let service: TaskStateService;
-  let repository: InMemoryRepository;
-
-  const setUp = async (seeded: Group[] = []): Promise<void> => {
-    repository = new InMemoryRepository();
-    repository.seed(seeded);
+  beforeEach(() => {
+    repo = new FakeTasksRepository();
     TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        { provide: TasksRepository, useValue: repository },
-      ],
+      providers: [provideZonelessChangeDetection(), { provide: TasksRepository, useValue: repo }],
     });
-    service = TestBed.inject(TaskStateService);
-    await waitForLoaded(service);
-  };
-
-  beforeEach(async () => {
-    await setUp();
+    state = TestBed.inject(TasksState);
   });
 
-  it('starts empty after the initial load', () => {
-    expect(service.groups()).toEqual([]);
-    expect(service.hasGroups()).toBe(false);
-    expect(service.isLoaded()).toBe(true);
+  it('returns an empty list for an unknown group before load', () => {
+    expect(state.tasksFor('g')).toEqual([]);
+    expect(state.isLoaded()).toBe(false);
   });
 
-  it('hydrates with whatever the repository returns', async () => {
-    TestBed.resetTestingModule();
-    await setUp([{ id: 'g1', name: 'Seeded', isOpen: true, tasks: [] }]);
-    expect(service.groups().length).toBe(1);
-    expect(service.groups()[0].name).toBe('Seeded');
+  it('loadAll groups rows by groupId and builds nested trees', async () => {
+    repo.rows.set('t1', {
+      id: 't1',
+      groupId: 'g1',
+      parentId: null,
+      name: 'one',
+      order: 0,
+      hiddenUntil: null,
+      completedDate: null,
+      isOpen: true,
+    });
+    repo.rows.set('t1-1', {
+      id: 't1-1',
+      groupId: 'g1',
+      parentId: 't1',
+      name: 'child',
+      order: 0,
+      hiddenUntil: null,
+      completedDate: null,
+      isOpen: true,
+    });
+    repo.rows.set('t2', {
+      id: 't2',
+      groupId: 'g2',
+      parentId: null,
+      name: 'other group',
+      order: 0,
+      hiddenUntil: null,
+      completedDate: null,
+      isOpen: true,
+    });
+
+    await state.loadAll();
+    expect(state.isLoaded()).toBe(true);
+    expect(state.tasksFor('g1').map((t) => t.id)).toEqual(['t1']);
+    expect(state.tasksFor('g1')[0].tasks.map((t) => t.id)).toEqual(['t1-1']);
+    expect(state.tasksFor('g2').map((t) => t.id)).toEqual(['t2']);
   });
 
-  it('createGroup appends a group with trimmed name and empty tasks', () => {
-    service.createGroup('  Inbox  ');
-    expect(service.groups().length).toBe(1);
-    expect(service.groups()[0].name).toBe('Inbox');
-    expect(service.groups()[0].tasks).toEqual([]);
-    expect(service.hasGroups()).toBe(true);
+  it('addRoot persists a single row tied to the group', () => {
+    state.addRoot('g', 'first');
+    expect(state.tasksFor('g').map((t) => t.name)).toEqual(['first']);
+    expect(repo.rows.size).toBe(1);
+    const row = Array.from(repo.rows.values())[0];
+    expect(row.groupId).toBe('g');
+    expect(row.parentId).toBeNull();
+    expect(row.order).toBe(0);
   });
 
-  it('createGroup ignores empty names', () => {
-    service.createGroup('   ');
-    expect(service.groups()).toEqual([]);
+  it('addRoot ignores empty names', () => {
+    state.addRoot('g', '   ');
+    expect(state.tasksFor('g')).toEqual([]);
+    expect(repo.putCalls).toBe(0);
   });
 
-  it('deleteGroup removes a group by id', () => {
-    service.createGroup('A');
-    service.createGroup('B');
-    const ids = service.groups().map((g) => g.id);
-    service.deleteGroup(ids[0]);
-    expect(service.groups().length).toBe(1);
-    expect(service.groups()[0].name).toBe('B');
+  it('addSubtask records the parent foreign key', () => {
+    state.addRoot('g', 'parent');
+    const parentId = state.tasksFor('g')[0].id;
+    state.addSubtask('g', parentId, 'child');
+    const childRow = Array.from(repo.rows.values()).find((t) => t.name === 'child');
+    expect(childRow?.parentId).toBe(parentId);
   });
 
-  it('renameGroup updates the name', () => {
-    service.createGroup('Old');
-    const id = service.groups()[0].id;
-    service.renameGroup(id, 'New');
-    expect(service.groups()[0].name).toBe('New');
+  it('remove deletes the task and its descendants', () => {
+    state.addRoot('g', 'parent');
+    const parentId = state.tasksFor('g')[0].id;
+    state.addSubtask('g', parentId, 'child');
+    const childId = state.tasksFor('g')[0].tasks[0].id;
+    state.addSubtask('g', childId, 'grand');
+
+    state.remove('g', parentId);
+    expect(state.tasksFor('g')).toEqual([]);
+    expect(repo.rows.size).toBe(0);
+    expect(repo.deleteByIdsCalls).toBe(1);
   });
 
-  it('toggleGroupOpen flips the isOpen flag', () => {
-    service.createGroup('A');
-    const id = service.groups()[0].id;
-    service.toggleGroupOpen(id, false);
-    expect(service.groups()[0].isOpen).toBe(false);
-  });
+  it('toggleCompletion writes the affected subtree', () => {
+    state.addRoot('g', 'parent');
+    const parentId = state.tasksFor('g')[0].id;
+    state.addSubtask('g', parentId, 'child');
 
-  it('reorderGroups moves a group to the new index', () => {
-    service.createGroup('A');
-    service.createGroup('B');
-    service.createGroup('C');
-    service.reorderGroups(0, 2);
-    expect(service.groups().map((g) => g.name)).toEqual(['B', 'C', 'A']);
-  });
-
-  it('addRootTask adds a task at the end of the group', () => {
-    service.createGroup('A');
-    const groupId = service.groups()[0].id;
-    service.addRootTask(groupId, 'first');
-    service.addRootTask(groupId, 'second');
-    const tasks = service.groups()[0].tasks;
-    expect(tasks.map((t) => t.name)).toEqual(['first', 'second']);
-    expect(tasks[0].order).toBe(0);
-    expect(tasks[1].order).toBe(1);
-  });
-
-  it('addSubtask appends a child to the matching task', () => {
-    service.createGroup('A');
-    const groupId = service.groups()[0].id;
-    service.addRootTask(groupId, 'parent');
-    const parentId = service.groups()[0].tasks[0].id;
-    service.addSubtask(groupId, parentId, 'child');
-    const parent = service.groups()[0].tasks[0];
-    expect(parent.tasks.length).toBe(1);
-    expect(parent.tasks[0].name).toBe('child');
-  });
-
-  it('deleteTask removes a nested task', () => {
-    service.createGroup('A');
-    const groupId = service.groups()[0].id;
-    service.addRootTask(groupId, 'parent');
-    const parentId = service.groups()[0].tasks[0].id;
-    service.addSubtask(groupId, parentId, 'child');
-    const childId = service.groups()[0].tasks[0].tasks[0].id;
-    service.deleteTask(groupId, childId);
-    expect(service.groups()[0].tasks[0].tasks).toEqual([]);
-  });
-
-  it('toggleTaskCompletion completes a task today and clears it on second toggle', () => {
-    service.createGroup('A');
-    const groupId = service.groups()[0].id;
-    service.addRootTask(groupId, 't');
-    const taskId = service.groups()[0].tasks[0].id;
-
-    service.toggleTaskCompletion(groupId, taskId);
+    const before = repo.putBatchCalls;
+    state.toggleCompletion('g', parentId);
     const today = new Date().toISOString().slice(0, 10);
-    expect(service.groups()[0].tasks[0].completedDate).toBe(today);
-
-    service.toggleTaskCompletion(groupId, taskId);
-    expect(service.groups()[0].tasks[0].completedDate).toBeNull();
+    expect(state.tasksFor('g')[0].completedDate).toBe(today);
+    expect(state.tasksFor('g')[0].tasks[0].completedDate).toBe(today);
+    expect(repo.putBatchCalls - before).toBe(1);
   });
 
-  it('reorderTasks reorders root tasks within a group', () => {
-    service.createGroup('A');
-    const groupId = service.groups()[0].id;
-    service.addRootTask(groupId, 'one');
-    service.addRootTask(groupId, 'two');
-    service.addRootTask(groupId, 'three');
-    service.reorderTasks(groupId, null, 0, 2);
-    expect(service.groups()[0].tasks.map((t) => t.name)).toEqual(['two', 'three', 'one']);
+  it('reorder reorders siblings and persists the affected rows', () => {
+    state.addRoot('g', 'one');
+    state.addRoot('g', 'two');
+    state.addRoot('g', 'three');
+
+    const before = repo.putBatchCalls;
+    state.reorder('g', null, 0, 2);
+    expect(state.tasksFor('g').map((t) => t.name)).toEqual(['two', 'three', 'one']);
+    expect(repo.putBatchCalls - before).toBe(1);
   });
 
-  it('persists changes through the repository', async () => {
-    service.createGroup('Persisted');
-    TestBed.tick();
-    await Promise.resolve();
-    const loaded = await repository.loadGroups();
-    expect(loaded.length).toBe(1);
-    expect(loaded[0].name).toBe('Persisted');
-    expect(repository.saveCallCount).toBeGreaterThan(0);
+  it('clearForGroup drops in-memory tasks for that group only', () => {
+    state.addRoot('g1', 'a');
+    state.addRoot('g2', 'b');
+    state.clearForGroup('g1');
+    expect(state.tasksFor('g1')).toEqual([]);
+    expect(state.tasksFor('g2').map((t) => t.name)).toEqual(['b']);
   });
 });
