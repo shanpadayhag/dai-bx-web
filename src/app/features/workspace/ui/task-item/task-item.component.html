@@ -51,6 +51,18 @@
     }
 
     <div [class]="actionsClass()">
+      <button
+        #addToggle
+        appButton
+        variant="neutral"
+        size="icon-sm"
+        (click)="toggleAdding()"
+        [attr.aria-expanded]="adding()"
+        title="Add subtask"
+        type="button"
+      >
+        <lucide-icon name="plus" class="h-4 w-4" />
+      </button>
       @if (isCompleted()) {
         <button
           appButton
@@ -74,6 +86,16 @@
           <lucide-icon name="check" class="h-4 w-4" />
         </button>
       }
+      <button
+        appButton
+        variant="destructive"
+        size="icon-sm"
+        (click)="deleteTask()"
+        title="Delete task"
+        type="button"
+      >
+        <lucide-icon name="trash-2" class="h-4 w-4" />
+      </button>
       <button
         #menuTrigger="cdkOverlayOrigin"
         cdkOverlayOrigin
@@ -124,25 +146,6 @@
         <lucide-icon name="timer" class="h-4 w-4 shrink-0" />
         <span>{{ timerMenuLabel() }}</span>
       </button>
-      <button
-        type="button"
-        role="menuitem"
-        class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold tracking-tight hover:bg-secondary-background transition-colors cursor-pointer"
-        (click)="addSubtaskFromMenu()"
-      >
-        <lucide-icon name="plus" class="h-4 w-4 shrink-0" />
-        <span>Add subtask</span>
-      </button>
-      <div class="my-1 h-px bg-border" role="separator"></div>
-      <button
-        type="button"
-        role="menuitem"
-        class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold tracking-tight text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-        (click)="deleteFromMenu()"
-      >
-        <lucide-icon name="trash-2" class="h-4 w-4 shrink-0" />
-        <span>Delete task</span>
-      </button>
     </div>
   </ng-template>
 
@@ -167,8 +170,13 @@
   </ng-template>
 
   @if (adding()) {
-    <form (submit)="submitSubtask($event)" class="flex gap-2 mt-2 ml-10 mr-2 mb-2">
+    <form
+      #subtaskForm
+      (submit)="submitSubtask($event)"
+      class="flex gap-2 mt-2 ml-10 mr-2 mb-2"
+    >
       <input
+        #subtaskInput
         appInput
         appAutofocus
         [ngModel]="newSubtaskName()"
@@ -176,7 +184,6 @@
         name="subtaskName"
         placeholder="Subtask name…"
         class="h-9 text-sm"
-        (blur)="onSubtaskBlur()"
       />
       <button appButton size="sm" btnClass="h-9 px-4" type="submit">Add</button>
     </form>

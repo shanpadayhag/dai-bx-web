@@ -2,9 +2,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   TemplateRef,
   ViewContainerRef,
   computed,
+  effect,
   inject,
   input,
   signal,
@@ -71,6 +73,9 @@ export class TaskItemComponent {
 
   private readonly alarmTpl = viewChild.required<TemplateRef<unknown>>('alarmTpl');
   private readonly timerTpl = viewChild.required<TemplateRef<unknown>>('timerTpl');
+  private readonly subtaskFormRef = viewChild<ElementRef<HTMLFormElement>>('subtaskForm');
+  private readonly subtaskInputRef = viewChild<ElementRef<HTMLInputElement>>('subtaskInput');
+  private readonly addToggleRef = viewChild<ElementRef<HTMLButtonElement>>('addToggle');
 
   protected readonly hovered = signal(false);
   protected readonly adding = signal(false);
@@ -174,6 +179,28 @@ export class TaskItemComponent {
       this.alarmOverlayRef?.dispose();
       this.timerOverlayRef?.dispose();
     });
+
+    effect((onCleanup) => {
+      if (!this.adding()) return;
+      const onMouseDown = (event: MouseEvent) => {
+        const target = event.target;
+        if (!(target instanceof Node)) return;
+        const form = this.subtaskFormRef()?.nativeElement;
+        if (form && form.contains(target)) return;
+        const toggle = this.addToggleRef()?.nativeElement;
+        if (toggle && toggle.contains(target)) return;
+        this.cancelAdding();
+      };
+      const onKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') this.cancelAdding();
+      };
+      document.addEventListener('mousedown', onMouseDown);
+      document.addEventListener('keydown', onKeyDown);
+      onCleanup(() => {
+        document.removeEventListener('mousedown', onMouseDown);
+        document.removeEventListener('keydown', onKeyDown);
+      });
+    });
   }
 
   protected toggleOpen(): void {
@@ -199,11 +226,12 @@ export class TaskItemComponent {
     if (!name) return;
     this.state.addSubtask(this.groupId(), this.task().id, name);
     this.newSubtaskName.set('');
-    this.adding.set(false);
+    this.subtaskInputRef()?.nativeElement.focus();
   }
 
-  protected onSubtaskBlur(): void {
-    if (!this.newSubtaskName().trim()) this.adding.set(false);
+  protected cancelAdding(): void {
+    this.adding.set(false);
+    this.newSubtaskName.set('');
   }
 
   protected toggleAlarmPicker(): void {
@@ -269,16 +297,6 @@ export class TaskItemComponent {
   protected openTimerFromMenu(): void {
     this.pickingActions.set(false);
     this.openTimerPicker();
-  }
-
-  protected addSubtaskFromMenu(): void {
-    this.pickingActions.set(false);
-    this.adding.set(true);
-  }
-
-  protected deleteFromMenu(): void {
-    this.pickingActions.set(false);
-    this.deleteTask();
   }
 
   protected onChildrenDrop(event: CdkDragDrop<Task[]>): void {
