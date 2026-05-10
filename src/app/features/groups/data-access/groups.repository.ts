@@ -12,7 +12,7 @@ export class GroupsRepository {
       const db = await this.database.db();
       const rows = (await db.getAll(STORES.groups)) as GroupRow[];
       rows.sort((a, b) => a.order - b.order);
-      return rows;
+      return rows.map((row) => ({ ...row, isHidden: row.isHidden === true }));
     } catch {
       return [];
     }

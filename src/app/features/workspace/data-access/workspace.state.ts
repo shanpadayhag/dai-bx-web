@@ -20,6 +20,7 @@ const normalizeLegacyGroup = (raw: LegacyGroupShape, index: number): LegacyGroup
   name: typeof raw.name === 'string' ? raw.name : 'Untitled',
   order: typeof raw.order === 'number' ? raw.order : index,
   isOpen: raw.isOpen !== false,
+  isHidden: false,
   tasks: Array.isArray(raw.tasks) ? (raw.tasks as Task[]) : [],
 });
 
@@ -35,6 +36,8 @@ export class WorkspaceState {
   private readonly _isLoaded = signal(false);
 
   readonly groups = this.groupsState.groups;
+  readonly visibleGroups = this.groupsState.visibleGroups;
+  readonly hiddenCount = this.groupsState.hiddenCount;
   readonly hasGroups = this.groupsState.hasGroups;
   readonly hasLegacyData = this._hasLegacyData.asReadonly();
   readonly isLoaded = this._isLoaded.asReadonly();
@@ -87,8 +90,16 @@ export class WorkspaceState {
     this.groupsState.toggleOpen(groupId, isOpen);
   }
 
-  reorderGroups(fromIndex: number, toIndex: number): void {
-    this.groupsState.reorder(fromIndex, toIndex);
+  toggleGroupHidden(groupId: string, isHidden: boolean): void {
+    this.groupsState.toggleHidden(groupId, isHidden);
+  }
+
+  setGroupVisibility(visibleIds: ReadonlySet<string>): void {
+    this.groupsState.setVisibility(visibleIds);
+  }
+
+  reorderGroups(fromVisibleIndex: number, toVisibleIndex: number): void {
+    this.groupsState.reorderVisible(fromVisibleIndex, toVisibleIndex);
   }
 
   deleteGroup(groupId: string): void {
@@ -154,6 +165,7 @@ export class WorkspaceState {
       name: g.name,
       order: g.order,
       isOpen: g.isOpen,
+      isHidden: g.isHidden,
     }));
     const taskRows = reordered.flatMap((g) => flattenTasks(g.tasks, g.id, null));
     await this.groupsRepo.putBatch(groupRows);

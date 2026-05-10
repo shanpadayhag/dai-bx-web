@@ -1,12 +1,22 @@
 @if (visible()) {
   <div [class]="rowClass()" (mouseenter)="hovered.set(true)" (mouseleave)="hovered.set(false)">
-    <span
-      cdkDragHandle
-      class="cursor-grab active:cursor-grabbing text-subtle-foreground hover:text-foreground transition-colors"
-      aria-label="Drag to reorder"
-    >
+    <span cdkDragHandle [class]="dragHandleClass()" aria-label="Drag to reorder">
       <lucide-icon name="grip-vertical" class="h-4 w-4" />
     </span>
+
+    <button
+      type="button"
+      (click)="toggleCompletion()"
+      [attr.aria-pressed]="isCompleted()"
+      [attr.aria-label]="
+        isCompleted() ? 'Mark ' + task().name + ' incomplete' : 'Mark ' + task().name + ' complete'
+      "
+      [class]="completionCircleClass()"
+    >
+      @if (isCompleted()) {
+        <lucide-icon name="check" class="h-3.5 w-3.5 text-secondary-background" />
+      }
+    </button>
 
     @if (hasSubtasks()) {
       <button
@@ -16,14 +26,11 @@
         btnClass="h-7 w-7"
         (click)="toggleOpen()"
         [attr.aria-expanded]="task().isOpen"
+        [attr.aria-label]="task().isOpen ? 'Collapse subtasks' : 'Expand subtasks'"
         type="button"
       >
         <lucide-icon name="chevron-down" [class]="chevronClass()" />
       </button>
-    } @else {
-      <span class="w-7 flex items-center justify-center" aria-hidden="true">
-        <span class="block h-1.5 w-1.5 rounded-full bg-foreground/30"></span>
-      </span>
     }
 
     <span [class]="nameClass()">{{ task().name }}</span>
@@ -40,13 +47,8 @@
     }
 
     @if (activeTimerSet(); as timerSet) {
-      <button
-        type="button"
-        class="cursor-pointer"
-        (click)="toggleTimerPicker()"
-        title="Edit timer"
-      >
-        <app-timer-badge [set]="timerSet" />
+      <button type="button" class="cursor-pointer" (click)="toggleTimerPicker()" title="Edit timer">
+        <app-timer-badge [set]="timerSet" [active]="isTimerActive()" />
       </button>
     }
 
@@ -59,39 +61,18 @@
         (click)="toggleAdding()"
         [attr.aria-expanded]="adding()"
         title="Add subtask"
+        aria-label="Add subtask"
         type="button"
       >
         <lucide-icon name="plus" class="h-4 w-4" />
       </button>
-      @if (isCompleted()) {
-        <button
-          appButton
-          variant="warning"
-          size="icon-sm"
-          (click)="toggleCompletion()"
-          title="Undo completion"
-          type="button"
-        >
-          <lucide-icon name="undo-2" class="h-4 w-4" />
-        </button>
-      } @else {
-        <button
-          appButton
-          variant="success"
-          size="icon-sm"
-          (click)="toggleCompletion()"
-          title="Mark as done"
-          type="button"
-        >
-          <lucide-icon name="check" class="h-4 w-4" />
-        </button>
-      }
       <button
         appButton
         variant="destructive"
         size="icon-sm"
         (click)="deleteTask()"
         title="Delete task"
+        aria-label="Delete task"
         type="button"
       >
         <lucide-icon name="trash-2" class="h-4 w-4" />
@@ -106,6 +87,7 @@
         [attr.aria-expanded]="pickingActions()"
         aria-haspopup="menu"
         title="More actions"
+        aria-label="More actions"
         type="button"
       >
         <lucide-icon name="more-vertical" class="h-4 w-4" />
@@ -153,7 +135,7 @@
     <app-alarm-picker
       [alarm]="task().alarm"
       (alarmChange)="onAlarmChange($event)"
-      (close)="onAlarmPickerClose()"
+      (closed)="onAlarmPickerClose()"
     />
   </ng-template>
 
@@ -165,16 +147,12 @@
       [activeTimerSetId]="task().activeTimerSetId"
       (timerSetsChange)="onTimerSetsChange($event)"
       (activeTimerSetIdChange)="onActiveTimerSetIdChange($event)"
-      (close)="onTimerPickerClose()"
+      (closed)="onTimerPickerClose()"
     />
   </ng-template>
 
   @if (adding()) {
-    <form
-      #subtaskForm
-      (submit)="submitSubtask($event)"
-      class="flex gap-2 mt-2 ml-10 mr-2 mb-2"
-    >
+    <form #subtaskForm (submit)="submitSubtask($event)" class="flex gap-2 mt-2 ml-10 mr-2 mb-2">
       <input
         #subtaskInput
         appInput
@@ -190,7 +168,7 @@
   }
 
   @if (task().isOpen && hasSubtasks()) {
-    <div class="ml-7 mt-1 border-l-2 border-border pl-3">
+    <div class="ml-7 mt-1 border-l border-subtle-foreground/40 pl-3">
       <div cdkDropList (cdkDropListDropped)="onChildrenDrop($event)">
         @for (child of sortedChildren(); track child.id) {
           <div cdkDrag>

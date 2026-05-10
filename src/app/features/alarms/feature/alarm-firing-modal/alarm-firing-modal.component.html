@@ -1,26 +1,34 @@
-@if (hasFiring()) {
+@if (firing(); as f) {
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
     role="dialog"
     aria-modal="true"
+    aria-labelledby="alarm-firing-title"
   >
     <div
-      class="w-full max-w-md rounded-md border-2 border-border bg-background shadow-brutal p-6 space-y-5 text-center"
+      class="w-full max-w-md rounded-md border-2 border-border bg-background shadow-brutal p-6 space-y-5"
     >
-      <div class="flex justify-center">
+      <div class="flex items-center gap-4">
         <span
-          class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-warning text-warning-foreground border-2 border-border shadow-brutal"
+          class="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-warning text-warning-foreground border-2 border-border shadow-brutal"
         >
-          <lucide-icon name="bell-ring" class="h-8 w-8 animate-pulse" />
+          <lucide-icon name="bell-ring" class="h-7 w-7 animate-pulse" />
         </span>
+        <div class="flex-1 min-w-0">
+          <p class="text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-subtle-foreground">
+            Alarm fired
+          </p>
+          @if (firingTime()) {
+            <p class="readout text-2xl font-bold leading-none mt-1">{{ firingTime() }}</p>
+          }
+        </div>
       </div>
 
-      <div class="space-y-1">
-        <p class="text-xs font-bold tracking-tight uppercase text-subtle-foreground">Alarm</p>
-        <h2 class="text-xl font-bold tracking-tight break-words">{{ firingTaskName() }}</h2>
-      </div>
+      <h2 id="alarm-firing-title" class="text-xl font-bold tracking-tight break-words leading-snug">
+        {{ f.task.name }}
+      </h2>
 
-      <div class="flex gap-2 justify-center">
+      <div class="flex gap-2">
         <button
           appButton
           variant="success"

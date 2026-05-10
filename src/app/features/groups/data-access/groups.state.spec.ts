@@ -48,7 +48,7 @@ describe('GroupsState', () => {
   });
 
   it('load hydrates from the repository', async () => {
-    repo.rows.set('a', { id: 'a', name: 'A', order: 0, isOpen: true });
+    repo.rows.set('a', { id: 'a', name: 'A', order: 0, isOpen: true, isHidden: false });
     await state.load();
     expect(state.isLoaded()).toBe(true);
     expect(state.groups().map((g) => g.id)).toEqual(['a']);
@@ -102,5 +102,64 @@ describe('GroupsState', () => {
     expect(state.groups().map((g) => g.name)).toEqual(['B', 'C', 'A']);
     expect(state.groups().map((g) => g.order)).toEqual([0, 1, 2]);
     expect(repo.putBatchCalls - before).toBe(1);
+  });
+
+  it('create defaults isHidden to false', () => {
+    state.set([]);
+    state.create('A');
+    expect(state.groups()[0].isHidden).toBe(false);
+  });
+
+  it('set normalizes missing isHidden to false', () => {
+    state.set([{ id: 'x', name: 'X', order: 0, isOpen: true } as never]);
+    expect(state.groups()[0].isHidden).toBe(false);
+  });
+
+  it('toggleHidden flips the flag and persists a single put', () => {
+    state.set([]);
+    state.create('A');
+    const id = state.groups()[0].id;
+    const before = repo.putCalls;
+    state.toggleHidden(id, true);
+    expect(state.groups()[0].isHidden).toBe(true);
+    expect(repo.putCalls - before).toBe(1);
+  });
+
+  it('visibleGroups and hiddenCount reflect the hidden flag', () => {
+    state.set([]);
+    state.create('A');
+    state.create('B');
+    state.create('C');
+    state.toggleHidden(state.groups()[1].id, true);
+    expect(state.visibleGroups().map((g) => g.name)).toEqual(['A', 'C']);
+    expect(state.hiddenCount()).toBe(1);
+  });
+
+  it('setVisibility applies a bulk batch and skips when nothing changed', () => {
+    state.set([]);
+    state.create('A');
+    state.create('B');
+    state.create('C');
+    const ids = state.groups().map((g) => g.id);
+    const before = repo.putBatchCalls;
+    state.setVisibility(new Set([ids[0]]));
+    expect(state.groups().map((g) => g.isHidden)).toEqual([false, true, true]);
+    expect(repo.putBatchCalls - before).toBe(1);
+
+    const sameAgain = repo.putBatchCalls;
+    state.setVisibility(new Set([ids[0]]));
+    expect(repo.putBatchCalls).toBe(sameAgain);
+  });
+
+  it('reorderVisible translates visible indices to absolute positions', () => {
+    state.set([]);
+    state.create('A');
+    state.create('B');
+    state.create('C');
+    state.create('D');
+    state.toggleHidden(state.groups()[1].id, true);
+    state.reorderVisible(0, 2);
+    expect(state.groups().map((g) => g.name)).toEqual(['B', 'C', 'D', 'A']);
+    expect(state.visibleGroups().map((g) => g.name)).toEqual(['C', 'D', 'A']);
   });
 });

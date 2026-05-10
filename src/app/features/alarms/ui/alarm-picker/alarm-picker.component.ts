@@ -10,10 +10,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ButtonDirective } from '@shared/ui/button/button.directive';
-import {
-  DropdownComponent,
-  type DropdownOption,
-} from '@shared/ui/dropdown/dropdown.component';
+import { DropdownComponent, type DropdownOption } from '@shared/ui/dropdown/dropdown.component';
 import {
   formatAlarmTime,
   isTomorrow,
@@ -49,7 +46,7 @@ export class AlarmPickerComponent {
   readonly alarm = input<AlarmSpec | null>(null);
 
   readonly alarmChange = output<AlarmSpec | null>();
-  readonly close = output<void>();
+  readonly closed = output<void>();
 
   private readonly soundsState = inject(SoundsState);
 
@@ -76,11 +73,16 @@ export class AlarmPickerComponent {
     ...this.sounds().map((s) => ({ value: s.id, label: s.name })),
   ]);
 
-  protected readonly previewLabel = computed<string>(() => {
+  protected readonly previewTime = computed<string>(() => {
     const t = this.currentTime();
     const iso = nextOccurrenceIso(t.hour, t.minute);
-    const time = formatAlarmTime(iso);
-    return isTomorrow(iso) ? `Tomorrow at ${time.replace(/^Tomorrow /, '')}` : `Today at ${time}`;
+    return formatAlarmTime(iso).replace(/^(Today|Tomorrow) /, '');
+  });
+
+  protected readonly previewDay = computed<string>(() => {
+    const t = this.currentTime();
+    const iso = nextOccurrenceIso(t.hour, t.minute);
+    return isTomorrow(iso) ? 'Tomorrow' : 'Today';
   });
 
   protected onTimeChange(value: TimeOfDay): void {
@@ -102,14 +104,14 @@ export class AlarmPickerComponent {
 
   protected onClear(): void {
     this.alarmChange.emit(null);
-    this.close.emit();
+    this.closed.emit();
   }
 
   protected onDone(): void {
-    this.close.emit();
+    this.closed.emit();
   }
 
   protected onManage(): void {
-    this.close.emit();
+    this.closed.emit();
   }
 }

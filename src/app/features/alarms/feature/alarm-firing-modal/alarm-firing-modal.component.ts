@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { ButtonDirective } from '@shared/ui/button/button.directive';
+import { formatAlarmTime } from '@features/alarms/data-access/alarm-format';
 import { AlarmsScheduler } from '@features/alarms/data-access/alarms.scheduler';
 import { WorkspaceState } from '@features/workspace/data-access/workspace.state';
 
@@ -15,8 +16,12 @@ export class AlarmFiringModalComponent {
   private readonly workspace = inject(WorkspaceState);
 
   protected readonly firing = this.scheduler.firing;
-  protected readonly hasFiring = computed(() => this.firing() !== null);
-  protected readonly firingTaskName = computed(() => this.firing()?.task.name ?? '');
+
+  protected readonly firingTime = computed(() => {
+    const iso = this.firing()?.task.alarm?.firesAt;
+    if (!iso) return '';
+    return formatAlarmTime(iso).replace(/^(Today|Tomorrow) /, '');
+  });
 
   protected onDone(): void {
     const f = this.firing();

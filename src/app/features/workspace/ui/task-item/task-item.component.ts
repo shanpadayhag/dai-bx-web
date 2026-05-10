@@ -36,6 +36,7 @@ import { isVisibleToday } from '@features/tasks/data-access/tasks.tree';
 import { TimerEditorComponent } from '@features/timers/feature/timer-editor/timer-editor.component';
 import { TimerBadgeComponent } from '@features/timers/ui/timer-badge/timer-badge.component';
 import { sortedSets } from '@features/timers/data-access/timer-format';
+import { TimersRunner } from '@features/timers/data-access/timers.runner';
 import type { TimerSet } from '@features/timers/data-access/timers.types';
 import { WorkspaceState } from '@features/workspace/data-access/workspace.state';
 
@@ -64,6 +65,7 @@ import { WorkspaceState } from '@features/workspace/data-access/workspace.state'
 })
 export class TaskItemComponent {
   private readonly state = inject(WorkspaceState);
+  private readonly runner = inject(TimersRunner);
   private readonly overlay = inject(Overlay);
   private readonly viewContainerRef = inject(ViewContainerRef);
   private readonly destroyRef = inject(DestroyRef);
@@ -134,6 +136,12 @@ export class TaskItemComponent {
 
   protected readonly isCompleted = computed(() => this.task().completedDate === todayIso());
 
+  protected readonly isTimerActive = computed(() => {
+    const r = this.runner.run();
+    if (r.status !== 'running' && r.status !== 'awaitingAdvance') return false;
+    return r.taskId === this.task().id;
+  });
+
   protected readonly sortedChildren = computed(() =>
     this.task()
       .tasks.slice()
@@ -142,12 +150,30 @@ export class TaskItemComponent {
 
   protected readonly hasSubtasks = computed(() => this.task().tasks.length > 0);
 
-  protected readonly rowClass = computed(() =>
+  protected readonly rowClass = computed(() => {
+    if (this.isTimerActive()) {
+      return cn(
+        'relative flex items-center gap-2 py-2 pl-5 pr-3 rounded-md bg-primary-soft transition-colors',
+        "before:content-[''] before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-foreground before:rounded-l-md",
+      );
+    }
+    return cn(
+      'flex items-center gap-2 py-2 px-3 rounded-md transition-colors',
+      this.isCompleted() ? 'opacity-60' : 'hover:bg-foreground/5',
+    );
+  });
+
+  protected readonly dragHandleClass = computed(() =>
     cn(
-      'flex items-center gap-2 py-1.5 px-2 rounded-md border-2 transition-colors',
-      this.isCompleted()
-        ? 'border-transparent bg-transparent'
-        : 'border-transparent hover:border-border hover:bg-secondary-background',
+      'cursor-grab active:cursor-grabbing text-subtle-foreground hover:text-foreground transition-opacity',
+      this.hovered() || this.isTimerActive() ? 'opacity-100' : 'opacity-0',
+    ),
+  );
+
+  protected readonly completionCircleClass = computed(() =>
+    cn(
+      'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-border cursor-pointer transition-colors',
+      this.isCompleted() ? 'bg-foreground' : 'bg-secondary-background hover:bg-foreground/10',
     ),
   );
 
@@ -159,8 +185,7 @@ export class TaskItemComponent {
   );
 
   protected readonly actionsVisible = computed(
-    () =>
-      this.hovered() || this.pickingActions() || this.pickingAlarm() || this.pickingTimer(),
+    () => this.hovered() || this.pickingActions() || this.pickingAlarm() || this.pickingTimer(),
   );
 
   protected readonly actionsClass = computed(() =>
@@ -312,9 +337,7 @@ export class TaskItemComponent {
   private openAlarmPicker(): void {
     if (this.alarmOverlayRef) return;
     this.alarmOverlayRef = this.createCenteredOverlay();
-    this.alarmOverlayRef.attach(
-      new TemplatePortal(this.alarmTpl(), this.viewContainerRef),
-    );
+    this.alarmOverlayRef.attach(new TemplatePortal(this.alarmTpl(), this.viewContainerRef));
     this.alarmOverlayRef
       .backdropClick()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -334,9 +357,7 @@ export class TaskItemComponent {
   private openTimerPicker(): void {
     if (this.timerOverlayRef) return;
     this.timerOverlayRef = this.createCenteredOverlay();
-    this.timerOverlayRef.attach(
-      new TemplatePortal(this.timerTpl(), this.viewContainerRef),
-    );
+    this.timerOverlayRef.attach(new TemplatePortal(this.timerTpl(), this.viewContainerRef));
     this.timerOverlayRef
       .backdropClick()
       .pipe(takeUntilDestroyed(this.destroyRef))

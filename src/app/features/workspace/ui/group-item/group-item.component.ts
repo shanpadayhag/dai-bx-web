@@ -6,7 +6,6 @@ import { AutofocusDirective } from '@shared/ui/autofocus/autofocus.directive';
 import { ButtonDirective } from '@shared/ui/button/button.directive';
 import { InputDirective } from '@shared/ui/input/input.directive';
 import { PluralPipe } from '@shared/ui/plural/plural.pipe';
-import { CardComponent, CardContentComponent } from '@shared/ui/card/card.component';
 import { cn } from '@shared/utils/cn';
 import type { Group } from '@features/groups/data-access/groups.types';
 import type { Task } from '@features/tasks/data-access/tasks.types';
@@ -27,13 +26,11 @@ import { TaskItemComponent } from '@features/workspace/ui/task-item/task-item.co
     ButtonDirective,
     InputDirective,
     PluralPipe,
-    CardComponent,
-    CardContentComponent,
     TaskItemComponent,
   ],
   templateUrl: './group-item.component.html',
   host: {
-    class: 'block',
+    class: 'block group/groupcard',
   },
 })
 export class GroupItemComponent {
@@ -58,6 +55,13 @@ export class GroupItemComponent {
 
   protected readonly deleteBtnClass = computed(() =>
     cn('transition-opacity', this.hovered() ? 'opacity-100' : 'opacity-0'),
+  );
+
+  protected readonly dragHandleClass = computed(() =>
+    cn(
+      'cursor-grab active:cursor-grabbing text-subtle-foreground hover:text-foreground transition-opacity',
+      this.hovered() ? 'opacity-100' : 'opacity-0',
+    ),
   );
 
   protected toggleOpen(): void {
