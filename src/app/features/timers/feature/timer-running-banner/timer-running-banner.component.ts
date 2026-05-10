@@ -19,7 +19,10 @@ export class TimerRunningBannerComponent {
   protected readonly currentStep = this.runner.currentStep;
   protected readonly remainingSeconds = this.runner.remainingSeconds;
 
-  protected readonly isVisible = computed(() => this.run().status !== 'idle');
+  protected readonly isVisible = computed(() => {
+    const status = this.run().status;
+    return status === 'awaitingAdvance' || status === 'completed';
+  });
   protected readonly isRunning = computed(() => this.run().status === 'running');
   protected readonly isCompleted = computed(() => this.run().status === 'completed');
 
@@ -35,10 +38,10 @@ export class TimerRunningBannerComponent {
     return s === null ? '00:00' : formatRemaining(s);
   });
 
-  protected readonly stepLabel = computed(() => {
+  protected readonly stepBadge = computed(() => {
     const step = this.currentStep();
     if (!step) return '';
-    return `Step ${step.index + 1} of ${step.set.timers.length} · ${step.step.durationMinutes} min`;
+    return `${step.index + 1}/${step.set.timers.length} · ${step.step.durationMinutes}M`;
   });
 
   protected readonly taskName = computed(() => {

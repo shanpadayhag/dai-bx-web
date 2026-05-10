@@ -1,20 +1,10 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { uid } from '@shared/utils/uid';
 import { ButtonDirective } from '@shared/ui/button/button.directive';
-import {
-  DropdownComponent,
-  type DropdownOption,
-} from '@shared/ui/dropdown/dropdown.component';
+import { DropdownComponent, type DropdownOption } from '@shared/ui/dropdown/dropdown.component';
 import { InputDirective } from '@shared/ui/input/input.directive';
 import { primeAudio } from '@features/alarms/data-access/alarm-sound';
 import { SoundsState } from '@features/sounds/data-access/sounds.state';
@@ -48,7 +38,7 @@ export class TimerEditorComponent {
 
   readonly timerSetsChange = output<TimerSet[]>();
   readonly activeTimerSetIdChange = output<string | null>();
-  readonly close = output<void>();
+  readonly closed = output<void>();
 
   private readonly soundsState = inject(SoundsState);
   private readonly runner = inject(TimersRunner);
@@ -69,10 +59,22 @@ export class TimerEditorComponent {
 
   protected readonly canStart = computed(() => (this.currentSet()?.timers.length ?? 0) > 0);
 
+  protected readonly totalMinutes = computed(() =>
+    this.currentTimers().reduce((sum, t) => sum + t.durationMinutes, 0),
+  );
+
   protected readonly soundOptions = computed<DropdownOption[]>(() => [
     { value: '', label: this.defaultLabel() },
     ...this.soundsState.sounds().map((s) => ({ value: s.id, label: s.name })),
   ]);
+
+  protected versionChipClass(id: string): string {
+    const base =
+      'inline-flex items-center h-8 px-3 rounded-md border-2 border-border text-xs font-bold tracking-tight cursor-pointer select-none transition-colors';
+    return id === this.currentSet()?.id
+      ? `${base} bg-foreground text-secondary-background`
+      : `${base} bg-secondary-background text-foreground hover:bg-foreground/5`;
+  }
 
   private readonly defaultLabel = computed<string>(() => {
     const id = this.soundsState.defaultSoundId();
@@ -103,9 +105,7 @@ export class TimerEditorComponent {
   protected renameSet(name: string): void {
     const set = this.currentSet();
     if (!set) return;
-    this.timerSetsChange.emit(
-      this.sortedSets().map((s) => (s.id === set.id ? { ...s, name } : s)),
-    );
+    this.timerSetsChange.emit(this.sortedSets().map((s) => (s.id === set.id ? { ...s, name } : s)));
   }
 
   protected toggleAutoAdvance(value: boolean): void {
@@ -120,9 +120,7 @@ export class TimerEditorComponent {
     const set = this.currentSet();
     if (!set) return;
     this.timerSetsChange.emit(
-      this.sortedSets().map((s) =>
-        s.id === set.id ? { ...s, soundId: soundId || null } : s,
-      ),
+      this.sortedSets().map((s) => (s.id === set.id ? { ...s, soundId: soundId || null } : s)),
     );
   }
 
@@ -170,22 +168,20 @@ export class TimerEditorComponent {
     if (!set || set.timers.length === 0) return;
     void primeAudio();
     this.runner.start(this.groupId(), this.taskId(), set.id);
-    this.close.emit();
+    this.closed.emit();
   }
 
   protected onDone(): void {
-    this.close.emit();
+    this.closed.emit();
   }
 
   protected onManageSounds(): void {
-    this.close.emit();
+    this.closed.emit();
   }
 
   private updateSetTimers(setId: string, timers: TimerSpec[]): void {
     this.timerSetsChange.emit(
-      this.sortedSets().map((s) =>
-        s.id === setId ? { ...s, timers: reindexTimers(timers) } : s,
-      ),
+      this.sortedSets().map((s) => (s.id === setId ? { ...s, timers: reindexTimers(timers) } : s)),
     );
   }
 }

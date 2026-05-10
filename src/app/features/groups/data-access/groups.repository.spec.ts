@@ -35,17 +35,17 @@ describe('GroupsRepository', () => {
   });
 
   it('listAll returns rows ordered by their order field', async () => {
-    await repo.put({ id: 'a', name: 'A', order: 2, isOpen: true });
-    await repo.put({ id: 'b', name: 'B', order: 0, isOpen: true });
-    await repo.put({ id: 'c', name: 'C', order: 1, isOpen: true });
+    await repo.put({ id: 'a', name: 'A', order: 2, isOpen: true, isHidden: false });
+    await repo.put({ id: 'b', name: 'B', order: 0, isOpen: true, isHidden: false });
+    await repo.put({ id: 'c', name: 'C', order: 1, isOpen: true, isHidden: false });
 
     expect((await repo.listAll()).map((g) => g.id)).toEqual(['b', 'c', 'a']);
   });
 
   it('putBatch upserts many rows in one transaction', async () => {
     await repo.putBatch([
-      { id: 'a', name: 'A', order: 0, isOpen: true },
-      { id: 'b', name: 'B', order: 1, isOpen: false },
+      { id: 'a', name: 'A', order: 0, isOpen: true, isHidden: false },
+      { id: 'b', name: 'B', order: 1, isOpen: false, isHidden: false },
     ]);
     const all = await repo.listAll();
     expect(all.length).toBe(2);
@@ -53,8 +53,8 @@ describe('GroupsRepository', () => {
   });
 
   it('deleteCascade removes the group AND its tasks via the by-group index', async () => {
-    await repo.put({ id: 'g1', name: 'A', order: 0, isOpen: true });
-    await repo.put({ id: 'g2', name: 'B', order: 1, isOpen: true });
+    await repo.put({ id: 'g1', name: 'A', order: 0, isOpen: true, isHidden: false });
+    await repo.put({ id: 'g2', name: 'B', order: 1, isOpen: true, isHidden: false });
 
     const tasks: TaskRow[] = [
       {

@@ -1,51 +1,58 @@
 @if (isVisible()) {
   <div
-    class="fixed bottom-4 right-4 z-50 w-72 rounded-md border-2 border-border bg-background shadow-brutal p-3 space-y-2"
+    class="fixed bottom-4 right-4 z-50 w-80 rounded-md border-2 border-border bg-background shadow-brutal p-3 space-y-3"
     role="status"
     aria-live="polite"
   >
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2.5">
       <span
         class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border-2 border-border bg-primary text-primary-foreground shadow-brutal-sm"
       >
-        <lucide-icon
-          [name]="statusIcon()"
-          class="h-4 w-4"
-          [class.animate-pulse]="!isRunning()"
-        />
+        <lucide-icon [name]="statusIcon()" class="h-4 w-4" [class.animate-pulse]="!isRunning()" />
       </span>
       <div class="min-w-0 flex-1">
-        <p class="text-[10px] font-bold uppercase tracking-wider text-subtle-foreground">Timer</p>
-        <p class="text-sm font-bold tracking-tight truncate">{{ taskName() }}</p>
+        <p class="text-[0.625rem] font-bold uppercase tracking-[0.12em] text-subtle-foreground">
+          Timer
+        </p>
+        <p class="text-sm font-bold tracking-tight truncate leading-tight">{{ taskName() }}</p>
       </div>
     </div>
 
     @switch (run().status) {
       @case ('running') {
-        <div class="flex items-center justify-between gap-2">
-          <div class="min-w-0">
-            <p class="text-[10px] font-semibold uppercase tracking-wider text-subtle-foreground truncate">
-              {{ stepLabel() }}
-            </p>
-            <p class="text-2xl font-black font-mono tabular-nums tracking-tight leading-tight">
+        <div
+          class="rounded-md border-2 border-border bg-secondary-background px-3 py-2 shadow-brutal-sm space-y-1"
+        >
+          <div class="flex items-baseline gap-3">
+            <p class="readout text-4xl font-bold leading-none flex-1 tracking-tight">
               {{ remainingLabel() }}
             </p>
+            <span
+              class="readout text-xs font-bold uppercase tracking-[0.1em] text-subtle-foreground"
+            >
+              {{ stepBadge() }}
+            </span>
           </div>
+        </div>
+        <div class="flex gap-2">
           <button
             appButton
             variant="destructive"
-            size="icon-sm"
+            size="sm"
+            btnClass="flex-1 h-9"
             (click)="onCancel()"
-            title="Cancel timer"
             type="button"
           >
             <lucide-icon name="x" class="h-4 w-4" />
+            Cancel
           </button>
         </div>
       }
       @case ('awaitingAdvance') {
-        <p class="text-xs font-semibold">Step done. Tap Next to continue.</p>
-        <div class="flex gap-1.5">
+        <p class="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-subtle-foreground">
+          Step complete
+        </p>
+        <div class="flex gap-2">
           <button
             appButton
             variant="success"
@@ -64,6 +71,7 @@
             btnClass="h-9 w-9"
             (click)="onCancel()"
             title="Cancel timer"
+            aria-label="Cancel timer"
             type="button"
           >
             <lucide-icon name="x" class="h-4 w-4" />
@@ -71,7 +79,9 @@
         </div>
       }
       @case ('completed') {
-        <p class="text-xs font-semibold">All steps complete.</p>
+        <p class="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-subtle-foreground">
+          All done
+        </p>
         <button
           appButton
           variant="success"

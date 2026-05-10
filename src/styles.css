@@ -83,6 +83,10 @@
   --font-mono: 'Geist Mono', ui-monospace, monospace;
   --font-weight-base: 500;
   --font-weight-heading: 700;
+  --font-weight-display: 900;
+
+  --ease-mechanical: cubic-bezier(0.32, 0.72, 0, 1);
+  --duration-press: 100ms;
 }
 
 html,
@@ -95,9 +99,18 @@ body {
   font-family: var(--font-sans);
   font-weight: 500;
   margin: 0;
-  background-image: radial-gradient(circle at 1px 1px, oklch(0% 0 0 / 0.06) 1px, transparent 0);
-  background-size: 22px 22px;
+  padding-top: 3rem;
+  background-image: radial-gradient(circle at 1px 1px, oklch(0% 0 0 / 0.08) 1px, transparent 0);
+  background-size: 24px 24px;
   background-attachment: fixed;
+}
+
+.readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings:
+    'tnum' 1,
+    'lnum' 1;
 }
 
 :where(button, input, textarea, select, a, [tabindex]):focus-visible {
@@ -117,8 +130,8 @@ h6 {
 
 .brutal-press {
   transition:
-    transform 100ms ease-out,
-    box-shadow 100ms ease-out;
+    transform var(--duration-press) var(--ease-mechanical),
+    box-shadow var(--duration-press) var(--ease-mechanical);
 }
 .brutal-press:hover:not(:disabled) {
   transform: translate(2px, 2px);
@@ -127,6 +140,15 @@ h6 {
 .brutal-press:active:not(:disabled) {
   transform: translate(4px, 4px);
   box-shadow: 0 0 0 0 var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brutal-press,
+  .brutal-press:hover:not(:disabled),
+  .brutal-press:active:not(:disabled) {
+    transition: none;
+    transform: none;
+  }
 }
 
 [cdkDrag].cdk-drag-preview {

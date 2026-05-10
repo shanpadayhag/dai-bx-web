@@ -9,10 +9,10 @@ import type { AlarmSpec } from '@features/alarms/data-access/alarms.types';
   imports: [LucideAngularModule],
   template: `
     <span
-      class="inline-flex items-center gap-1 rounded-md border-2 border-border bg-secondary-background px-1.5 h-6 text-xs font-bold font-mono tabular-nums tracking-tight text-foreground"
+      class="inline-flex items-center gap-1 rounded-md border-2 border-border bg-secondary-background px-1.5 h-6 tracking-tight text-foreground font-semibold"
     >
       <lucide-icon name="bell" class="h-3 w-3" />
-      {{ label() }}
+      <span class="readout text-xs">{{ label() }}</span>
     </span>
   `,
 })

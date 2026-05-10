@@ -93,7 +93,7 @@ const setUp = async (
 describe('WorkspaceState', () => {
   it('hydrates groups + tasks from the repos on initialize', async () => {
     const { state } = await setUp((f) => {
-      f.groupsRepo.rows.set('g1', { id: 'g1', name: 'A', order: 0, isOpen: true });
+      f.groupsRepo.rows.set('g1', { id: 'g1', name: 'A', order: 0, isOpen: true, isHidden: false });
       f.tasksRepo.rows.set('t1', {
         id: 't1',
         groupId: 'g1',
@@ -121,7 +121,7 @@ describe('WorkspaceState', () => {
 
   it('deleteGroup cascades on the repo and drops in-memory tasks', async () => {
     const { state, groupsRepo, tasksRepo } = await setUp((f) => {
-      f.groupsRepo.rows.set('g1', { id: 'g1', name: 'A', order: 0, isOpen: true });
+      f.groupsRepo.rows.set('g1', { id: 'g1', name: 'A', order: 0, isOpen: true, isHidden: false });
       f.tasksRepo.rows.set('t1', {
         id: 't1',
         groupId: 'g1',

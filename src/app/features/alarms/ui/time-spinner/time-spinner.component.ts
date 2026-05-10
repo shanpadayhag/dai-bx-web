@@ -42,13 +42,20 @@ export class TimeSpinnerComponent {
 
   protected readonly isPm = computed(() => this.value().hour >= 12);
 
-  protected readonly meridiemClass = computed<string>(() => {
-    const base =
-      'inline-flex h-14 w-14 items-center justify-center rounded-md border-2 border-border text-base font-bold tracking-tight cursor-pointer select-none transition-colors';
-    return this.isPm()
-      ? `${base} bg-primary text-primary-foreground`
-      : `${base} bg-secondary-background text-foreground`;
-  });
+  private readonly segmentBase =
+    'flex-1 flex items-center justify-center text-xs font-bold tracking-[0.08em] cursor-pointer select-none transition-colors';
+
+  protected readonly amSegmentClass = computed<string>(() =>
+    this.isPm()
+      ? `${this.segmentBase} bg-secondary-background text-subtle-foreground border-b-2 border-border hover:text-foreground`
+      : `${this.segmentBase} bg-foreground text-secondary-background border-b-2 border-border`,
+  );
+
+  protected readonly pmSegmentClass = computed<string>(() =>
+    this.isPm()
+      ? `${this.segmentBase} bg-foreground text-secondary-background`
+      : `${this.segmentBase} bg-secondary-background text-subtle-foreground hover:text-foreground`,
+  );
 
   constructor() {
     effect(() => this.syncIfBlurred(this.hourEl(), this.hourDisplay()));
@@ -74,6 +81,13 @@ export class TimeSpinnerComponent {
 
   protected toggleMeridiem(): void {
     this.emit(wrap(this.value().hour + 12, 24), this.value().minute);
+  }
+
+  protected setMeridiem(target: 'am' | 'pm'): void {
+    const isPm = this.isPm();
+    if (target === 'pm' && isPm) return;
+    if (target === 'am' && !isPm) return;
+    this.toggleMeridiem();
   }
 
   protected onHourInput(event: Event): void {

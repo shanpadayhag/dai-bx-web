@@ -11,25 +11,15 @@ import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ButtonDirective } from '@shared/ui/button/button.directive';
 import { BytesPipe } from '@shared/ui/bytes/bytes.pipe';
-import { CardComponent, CardContentComponent } from '@shared/ui/card/card.component';
-import {
-  primeAudio,
-  playSoundBlob,
-  stopAlarm,
-} from '@features/alarms/data-access/alarm-sound';
+import { CardComponent } from '@shared/ui/card/card.component';
+import { PluralPipe } from '@shared/ui/plural/plural.pipe';
+import { primeAudio, playSoundBlob, stopAlarm } from '@features/alarms/data-access/alarm-sound';
 import { SoundsState } from '@features/sounds/data-access/sounds.state';
 
 @Component({
   selector: 'app-settings-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    RouterLink,
-    LucideAngularModule,
-    ButtonDirective,
-    BytesPipe,
-    CardComponent,
-    CardContentComponent,
-  ],
+  imports: [RouterLink, LucideAngularModule, ButtonDirective, BytesPipe, CardComponent, PluralPipe],
   templateUrl: './settings-page.component.html',
 })
 export class SettingsPageComponent {
