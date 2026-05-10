@@ -21,6 +21,10 @@
   [cdkConnectedOverlayOpen]="open()"
   [cdkConnectedOverlayPositions]="positions"
   [cdkConnectedOverlayHasBackdrop]="true"
+  [cdkConnectedOverlayFlexibleDimensions]="true"
+  [cdkConnectedOverlayPush]="true"
+  [cdkConnectedOverlayGrowAfterOpen]="true"
+  [cdkConnectedOverlayViewportMargin]="8"
   cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
   (backdropClick)="open.set(false)"
   (detach)="open.set(false)"
@@ -28,7 +32,7 @@
 >
   <div
     [style.width.px]="triggerWidth()"
-    class="rounded-md border-2 border-border bg-background shadow-brutal overflow-hidden max-h-64 overflow-y-auto"
+    class="max-h-[inherit] overflow-y-auto rounded-md border-2 border-border bg-background shadow-brutal"
     role="listbox"
   >
     @for (option of options(); track option.value) {

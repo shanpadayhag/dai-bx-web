@@ -1,7 +1,25 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  TemplateRef,
+  ViewContainerRef,
+  computed,
+  inject,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList } from '@angular/cdk/drag-drop';
-import { OverlayModule, type ConnectedPosition } from '@angular/cdk/overlay';
+import {
+  Overlay,
+  OverlayModule,
+  type ConnectedPosition,
+  type OverlayRef,
+} from '@angular/cdk/overlay';
+import { TemplatePortal } from '@angular/cdk/portal';
 import { LucideAngularModule } from 'lucide-angular';
 import { AutofocusDirective } from '@shared/ui/autofocus/autofocus.directive';
 import { ButtonDirective } from '@shared/ui/button/button.directive';
@@ -44,9 +62,15 @@ import { WorkspaceState } from '@features/workspace/data-access/workspace.state'
 })
 export class TaskItemComponent {
   private readonly state = inject(WorkspaceState);
+  private readonly overlay = inject(Overlay);
+  private readonly viewContainerRef = inject(ViewContainerRef);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly task = input.required<Task>();
   readonly groupId = input.required<string>();
+
+  private readonly alarmTpl = viewChild.required<TemplateRef<unknown>>('alarmTpl');
+  private readonly timerTpl = viewChild.required<TemplateRef<unknown>>('timerTpl');
 
   protected readonly hovered = signal(false);
   protected readonly adding = signal(false);
@@ -54,6 +78,9 @@ export class TaskItemComponent {
   protected readonly pickingAlarm = signal(false);
   protected readonly pickingTimer = signal(false);
   protected readonly pickingActions = signal(false);
+
+  private alarmOverlayRef: OverlayRef | null = null;
+  private timerOverlayRef: OverlayRef | null = null;
 
   protected readonly hasTimers = computed(() => this.task().timerSets.length > 0);
 
@@ -74,7 +101,7 @@ export class TaskItemComponent {
     return sets.find((s) => s.id === id) ?? sets[0];
   });
 
-  protected readonly alarmOverlayPositions: ConnectedPosition[] = [
+  protected readonly actionsMenuPositions: ConnectedPosition[] = [
     {
       originX: 'end',
       originY: 'bottom',
@@ -142,6 +169,13 @@ export class TaskItemComponent {
     cn('h-4 w-4 transition-transform duration-200', !this.task().isOpen && '-rotate-90'),
   );
 
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      this.alarmOverlayRef?.dispose();
+      this.timerOverlayRef?.dispose();
+    });
+  }
+
   protected toggleOpen(): void {
     this.state.toggleTaskOpen(this.groupId(), this.task().id, !this.task().isOpen);
   }
@@ -173,7 +207,11 @@ export class TaskItemComponent {
   }
 
   protected toggleAlarmPicker(): void {
-    this.pickingAlarm.update((v) => !v);
+    if (this.pickingAlarm()) {
+      this.onAlarmPickerClose();
+    } else {
+      this.openAlarmPicker();
+    }
   }
 
   protected onAlarmChange(alarm: AlarmSpec | null): void {
@@ -181,18 +219,17 @@ export class TaskItemComponent {
   }
 
   protected onAlarmPickerClose(): void {
+    this.alarmOverlayRef?.dispose();
+    this.alarmOverlayRef = null;
     this.pickingAlarm.set(false);
   }
 
-  protected onAlarmOverlayKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      event.stopPropagation();
-      this.onAlarmPickerClose();
-    }
-  }
-
   protected toggleTimerPicker(): void {
-    this.pickingTimer.update((v) => !v);
+    if (this.pickingTimer()) {
+      this.onTimerPickerClose();
+    } else {
+      this.openTimerPicker();
+    }
   }
 
   protected onTimerSetsChange(sets: TimerSet[]): void {
@@ -204,14 +241,9 @@ export class TaskItemComponent {
   }
 
   protected onTimerPickerClose(): void {
+    this.timerOverlayRef?.dispose();
+    this.timerOverlayRef = null;
     this.pickingTimer.set(false);
-  }
-
-  protected onTimerOverlayKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      event.stopPropagation();
-      this.onTimerPickerClose();
-    }
   }
 
   protected toggleActions(): void {
@@ -231,12 +263,12 @@ export class TaskItemComponent {
 
   protected openAlarmFromMenu(): void {
     this.pickingActions.set(false);
-    this.pickingAlarm.set(true);
+    this.openAlarmPicker();
   }
 
   protected openTimerFromMenu(): void {
     this.pickingActions.set(false);
-    this.pickingTimer.set(true);
+    this.openTimerPicker();
   }
 
   protected addSubtaskFromMenu(): void {
@@ -257,5 +289,63 @@ export class TaskItemComponent {
       event.previousIndex,
       event.currentIndex,
     );
+  }
+
+  private openAlarmPicker(): void {
+    if (this.alarmOverlayRef) return;
+    this.alarmOverlayRef = this.createCenteredOverlay();
+    this.alarmOverlayRef.attach(
+      new TemplatePortal(this.alarmTpl(), this.viewContainerRef),
+    );
+    this.alarmOverlayRef
+      .backdropClick()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.onAlarmPickerClose());
+    this.alarmOverlayRef
+      .keydownEvents()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        if (event.key === 'Escape') {
+          event.stopPropagation();
+          this.onAlarmPickerClose();
+        }
+      });
+    this.pickingAlarm.set(true);
+  }
+
+  private openTimerPicker(): void {
+    if (this.timerOverlayRef) return;
+    this.timerOverlayRef = this.createCenteredOverlay();
+    this.timerOverlayRef.attach(
+      new TemplatePortal(this.timerTpl(), this.viewContainerRef),
+    );
+    this.timerOverlayRef
+      .backdropClick()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.onTimerPickerClose());
+    this.timerOverlayRef
+      .keydownEvents()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        if (event.key === 'Escape') {
+          event.stopPropagation();
+          this.onTimerPickerClose();
+        }
+      });
+    this.pickingTimer.set(true);
+  }
+
+  private createCenteredOverlay(): OverlayRef {
+    const positionStrategy = this.overlay
+      .position()
+      .global()
+      .centerHorizontally()
+      .centerVertically();
+    return this.overlay.create({
+      positionStrategy,
+      hasBackdrop: true,
+      backdropClass: 'cdk-overlay-dark-backdrop',
+      scrollStrategy: this.overlay.scrollStrategies.block(),
+    });
   }
 }

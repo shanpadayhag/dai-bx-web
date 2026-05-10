@@ -95,7 +95,7 @@
     cdkConnectedOverlay
     [cdkConnectedOverlayOrigin]="menuTrigger"
     [cdkConnectedOverlayOpen]="pickingActions()"
-    [cdkConnectedOverlayPositions]="alarmOverlayPositions"
+    [cdkConnectedOverlayPositions]="actionsMenuPositions"
     [cdkConnectedOverlayHasBackdrop]="true"
     cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
     (backdropClick)="onActionsClose()"
@@ -146,17 +146,7 @@
     </div>
   </ng-template>
 
-  <ng-template
-    cdkConnectedOverlay
-    [cdkConnectedOverlayOrigin]="menuTrigger"
-    [cdkConnectedOverlayOpen]="pickingAlarm()"
-    [cdkConnectedOverlayPositions]="alarmOverlayPositions"
-    [cdkConnectedOverlayHasBackdrop]="true"
-    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
-    (backdropClick)="onAlarmPickerClose()"
-    (detach)="onAlarmPickerClose()"
-    (overlayKeydown)="onAlarmOverlayKeydown($event)"
-  >
+  <ng-template #alarmTpl>
     <app-alarm-picker
       [alarm]="task().alarm"
       (alarmChange)="onAlarmChange($event)"
@@ -164,17 +154,7 @@
     />
   </ng-template>
 
-  <ng-template
-    cdkConnectedOverlay
-    [cdkConnectedOverlayOrigin]="menuTrigger"
-    [cdkConnectedOverlayOpen]="pickingTimer()"
-    [cdkConnectedOverlayPositions]="alarmOverlayPositions"
-    [cdkConnectedOverlayHasBackdrop]="true"
-    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
-    (backdropClick)="onTimerPickerClose()"
-    (detach)="onTimerPickerClose()"
-    (overlayKeydown)="onTimerOverlayKeydown($event)"
-  >
+  <ng-template #timerTpl>
     <app-timer-editor
       [groupId]="groupId()"
       [taskId]="task().id"
