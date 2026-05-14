@@ -61,6 +61,14 @@
             {{ timerStepBadge() }}
           </span>
         }
+        @if (extraRunning() > 0) {
+          <span
+            class="readout text-[0.625rem] font-bold uppercase tracking-[0.12em] opacity-80"
+            [attr.aria-label]="extraRunning() + ' more timers running'"
+          >
+            +{{ extraRunning() }}
+          </span>
+        }
       </div>
     }
 

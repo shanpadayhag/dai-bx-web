@@ -102,7 +102,7 @@ export class TasksState {
     const newTask: Task = {
       id: uid(),
       name: trimmed,
-      order: tree.length,
+      order: this.nextOrder(tree),
       hiddenUntil: null,
       completedDate: null,
       isOpen: true,
@@ -124,7 +124,7 @@ export class TasksState {
     const newTask: Task = {
       id: uid(),
       name: trimmed,
-      order: parent.task.tasks.length,
+      order: this.nextOrder(parent.task.tasks),
       hiddenUntil: null,
       completedDate: null,
       isOpen: true,
@@ -187,6 +187,12 @@ export class TasksState {
     this.replaceTree(groupId, next);
     const siblings = getSiblingsOf(next, parentTaskId);
     void this.repository.putBatch(siblings.map((t) => toTaskRow(t, groupId, parentTaskId)));
+  }
+
+  private nextOrder(siblings: readonly { order: number }[]): number {
+    let max = -1;
+    for (const s of siblings) if (s.order > max) max = s.order;
+    return max + 1;
   }
 
   private replaceTree(groupId: string, tree: Task[]): void {

@@ -47,7 +47,7 @@ export class WorkspaceState {
     let best: { task: Task; groupId: string; at: number } | null = null;
     for (const entry of this.tasksState.tasksWithAlarm()) {
       const alarm = entry.task.alarm;
-      if (!alarm) continue;
+      if (!alarm || !alarm.enabled) continue;
       const at = Date.parse(alarm.firesAt);
       if (Number.isNaN(at) || at < now) continue;
       if (!best || at < best.at) best = { ...entry, at };

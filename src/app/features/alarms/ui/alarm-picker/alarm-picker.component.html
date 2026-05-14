@@ -38,6 +38,57 @@
     </span>
   </div>
 
+  @if (hasAlarm()) {
+    <label
+      class="flex items-center gap-3 rounded-md border-2 border-border bg-secondary-background px-3 py-2 shadow-brutal-sm cursor-pointer select-none"
+    >
+      <input
+        type="checkbox"
+        class="h-4 w-4 accent-foreground"
+        [checked]="currentEnabled()"
+        (change)="onEnabledChange($any($event.target).checked)"
+      />
+      <span class="flex-1 text-sm font-bold tracking-tight">Enabled</span>
+      <span class="text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-subtle-foreground">
+        {{ currentEnabled() ? 'On' : 'Off' }}
+      </span>
+    </label>
+  }
+
+  <div class="space-y-1.5">
+    <span
+      class="block text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-subtle-foreground"
+    >
+      Repeat
+    </span>
+    <div class="grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        [class]="
+          'inline-flex items-center justify-center h-9 px-3 rounded-md border-2 border-border text-xs font-bold tracking-tight transition-colors ' +
+          (currentRepeat() === 'none'
+            ? 'bg-foreground text-secondary-background'
+            : 'bg-secondary-background text-foreground hover:bg-foreground/5')
+        "
+        (click)="onRepeatChange('none')"
+      >
+        One-shot
+      </button>
+      <button
+        type="button"
+        [class]="
+          'inline-flex items-center justify-center h-9 px-3 rounded-md border-2 border-border text-xs font-bold tracking-tight transition-colors ' +
+          (currentRepeat() === 'daily'
+            ? 'bg-foreground text-secondary-background'
+            : 'bg-secondary-background text-foreground hover:bg-foreground/5')
+        "
+        (click)="onRepeatChange('daily')"
+      >
+        Daily
+      </button>
+    </div>
+  </div>
+
   <div class="space-y-1.5">
     <span
       class="block text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-subtle-foreground"

@@ -18,7 +18,7 @@ import {
   parseHourMinute,
 } from '@features/alarms/data-access/alarm-format';
 import { primeAudio } from '@features/alarms/data-access/alarm-sound';
-import type { AlarmSpec } from '@features/alarms/data-access/alarms.types';
+import type { AlarmRepeat, AlarmSpec } from '@features/alarms/data-access/alarms.types';
 import {
   TimeSpinnerComponent,
   type TimeOfDay,
@@ -61,6 +61,12 @@ export class AlarmPickerComponent {
 
   protected readonly currentSoundId = computed<string>(() => this.alarm()?.soundId ?? '');
 
+  protected readonly currentEnabled = computed<boolean>(() => this.alarm()?.enabled ?? true);
+
+  protected readonly currentRepeat = computed<AlarmRepeat>(() => this.alarm()?.repeat ?? 'none');
+
+  protected readonly hasAlarm = computed<boolean>(() => this.alarm() !== null);
+
   protected readonly defaultLabel = computed<string>(() => {
     const id = this.defaultSoundId();
     if (!id) return 'Default · built-in beep';
@@ -88,9 +94,12 @@ export class AlarmPickerComponent {
   protected onTimeChange(value: TimeOfDay): void {
     void primeAudio();
     this.draft.set(value);
+    const current = this.alarm();
     this.alarmChange.emit({
       firesAt: nextOccurrenceIso(value.hour, value.minute),
-      soundId: this.alarm()?.soundId ?? null,
+      soundId: current?.soundId ?? null,
+      enabled: current?.enabled ?? true,
+      repeat: current?.repeat ?? 'none',
     });
   }
 
@@ -99,7 +108,40 @@ export class AlarmPickerComponent {
     const current = this.alarm();
     const t = this.currentTime();
     const firesAt = current?.firesAt ?? nextOccurrenceIso(t.hour, t.minute);
-    this.alarmChange.emit({ firesAt, soundId });
+    this.alarmChange.emit({
+      firesAt,
+      soundId,
+      enabled: current?.enabled ?? true,
+      repeat: current?.repeat ?? 'none',
+    });
+  }
+
+  protected onEnabledChange(value: boolean): void {
+    const current = this.alarm();
+    if (!current) return;
+    if (!value) {
+      this.alarmChange.emit({ ...current, enabled: false });
+      return;
+    }
+    const parsedAt = Date.parse(current.firesAt);
+    let firesAt = current.firesAt;
+    if (!Number.isNaN(parsedAt) && parsedAt <= Date.now()) {
+      const t = parseHourMinute(current.firesAt);
+      if (t) firesAt = nextOccurrenceIso(t.hour, t.minute);
+    }
+    this.alarmChange.emit({ ...current, enabled: true, firesAt });
+  }
+
+  protected onRepeatChange(value: AlarmRepeat): void {
+    const current = this.alarm();
+    const t = this.currentTime();
+    const firesAt = current?.firesAt ?? nextOccurrenceIso(t.hour, t.minute);
+    this.alarmChange.emit({
+      firesAt,
+      soundId: current?.soundId ?? null,
+      enabled: current?.enabled ?? true,
+      repeat: value,
+    });
   }
 
   protected onClear(): void {

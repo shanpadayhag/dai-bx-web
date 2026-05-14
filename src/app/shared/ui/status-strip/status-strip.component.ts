@@ -42,17 +42,25 @@ export class StatusStripComponent {
     };
   });
 
-  protected readonly timerRun = this.runner.run;
+  protected readonly chipRun = computed(() => this.runner.runningRuns()[0] ?? null);
 
-  protected readonly hasActiveTimer = computed(() => this.timerRun().status === 'running');
+  protected readonly hasActiveTimer = computed(() => this.chipRun() !== null);
+
+  protected readonly extraRunning = computed(() =>
+    Math.max(0, this.runner.runningRuns().length - 1),
+  );
 
   protected readonly timerRemaining = computed(() => {
-    const s = this.runner.remainingSeconds();
+    const chip = this.chipRun();
+    if (!chip) return '00:00';
+    const s = this.runner.remainingSecondsFor(chip.taskId);
     return s === null ? '00:00' : formatRemaining(s);
   });
 
   protected readonly timerStepBadge = computed(() => {
-    const step = this.runner.currentStep();
+    const chip = this.chipRun();
+    if (!chip) return '';
+    const step = this.runner.currentStepFor(chip.taskId);
     if (!step) return '';
     return `${step.index + 1}/${step.set.timers.length}`;
   });

@@ -137,9 +137,8 @@ export class TaskItemComponent {
   protected readonly isCompleted = computed(() => this.task().completedDate === todayIso());
 
   protected readonly isTimerActive = computed(() => {
-    const r = this.runner.run();
-    if (r.status !== 'running' && r.status !== 'awaitingAdvance') return false;
-    return r.taskId === this.task().id;
+    const r = this.runner.runForTask(this.task().id);
+    return r?.status === 'running' || r?.status === 'awaitingAdvance';
   });
 
   protected readonly sortedChildren = computed(() =>
