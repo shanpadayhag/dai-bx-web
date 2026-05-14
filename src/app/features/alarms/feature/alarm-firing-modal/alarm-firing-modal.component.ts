@@ -27,14 +27,10 @@ export class AlarmFiringModalComponent {
     const f = this.firing();
     if (!f) return;
     this.workspace.toggleTaskCompletion(f.groupId, f.task.id);
-    this.workspace.setTaskAlarm(f.groupId, f.task.id, null);
     this.scheduler.dismiss();
   }
 
   protected onDismiss(): void {
-    const f = this.firing();
-    if (!f) return;
-    this.workspace.setTaskAlarm(f.groupId, f.task.id, null);
     this.scheduler.dismiss();
   }
 }

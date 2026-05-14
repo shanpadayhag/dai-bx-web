@@ -72,6 +72,75 @@ export const playSoundBlob = (blob: Blob, options: { loop?: boolean } = {}): voi
   activeAudioUrl = url;
 };
 
+export interface RunSoundHandle {
+  stop: () => void;
+}
+
+export const playRunSound = (blob: Blob, opts: { loop?: boolean } = {}): RunSoundHandle => {
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  audio.loop = opts.loop ?? true;
+  let stopped = false;
+  audio.play().catch(() => {
+    /* play may be blocked until user gesture; alarm picker primes context */
+  });
+  const stop = (): void => {
+    if (stopped) return;
+    stopped = true;
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+    } catch {
+      /* element may be detached */
+    }
+    URL.revokeObjectURL(url);
+  };
+  return { stop };
+};
+
+export const playRunBeep = (): RunSoundHandle => {
+  const ctx = getContext();
+  if (!ctx) return { stop: () => undefined };
+  if (ctx.state === 'suspended') void ctx.resume();
+
+  const gain = ctx.createGain();
+  gain.gain.value = 0.0001;
+  gain.connect(ctx.destination);
+
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = 880;
+  osc.connect(gain);
+
+  const start = ctx.currentTime;
+  osc.start(start);
+
+  const beat = 0.6;
+  const cycles = 30;
+  for (let i = 0; i < cycles; i++) {
+    const t = start + i * beat;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.4, t + 0.05);
+    gain.gain.setValueAtTime(0.4, t + beat * 0.5);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + beat * 0.6);
+  }
+  osc.stop(start + cycles * beat);
+
+  let stopped = false;
+  const stop = (): void => {
+    if (stopped) return;
+    stopped = true;
+    try {
+      gain.gain.cancelScheduledValues(ctx.currentTime);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.05);
+    } catch {
+      /* already stopped */
+    }
+  };
+  return { stop };
+};
+
 export const stopAlarm = (): void => {
   activeBeepStop?.();
   if (activeAudio) {

@@ -104,6 +104,17 @@ export class GroupItemComponent {
 
   protected onTaskDrop(event: CdkDragDrop<Task[]>): void {
     if (event.previousIndex === event.currentIndex) return;
-    this.state.reorderTasks(this.group().id, null, event.previousIndex, event.currentIndex);
+
+    const tasks = this.state.tasksFor(this.group().id);
+    const visibleAbsIndices: number[] = [];
+    for (let i = 0; i < tasks.length; i++) {
+      if (isVisibleToday(tasks[i])) visibleAbsIndices.push(i);
+    }
+
+    const fromAbs = visibleAbsIndices[event.previousIndex];
+    const toAbs = visibleAbsIndices[event.currentIndex];
+    if (fromAbs === undefined || toAbs === undefined) return;
+
+    this.state.reorderTasks(this.group().id, null, fromAbs, toAbs);
   }
 }

@@ -198,4 +198,72 @@ describe('TasksState', () => {
     expect(state.findTask(id)?.groupId).toBe('g2');
     expect(state.findTask('missing')).toBeNull();
   });
+
+  describe('order assignment for new tasks', () => {
+    const row = (overrides: Partial<TaskRow>): TaskRow => ({
+      id: overrides.id ?? 'x',
+      groupId: overrides.groupId ?? 'g',
+      parentId: overrides.parentId ?? null,
+      name: overrides.name ?? 'x',
+      order: overrides.order ?? 0,
+      hiddenUntil: null,
+      completedDate: null,
+      isOpen: true,
+      alarm: null,
+      timerSets: [],
+      activeTimerSetId: null,
+    });
+
+    it('addRoot assigns order 0 when the group is empty', () => {
+      state.addRoot('g', 'first');
+      expect(state.tasksFor('g')[0].order).toBe(0);
+    });
+
+    it('addRoot assigns max(order)+1 when root orders are dense', () => {
+      state.addRoot('g', 'one');
+      state.addRoot('g', 'two');
+      state.addRoot('g', 'three');
+      state.addRoot('g', 'four');
+      expect(state.tasksFor('g').map((t) => t.order)).toEqual([0, 1, 2, 3]);
+    });
+
+    it('addRoot assigns max(order)+1 when root orders are sparse', async () => {
+      repo.rows.set('a', row({ id: 'a', name: 'a', order: 0 }));
+      repo.rows.set('b', row({ id: 'b', name: 'b', order: 1 }));
+      repo.rows.set('c', row({ id: 'c', name: 'c', order: 4 }));
+      await state.loadAll();
+
+      state.addRoot('g', 'new');
+      const added = state.tasksFor('g').find((t) => t.name === 'new');
+      expect(added?.order).toBe(5);
+    });
+
+    it('addSubtask assigns order 0 for the first child', () => {
+      state.addRoot('g', 'parent');
+      const parentId = state.tasksFor('g')[0].id;
+      state.addSubtask('g', parentId, 'first-child');
+      expect(state.tasksFor('g')[0].tasks[0].order).toBe(0);
+    });
+
+    it('addSubtask assigns max(order)+1 when child orders are dense', () => {
+      state.addRoot('g', 'parent');
+      const parentId = state.tasksFor('g')[0].id;
+      state.addSubtask('g', parentId, 'one');
+      state.addSubtask('g', parentId, 'two');
+      state.addSubtask('g', parentId, 'three');
+      expect(state.tasksFor('g')[0].tasks.map((t) => t.order)).toEqual([0, 1, 2]);
+    });
+
+    it('addSubtask assigns max(order)+1 when child orders are sparse', async () => {
+      repo.rows.set('p', row({ id: 'p', name: 'parent', order: 0 }));
+      repo.rows.set('c0', row({ id: 'c0', parentId: 'p', name: 'c0', order: 0 }));
+      repo.rows.set('c1', row({ id: 'c1', parentId: 'p', name: 'c1', order: 1 }));
+      repo.rows.set('c4', row({ id: 'c4', parentId: 'p', name: 'c4', order: 4 }));
+      await state.loadAll();
+
+      state.addSubtask('g', 'p', 'new-child');
+      const added = state.tasksFor('g')[0].tasks.find((t) => t.name === 'new-child');
+      expect(added?.order).toBe(5);
+    });
+  });
 });

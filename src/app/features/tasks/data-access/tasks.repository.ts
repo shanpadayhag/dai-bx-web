@@ -1,7 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { DatabaseService } from '@core/db/database.service';
 import { STORES, TASK_INDEXES } from '@core/db/database.schema';
+import { normalizeAlarm } from '@features/alarms/data-access/alarms.types';
 import type { TaskRow } from '@features/tasks/data-access/tasks.types';
+
+const hydrateRow = (row: TaskRow): TaskRow => ({
+  ...row,
+  alarm: normalizeAlarm(row.alarm),
+});
 
 @Injectable({ providedIn: 'root' })
 export class TasksRepository {
@@ -10,7 +16,8 @@ export class TasksRepository {
   async listAll(): Promise<TaskRow[]> {
     try {
       const db = await this.database.db();
-      return (await db.getAll(STORES.tasks)) as TaskRow[];
+      const rows = (await db.getAll(STORES.tasks)) as TaskRow[];
+      return rows.map(hydrateRow);
     } catch {
       return [];
     }
@@ -19,7 +26,12 @@ export class TasksRepository {
   async listByGroup(groupId: string): Promise<TaskRow[]> {
     try {
       const db = await this.database.db();
-      return (await db.getAllFromIndex(STORES.tasks, TASK_INDEXES.byGroup, groupId)) as TaskRow[];
+      const rows = (await db.getAllFromIndex(
+        STORES.tasks,
+        TASK_INDEXES.byGroup,
+        groupId,
+      )) as TaskRow[];
+      return rows.map(hydrateRow);
     } catch {
       return [];
     }

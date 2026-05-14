@@ -158,6 +158,97 @@ describe('WorkspaceState', () => {
     expect(preview?.[1].id).toBe('legacy-1');
   });
 
+  it('nextAlarm returns the soonest enabled alarm', async () => {
+    const inOneMin = new Date(Date.now() + 60_000).toISOString();
+    const inTwoMin = new Date(Date.now() + 120_000).toISOString();
+    const { state } = await setUp((f) => {
+      f.groupsRepo.rows.set('g1', { id: 'g1', name: 'A', order: 0, isOpen: true, isHidden: false });
+      f.tasksRepo.rows.set('t1', {
+        id: 't1',
+        groupId: 'g1',
+        parentId: null,
+        name: 'one',
+        order: 0,
+        hiddenUntil: null,
+        completedDate: null,
+        isOpen: true,
+        alarm: { firesAt: inTwoMin, soundId: null, enabled: true, repeat: 'none' },
+        timerSets: [],
+        activeTimerSetId: null,
+      });
+      f.tasksRepo.rows.set('t2', {
+        id: 't2',
+        groupId: 'g1',
+        parentId: null,
+        name: 'two',
+        order: 1,
+        hiddenUntil: null,
+        completedDate: null,
+        isOpen: true,
+        alarm: { firesAt: inOneMin, soundId: null, enabled: true, repeat: 'none' },
+        timerSets: [],
+        activeTimerSetId: null,
+      });
+    });
+    expect(state.nextAlarm()?.task.id).toBe('t2');
+  });
+
+  it('nextAlarm ignores disabled alarms even when their firesAt is sooner', async () => {
+    const inOneMin = new Date(Date.now() + 60_000).toISOString();
+    const inTwoMin = new Date(Date.now() + 120_000).toISOString();
+    const { state } = await setUp((f) => {
+      f.groupsRepo.rows.set('g1', { id: 'g1', name: 'A', order: 0, isOpen: true, isHidden: false });
+      f.tasksRepo.rows.set('t1', {
+        id: 't1',
+        groupId: 'g1',
+        parentId: null,
+        name: 'enabled-later',
+        order: 0,
+        hiddenUntil: null,
+        completedDate: null,
+        isOpen: true,
+        alarm: { firesAt: inTwoMin, soundId: null, enabled: true, repeat: 'none' },
+        timerSets: [],
+        activeTimerSetId: null,
+      });
+      f.tasksRepo.rows.set('t2', {
+        id: 't2',
+        groupId: 'g1',
+        parentId: null,
+        name: 'disabled-sooner',
+        order: 1,
+        hiddenUntil: null,
+        completedDate: null,
+        isOpen: true,
+        alarm: { firesAt: inOneMin, soundId: null, enabled: false, repeat: 'none' },
+        timerSets: [],
+        activeTimerSetId: null,
+      });
+    });
+    expect(state.nextAlarm()?.task.id).toBe('t1');
+  });
+
+  it('nextAlarm returns null when all alarms are disabled', async () => {
+    const inOneMin = new Date(Date.now() + 60_000).toISOString();
+    const { state } = await setUp((f) => {
+      f.groupsRepo.rows.set('g1', { id: 'g1', name: 'A', order: 0, isOpen: true, isHidden: false });
+      f.tasksRepo.rows.set('t1', {
+        id: 't1',
+        groupId: 'g1',
+        parentId: null,
+        name: 'off',
+        order: 0,
+        hiddenUntil: null,
+        completedDate: null,
+        isOpen: true,
+        alarm: { firesAt: inOneMin, soundId: null, enabled: false, repeat: 'none' },
+        timerSets: [],
+        activeTimerSetId: null,
+      });
+    });
+    expect(state.nextAlarm()).toBeNull();
+  });
+
   it('importLegacy writes group + task rows, clears legacy, and refreshes', async () => {
     const { state, groupsRepo, tasksRepo, legacy } = await setUp((f) => {
       f.legacy.data = [

@@ -1,14 +1,17 @@
-@if (isVisible()) {
+@if (focused(); as f) {
   <div
     class="fixed bottom-4 right-4 z-50 w-80 rounded-md border-2 border-border bg-background shadow-brutal p-3 space-y-3"
     role="status"
     aria-live="polite"
+    tabindex="0"
+    (keydown.arrowleft)="onPrev()"
+    (keydown.arrowright)="onNext()"
   >
     <div class="flex items-center gap-2.5">
       <span
         class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border-2 border-border bg-primary text-primary-foreground shadow-brutal-sm"
       >
-        <lucide-icon [name]="statusIcon()" class="h-4 w-4" [class.animate-pulse]="!isRunning()" />
+        <lucide-icon [name]="statusIcon()" class="h-4 w-4 animate-pulse" />
       </span>
       <div class="min-w-0 flex-1">
         <p class="text-[0.625rem] font-bold uppercase tracking-[0.12em] text-subtle-foreground">
@@ -16,38 +19,50 @@
         </p>
         <p class="text-sm font-bold tracking-tight truncate leading-tight">{{ taskName() }}</p>
       </div>
+      @if (hasMultiple()) {
+        <span
+          class="readout text-[0.625rem] font-bold uppercase tracking-[0.12em] text-subtle-foreground"
+        >
+          {{ counterLabel() }}
+        </span>
+      }
     </div>
 
-    @switch (run().status) {
-      @case ('running') {
-        <div
-          class="rounded-md border-2 border-border bg-secondary-background px-3 py-2 shadow-brutal-sm space-y-1"
+    @if (hasMultiple()) {
+      <div class="flex items-center gap-2">
+        <button
+          appButton
+          variant="neutral"
+          size="icon-sm"
+          btnClass="h-8 w-8"
+          (click)="onPrev()"
+          title="Previous timer"
+          aria-label="Previous timer"
+          type="button"
         >
-          <div class="flex items-baseline gap-3">
-            <p class="readout text-4xl font-bold leading-none flex-1 tracking-tight">
-              {{ remainingLabel() }}
-            </p>
-            <span
-              class="readout text-xs font-bold uppercase tracking-[0.1em] text-subtle-foreground"
-            >
-              {{ stepBadge() }}
-            </span>
-          </div>
-        </div>
-        <div class="flex gap-2">
-          <button
-            appButton
-            variant="destructive"
-            size="sm"
-            btnClass="flex-1 h-9"
-            (click)="onCancel()"
-            type="button"
-          >
-            <lucide-icon name="x" class="h-4 w-4" />
-            Cancel
-          </button>
-        </div>
-      }
+          <lucide-icon name="chevron-left" class="h-4 w-4" />
+        </button>
+        <span
+          class="readout flex-1 text-center text-[0.625rem] font-bold uppercase tracking-[0.12em] text-subtle-foreground"
+        >
+          {{ counterLabel() }}
+        </span>
+        <button
+          appButton
+          variant="neutral"
+          size="icon-sm"
+          btnClass="h-8 w-8"
+          (click)="onNext()"
+          title="Next timer"
+          aria-label="Next timer"
+          type="button"
+        >
+          <lucide-icon name="chevron-right" class="h-4 w-4" />
+        </button>
+      </div>
+    }
+
+    @switch (f.run.status) {
       @case ('awaitingAdvance') {
         <p class="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-subtle-foreground">
           Step complete
