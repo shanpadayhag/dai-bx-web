@@ -4,6 +4,7 @@ import { Music, Upload } from 'lucide-solid'
 import Button, { buttonClasses } from '~/components/Button'
 import { Card } from '~/components/Card'
 import { useWorkspace } from '~/state/workspaceContext'
+import BackupSection from '~/features/backup/BackupSection'
 import SoundListItem from './SoundListItem'
 
 /**
@@ -146,6 +147,8 @@ export default function SettingsPage() {
             </ul>
           </Card>
         </Show>
+
+        <BackupSection />
       </div>
     </main>
   )
