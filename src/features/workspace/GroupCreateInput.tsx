@@ -1,15 +1,17 @@
 import { createSignal } from 'solid-js'
-import { Plus } from 'lucide-solid'
+import { Plus, Upload } from 'lucide-solid'
 import Button from '~/components/Button'
+import IconButton from '~/components/IconButton'
 import Input from '~/components/Input'
 
 /**
- * "Create a new group…" input + submit button. Trims on submit, clears the
- * field on success.
+ * "Create a new group…" input + submit button, with an icon trigger to import
+ * a group from JSON. Trims on submit, clears the field on success.
  */
 
 interface Props {
   onSubmit: (name: string) => void | Promise<unknown>
+  onImport: () => void
 }
 
 export default function GroupCreateInput(props: Props) {
@@ -36,6 +38,16 @@ export default function GroupCreateInput(props: Props) {
         <Plus size={20} />
         New
       </Button>
+      <IconButton
+        type="button"
+        size="icon"
+        btnClass="h-11 w-11"
+        aria-label="Import group from JSON"
+        title="Import group from JSON"
+        onClick={() => props.onImport()}
+      >
+        <Upload size={20} />
+      </IconButton>
     </form>
   )
 }

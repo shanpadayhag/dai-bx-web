@@ -2,7 +2,7 @@ import { beforeEach, describe, it, expect } from 'vitest'
 import { DB_NAME, __resetForTests } from '~/lib/db'
 import { listAllTaskRows, putTaskRowBatch } from './repository'
 import { createTasksStore, type TasksStore } from './store'
-import type { TaskRow } from './types'
+import type { Task, TaskRow } from './types'
 
 import { todayIso } from '~/lib/date'
 
@@ -266,6 +266,44 @@ describe('findTask', () => {
     expect(store.findTask(a.id)?.groupId).toBe('g1')
     expect(store.findTask(b.id)?.groupId).toBe('g2')
     expect(store.findTask('missing')).toBeNull()
+  })
+})
+
+describe('importTree', () => {
+  const node = (id: string, name: string, order: number, children: Task[] = []): Task => ({
+    id,
+    name,
+    order,
+    hiddenUntil: null,
+    completedDate: null,
+    isOpen: true,
+    alarm: null,
+    timerSets: [],
+    activeTimerSetId: null,
+    tasks: children,
+  })
+
+  it('installs the tree in state and persists every node flattened', async () => {
+    const tree: Task[] = [
+      node('a', 'A', 0, [node('a1', 'A1', 0), node('a2', 'A2', 1)]),
+      node('b', 'B', 1),
+    ]
+    await store.importTree('g', tree)
+
+    expect(store.tasksFor('g').map((t) => t.id)).toEqual(['a', 'b'])
+    expect(store.tasksFor('g')[0]?.tasks.map((t) => t.id)).toEqual(['a1', 'a2'])
+
+    const persisted = await listAllTaskRows()
+    expect(persisted).toHaveLength(4)
+    const a1 = persisted.find((r) => r.id === 'a1')
+    expect(a1?.parentId).toBe('a')
+    expect(a1?.groupId).toBe('g')
+  })
+
+  it('handles an empty tree (group with no tasks)', async () => {
+    await store.importTree('g', [])
+    expect(store.tasksFor('g')).toEqual([])
+    expect(await listAllTaskRows()).toEqual([])
   })
 })
 

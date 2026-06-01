@@ -19,6 +19,9 @@ import {
   createTimersRunner,
   type TimersRunner,
 } from '~/features/timers/runner'
+import { parseGroupJson } from '~/features/import/parse'
+import { buildGroupAndTree, countTasks } from '~/features/import/build'
+import type { ImportResult } from '~/features/import/types'
 
 /**
  * Workspace-wide context. Instantiates the feature stores at app boot and
@@ -48,6 +51,12 @@ export interface WorkspaceContextValue {
   pickingTimerTaskId: Accessor<string | null>
   openTimerPicker: (taskId: string) => void
   closeTimerPicker: () => void
+  /**
+   * Imports one group (name + nested task tree) from raw JSON text. Parses and
+   * validates first; only on success does it persist the tasks then the group,
+   * so a malformed file creates nothing (atomicity at the validation boundary).
+   */
+  importGroup: (text: string) => Promise<ImportResult>
 }
 
 export const WorkspaceContext = createContext<WorkspaceContextValue>()
@@ -71,6 +80,18 @@ export function WorkspaceContextProvider(props: ProviderProps): JSX.Element {
   const closeTimerPicker = (): void => {
     setPickingTimerTaskId(null)
   }
+
+  const importGroup = async (text: string): Promise<ImportResult> => {
+    const parsed = parseGroupJson(text)
+    if (!parsed.ok) return { ok: false, error: parsed.error }
+    const { group, tree } = buildGroupAndTree(parsed.group)
+    // Tasks first, then the group: the group becoming visible is the signal the
+    // import is done, so its tasks should already be in place.
+    await tasks.importTree(group.id, tree)
+    await groups.importGroup(group)
+    return { ok: true, groupName: group.name, taskCount: countTasks(tree) }
+  }
+
   onCleanup(() => {
     alarmsScheduler.dispose()
     timersRunner.dispose()
@@ -101,6 +122,7 @@ export function WorkspaceContextProvider(props: ProviderProps): JSX.Element {
         pickingTimerTaskId,
         openTimerPicker,
         closeTimerPicker,
+        importGroup,
       }}
     >
       {props.children}

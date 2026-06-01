@@ -34,9 +34,11 @@ export interface GroupsStore {
   load: () => Promise<void>
   setAll: (groups: Group[]) => void
   create: (name: string) => Promise<Group | null>
+  importGroup: (group: Group) => Promise<void>
   delete: (groupId: string) => Promise<void>
   rename: (groupId: string, name: string) => Promise<void>
   toggleOpen: (groupId: string, isOpen: boolean) => Promise<void>
+  collapseVisible: () => Promise<void>
   setHidden: (groupId: string, isHidden: boolean) => Promise<void>
   setVisibility: (visibleIds: ReadonlySet<string>) => Promise<void>
   reorder: (fromIndex: number, toIndex: number) => Promise<void>
@@ -95,6 +97,17 @@ export function createGroupsStore(): GroupsStore {
     return newGroup
   }
 
+  /**
+   * Appends a pre-built group (e.g. from a JSON import). Mirrors `create` but
+   * takes a ready-made `Group`; the store owns the append position by stamping
+   * `order = state.groups.length` so the import lands at the bottom.
+   */
+  const importGroup = async (group: Group): Promise<void> => {
+    const placed: Group = { ...group, order: state.groups.length }
+    setState('groups', [...state.groups, placed])
+    await repo.putGroup(placed)
+  }
+
   const del = async (groupId: string): Promise<void> => {
     const reordered = reindexOrder(state.groups.filter((g) => g.id !== groupId))
     setState('groups', reordered)
@@ -114,6 +127,18 @@ export function createGroupsStore(): GroupsStore {
     setState('groups', (g) => g.id === groupId, 'isOpen', isOpen)
     const updated = findById(groupId)
     if (updated) await repo.putGroup({ ...updated })
+  }
+
+  /** Collapses every visible (non-hidden) group; leaves hidden groups alone. */
+  const collapseVisible = async (): Promise<void> => {
+    const changed: Group[] = []
+    for (const g of state.groups) {
+      if (g.isHidden || !g.isOpen) continue
+      setState('groups', (x) => x.id === g.id, 'isOpen', false)
+      const updated = findById(g.id)
+      if (updated) changed.push({ ...updated })
+    }
+    if (changed.length > 0) await repo.putGroupBatch(changed)
   }
 
   const setHidden = async (groupId: string, isHidden: boolean): Promise<void> => {
@@ -172,9 +197,11 @@ export function createGroupsStore(): GroupsStore {
     load,
     setAll,
     create,
+    importGroup,
     delete: del,
     rename,
     toggleOpen,
+    collapseVisible,
     setHidden,
     setVisibility,
     reorder,

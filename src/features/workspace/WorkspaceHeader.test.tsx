@@ -49,6 +49,7 @@ const makeCtx = (): WorkspaceContextValue => ({
   pickingTimerTaskId: () => null,
   openTimerPicker: () => {},
   closeTimerPicker: () => {},
+  importGroup: async () => ({ ok: false as const, error: 'stub' }),
 })
 
 const renderWithCtx = (

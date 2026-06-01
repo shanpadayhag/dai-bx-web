@@ -1,5 +1,5 @@
 import { Show } from 'solid-js'
-import { Eye } from 'lucide-solid'
+import { ChevronsDownUp, Eye } from 'lucide-solid'
 import { useWorkspace } from '~/state/workspaceContext'
 import IconButton from '~/components/IconButton'
 import { isVisibleToday } from '~/features/tasks/tree'
@@ -36,6 +36,18 @@ export default function WorkspaceHeader(props: Props) {
     return count
   }
 
+  /**
+   * Collapses everything currently on screen: tasks/subtasks inside each open
+   * visible group, then the visible groups themselves. Hidden groups and
+   * date-hidden or already-collapsed-deeper items are left untouched.
+   */
+  const collapseAll = (): void => {
+    for (const g of ws.groups.visibleGroups()) {
+      if (g.isOpen) void ws.tasks.collapseVisible(g.id)
+    }
+    void ws.groups.collapseVisible()
+  }
+
   return (
     <header class="mb-8 flex items-end justify-between gap-4">
       <div class="min-w-0 flex-1">
@@ -54,13 +66,22 @@ export default function WorkspaceHeader(props: Props) {
         </Show>
       </div>
       <Show when={ws.groups.hasGroups()}>
-        <IconButton
-          onClick={props.onManage}
-          title="Manage visible groups"
-          aria-label="Manage visible groups"
-        >
-          <Eye size={20} />
-        </IconButton>
+        <div class="flex items-center gap-2">
+          <IconButton
+            onClick={collapseAll}
+            title="Collapse all"
+            aria-label="Collapse all groups, tasks, and subtasks"
+          >
+            <ChevronsDownUp size={20} />
+          </IconButton>
+          <IconButton
+            onClick={props.onManage}
+            title="Manage visible groups"
+            aria-label="Manage visible groups"
+          >
+            <Eye size={20} />
+          </IconButton>
+        </div>
       </Show>
     </header>
   )

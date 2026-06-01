@@ -1,6 +1,11 @@
 import { For, Show, createSignal, onCleanup, onMount } from 'solid-js'
 import { Bell, Check, ChevronDown, GripVertical, Plus, Timer, Trash2 } from 'lucide-solid'
-import { createDraggable } from '@thisbeyond/solid-dnd'
+import {
+  createSortable,
+  SortableProvider,
+  maybeTransformStyle,
+  useDragDropContext,
+} from '@thisbeyond/solid-dnd'
 import { cn } from '~/lib/classnames'
 import { todayIso } from '~/lib/date'
 import { useWorkspace } from '~/state/workspaceContext'
@@ -13,13 +18,13 @@ import AlarmPicker from '~/features/alarms/AlarmPicker'
 import TimerBadge from '~/features/timers/TimerBadge'
 import TimerEditor from '~/features/timers/TimerEditor'
 import { sortedSets } from '~/features/timers/lib/timerFormat'
-import Gap from './Gap'
 import { rootTasksListKey, subtasksListKey, type ItemDragData } from './dnd'
 
 /**
- * Recursive task row. The row itself is a draggable in its parent's list
- * (root tasks of the group, or subtasks of another task). Children render
- * inside their own gap-interleaved list using `subtasksListKey(...)`.
+ * Recursive task row. The row is a sortable in its parent's list (root tasks of
+ * the group, or subtasks of another task): it drags under the cursor while
+ * siblings shift. Children render inside their own `SortableProvider` keyed by
+ * `subtasksListKey(...)`.
  */
 
 interface Props {
@@ -36,13 +41,15 @@ export default function TaskItem(props: Props) {
       ? rootTasksListKey(props.groupId)
       : subtasksListKey(props.groupId, props.parentId)
 
-  const draggable = createDraggable(props.task.id, {
+  const sortable = createSortable(props.task.id, {
     kind: 'item',
     itemKind: 'task',
     listKey: myListKey() as ItemDragData['listKey'],
     groupId: props.groupId,
     parentId: props.parentId,
   } satisfies ItemDragData)
+  const dnd = useDragDropContext()
+  const isDragging = (): boolean => !!dnd?.[0].active.draggable
 
   const [hovered, setHovered] = createSignal(false)
   const [adding, setAdding] = createSignal(false)
@@ -72,9 +79,6 @@ export default function TaskItem(props: Props) {
     const run = ws.timersRunner.runForTask(props.task.id)
     return run?.status === 'running' || run?.status === 'awaitingAdvance'
   }
-
-  const childrenListKey = (): string =>
-    subtasksListKey(props.groupId, props.task.id)
 
   const toggleAdding = (): void => {
     setAdding((v) => !v)
@@ -118,9 +122,17 @@ export default function TaskItem(props: Props) {
   return (
     <Show when={isVisibleToday(props.task)}>
       <div
-        ref={draggable.ref}
-        // opacity-0 (not opacity-50): the floating ghost is shown by DragOverlay.
-        class={cn('block group/task', draggable.isActiveDraggable && 'opacity-0')}
+        ref={sortable.ref}
+        // solid-dnd writes the live drag/sort offset as an inline transform; the
+        // dragged row follows the cursor at 25% opacity while siblings slide.
+        // Transition the SIBLING shift only — never the active row, or its
+        // per-frame pointer transform would ease behind the cursor and feel laggy.
+        style={maybeTransformStyle(sortable.transform)}
+        class={cn(
+          'block group/task',
+          isDragging() && !sortable.isActiveDraggable && 'transition-transform',
+          sortable.isActiveDraggable && 'opacity-25',
+        )}
         data-testid={`task-item-${props.task.id}`}
       >
         <div
@@ -132,7 +144,7 @@ export default function TaskItem(props: Props) {
           onMouseLeave={() => setHovered(false)}
         >
           <span
-            {...draggable.dragActivators}
+            {...sortable.dragActivators}
             class={cn(
               'inline-flex cursor-grab active:cursor-grabbing text-subtle-foreground hover:text-foreground transition-opacity',
               hovered() ? 'opacity-100' : 'opacity-0',
@@ -332,24 +344,12 @@ export default function TaskItem(props: Props) {
         />
 
         <Show when={props.task.isOpen && visibleChildren().length > 0}>
-          <div class="ml-7 mt-1 border-l border-subtle-foreground/40 pl-3">
-            <Gap
-              id={`gap:${childrenListKey()}:0`}
-              listKey={childrenListKey() as ItemDragData['listKey']}
-              insertAt={0}
-              heightClass="h-2"
-            />
-            <For each={visibleChildren()}>{(child, i) => (
-              <>
+          <div class="ml-7 mt-1 space-y-1 border-l border-subtle-foreground/40 pl-3">
+            <SortableProvider ids={visibleChildren().map((c) => c.id)}>
+              <For each={visibleChildren()}>{(child) => (
                 <TaskItem task={child} groupId={props.groupId} parentId={props.task.id} />
-                <Gap
-                  id={`gap:${childrenListKey()}:${i() + 1}`}
-                  listKey={childrenListKey() as ItemDragData['listKey']}
-                  insertAt={i() + 1}
-                  heightClass="h-2"
-                />
-              </>
-            )}</For>
+              )}</For>
+            </SortableProvider>
           </div>
         </Show>
       </div>

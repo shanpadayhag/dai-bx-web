@@ -1,19 +1,23 @@
 import { For, Show, createSignal } from 'solid-js'
 import { Folder, FolderOpen, GripVertical, Plus, Trash2 } from 'lucide-solid'
-import { createDraggable } from '@thisbeyond/solid-dnd'
+import {
+  createSortable,
+  SortableProvider,
+  maybeTransformStyle,
+  useDragDropContext,
+} from '@thisbeyond/solid-dnd'
 import { cn } from '~/lib/classnames'
 import { useWorkspace } from '~/state/workspaceContext'
 import { isVisibleToday } from '~/features/tasks/tree'
 import type { Group } from '~/features/groups/types'
 import type { Task } from '~/features/tasks/types'
 import TaskItem from './TaskItem'
-import Gap from './Gap'
-import { GROUPS_LIST_KEY, rootTasksListKey, type ItemDragData } from './dnd'
+import { GROUPS_LIST_KEY, type ItemDragData } from './dnd'
 
 /**
- * One group card. The header (grip, folder toggle, name, count, delete) is a
- * draggable in the workspace's groups list. The expanded body renders the
- * group's root-task list as items interleaved with `Gap` droppables.
+ * One group card. The whole card is a sortable in the workspace's groups list:
+ * it drags under the cursor while sibling groups shift to open a slot. The
+ * expanded body renders the group's root tasks as their own sortable list.
  */
 
 interface Props {
@@ -22,11 +26,13 @@ interface Props {
 
 export default function GroupItem(props: Props) {
   const ws = useWorkspace()
-  const draggable = createDraggable(props.group.id, {
+  const sortable = createSortable(props.group.id, {
     kind: 'item',
     itemKind: 'group',
     listKey: GROUPS_LIST_KEY,
   } satisfies ItemDragData)
+  const dnd = useDragDropContext()
+  const isDragging = (): boolean => !!dnd?.[0].active.draggable
 
   const [hovered, setHovered] = createSignal(false)
   const [editing, setEditing] = createSignal(false)
@@ -72,19 +78,19 @@ export default function GroupItem(props: Props) {
     setNewTaskName('')
   }
 
-  const listKey = (): ReturnType<typeof rootTasksListKey> =>
-    rootTasksListKey(props.group.id)
-
   return (
     <section
-      ref={draggable.ref}
-      // The original card stays put while dragging — opacity-0 hides it; the
-      // DragOverlay shows the floating ghost. No `transition-transform` here
-      // (would fight solid-dnd's per-frame inline transforms anyway, even though
-      // the insertion-point model doesn't shift siblings).
+      ref={sortable.ref}
+      // solid-dnd writes the live drag/sort offset as an inline transform; the
+      // dragged card follows the cursor at 25% opacity while siblings slide.
+      // `transition-transform` smooths the SIBLING shift only — never the active
+      // card, or its per-frame pointer transform would ease behind the cursor
+      // and feel laggy.
+      style={maybeTransformStyle(sortable.transform)}
       class={cn(
         'rounded-lg border-2 border-border bg-secondary-background shadow-brutal overflow-hidden',
-        draggable.isActiveDraggable && 'opacity-0',
+        isDragging() && !sortable.isActiveDraggable && 'transition-transform',
+        sortable.isActiveDraggable && 'opacity-25',
       )}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -92,7 +98,7 @@ export default function GroupItem(props: Props) {
     >
       <header class="flex items-center gap-2 px-4 py-3">
         <span
-          {...draggable.dragActivators}
+          {...sortable.dragActivators}
           class={cn(
             'inline-flex cursor-grab active:cursor-grabbing text-subtle-foreground hover:text-foreground transition-opacity',
             hovered() ? 'opacity-100' : 'opacity-0',
@@ -183,26 +189,12 @@ export default function GroupItem(props: Props) {
               </p>
             }
           >
-            <div class="py-1.5">
-              {/* Tighter gap height for task lists — tasks pack denser than
-                  groups. h-2 = 8px between adjacent tasks. */}
-              <Gap
-                id={`gap:${listKey()}:0`}
-                listKey={listKey()}
-                insertAt={0}
-                heightClass="h-2"
-              />
-              <For each={visibleTasks()}>{(task, i) => (
-                <>
+            <div class="py-1.5 space-y-1">
+              <SortableProvider ids={visibleTasks().map((t) => t.id)}>
+                <For each={visibleTasks()}>{(task) => (
                   <TaskItem task={task} groupId={props.group.id} parentId={null} />
-                  <Gap
-                    id={`gap:${listKey()}:${i() + 1}`}
-                    listKey={listKey()}
-                    insertAt={i() + 1}
-                    heightClass="h-2"
-                  />
-                </>
-              )}</For>
+                )}</For>
+              </SortableProvider>
             </div>
           </Show>
 

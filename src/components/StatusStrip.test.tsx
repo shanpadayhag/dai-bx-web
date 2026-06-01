@@ -49,6 +49,7 @@ const ctx: WorkspaceContextValue = {
   pickingTimerTaskId: () => null,
   openTimerPicker: () => {},
   closeTimerPicker: () => {},
+  importGroup: async () => ({ ok: false as const, error: 'stub' }),
 }
 
 const renderInRouter = () =>
