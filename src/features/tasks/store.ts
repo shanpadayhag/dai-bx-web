@@ -32,6 +32,7 @@ import {
   findTaskInTree,
   flattenTasks,
   getSiblingsOf,
+  isVisibleToday,
   toTaskRow,
 } from './tree'
 import type { Task, TaskRow } from './types'
@@ -55,6 +56,7 @@ export interface TasksStore {
   load: () => Promise<void>
   loadGroup: (groupId: string) => Promise<void>
   hydrateFromRows: (rows: TaskRow[]) => void
+  importTree: (groupId: string, tree: Task[]) => Promise<void>
   clearForGroup: (groupId: string) => void
   add: (groupId: string, name: string) => Promise<Task | null>
   addSubtask: (
@@ -66,6 +68,7 @@ export interface TasksStore {
   rename: (groupId: string, taskId: string, name: string) => Promise<void>
   toggleCompletion: (groupId: string, taskId: string) => Promise<void>
   toggleOpen: (groupId: string, taskId: string, isOpen: boolean) => Promise<void>
+  collapseVisible: (groupId: string) => Promise<void>
   setAlarm: (groupId: string, taskId: string, alarm: AlarmSpec | null) => Promise<void>
   updateTimerSets: (
     groupId: string,
@@ -212,6 +215,18 @@ export function createTasksStore(): TasksStore {
   const loadGroup = async (groupId: string): Promise<void> => {
     const rows = await repo.listTaskRowsByGroup(groupId)
     setState('byGroup', groupId, buildTreeFromRows(rows))
+  }
+
+  /**
+   * Installs a pre-built task tree for `groupId` (e.g. from a JSON import) and
+   * persists every node. `unwrap` before `flattenTasks` so IDB's
+   * structuredClone doesn't choke on Solid store proxies (see `persist`).
+   */
+  const importTree = async (groupId: string, tree: Task[]): Promise<void> => {
+    setState('byGroup', groupId, tree)
+    await repo.putTaskRowBatch(
+      flattenTasks(unwrap(tasksFor(groupId)), groupId, null),
+    )
   }
 
   const clearForGroup = (groupId: string): void => {
@@ -382,6 +397,37 @@ export function createTasksStore(): TasksStore {
     if (found) await persist(found.task, groupId, found.parentId)
   }
 
+  /**
+   * Collapses every currently-rendered task/subtask in `groupId`. Only walks
+   * through open ancestors and skips tasks hidden for today, so items the user
+   * can't see (collapsed deeper in the tree, or date-hidden) keep their state.
+   */
+  const collapseVisible = async (groupId: string): Promise<void> => {
+    if (!(groupId in state.byGroup)) return
+    let mutated = false
+    setState(
+      'byGroup',
+      groupId,
+      produce((tree: Task[]) => {
+        const walk = (nodes: Task[]): void => {
+          for (const t of nodes) {
+            if (!isVisibleToday(t)) continue
+            if (t.isOpen) {
+              if (t.tasks.length > 0) walk(t.tasks)
+              t.isOpen = false
+              mutated = true
+            }
+          }
+        }
+        walk(tree)
+      }),
+    )
+    if (!mutated) return
+    await repo.putTaskRowBatch(
+      flattenTasks(unwrap(tasksFor(groupId)), groupId, null),
+    )
+  }
+
   const setAlarm = async (
     groupId: string,
     taskId: string,
@@ -490,6 +536,7 @@ export function createTasksStore(): TasksStore {
     load,
     loadGroup,
     hydrateFromRows,
+    importTree,
     clearForGroup,
     add,
     addSubtask,
@@ -497,6 +544,7 @@ export function createTasksStore(): TasksStore {
     rename,
     toggleCompletion,
     toggleOpen,
+    collapseVisible,
     setAlarm,
     updateTimerSets,
     setActiveTimerSetId,

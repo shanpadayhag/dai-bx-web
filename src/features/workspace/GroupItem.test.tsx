@@ -65,6 +65,7 @@ const ctxFor = (groups: GroupsStore): WorkspaceContextValue => ({
   pickingTimerTaskId: () => null,
   openTimerPicker: () => {},
   closeTimerPicker: () => {},
+  importGroup: async () => ({ ok: false as const, error: 'stub' }),
 })
 
 const renderItem = (group: Group) =>

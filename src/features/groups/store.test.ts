@@ -83,6 +83,24 @@ describe('create', () => {
   })
 })
 
+describe('importGroup', () => {
+  it('appends a pre-built group, stamps the next order, and persists it', async () => {
+    await store.create('Alpha')
+    await store.importGroup({
+      id: 'imported',
+      name: 'Imported',
+      order: 99, // deliberately wrong; store should overwrite to the next index
+      isOpen: true,
+      isHidden: false,
+    })
+    expect(store.state.groups.map((g) => g.name)).toEqual(['Alpha', 'Imported'])
+    expect(store.state.groups[1]?.order).toBe(1)
+    const persisted = await listGroups()
+    expect(persisted.map((g) => g.name)).toEqual(['Alpha', 'Imported'])
+    expect(persisted[1]?.order).toBe(1)
+  })
+})
+
 describe('delete', () => {
   it('removes the group, re-indexes remaining, and cascades to its tasks', async () => {
     const a = await store.create('A')

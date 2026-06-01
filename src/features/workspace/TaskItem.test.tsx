@@ -63,6 +63,7 @@ const ctxFor = (tasksStore: TasksStore): WorkspaceContextValue => ({
   pickingTimerTaskId: () => null,
   openTimerPicker: () => {},
   closeTimerPicker: () => {},
+  importGroup: async () => ({ ok: false as const, error: 'stub' }),
 })
 
 const renderItem = (task: Task, groupId: string, parentId: string | null = null) =>

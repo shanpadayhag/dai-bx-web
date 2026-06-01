@@ -72,6 +72,40 @@ describe('WorkspacePage', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
+  it('opens the import dialog and creates a group from an uploaded file', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText(/no groups yet\./i)).toBeInTheDocument()
+    })
+
+    await user.click(
+      screen.getByRole('button', { name: /import group from json/i }),
+    )
+    expect(
+      screen.getByRole('dialog', { name: /import a group from json/i }),
+    ).toBeInTheDocument()
+
+    // Import a group with no tasks: this exercises the full trigger → dialog →
+    // upload → group-appears path. A group WITH tasks would render TaskItem,
+    // which pulls in AlarmPicker/TimerEditor (router `<A>`) and needs a Router
+    // this page test doesn't provide; that path is covered by the context and
+    // store tests instead.
+    const file = new File(
+      [JSON.stringify({ name: 'Imported', tasks: [] })],
+      'group.json',
+      { type: 'application/json' },
+    )
+    await user.upload(
+      document.querySelector('input[type="file"]') as HTMLInputElement,
+      file,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Imported' })).toBeInTheDocument()
+    })
+  })
+
   it('shows the hidden-count link when at least one group is hidden', async () => {
     await putGroup({ id: 'g1', name: 'Alpha', order: 0, isOpen: true, isHidden: false })
     await putGroup({ id: 'g2', name: 'Beta', order: 1, isOpen: true, isHidden: true })
