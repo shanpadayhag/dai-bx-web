@@ -48,11 +48,3 @@ npm run test        # vitest in watch mode
 npm run test:run    # vitest, one-shot
 npm run typecheck   # tsc -b, no emit
 ```
-
-## Planning artifacts
-
-The full spec lives in `../.kiro/`:
-
-- `requirements.md` — what the app must do
-- `design.md` — how it's built
-- `tasks.md` — the ordered task list driving implementation
