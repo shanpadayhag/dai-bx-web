@@ -1,50 +1,32 @@
-# client-web — DaiBX (SolidJS)
+# dai-bx-web — DaiBX 3
 
-A faithful rewrite of the Angular DaiBX app in SolidJS. Same shadcn-neobrutalism design, same features, same IndexedDB database. The Angular original lives at `../client-web-old/` for reference.
+The web frontend for DaiBX: one open-source workspace for nested tasks, a board and a calendar. Starting a task opens a calendar event and finishing it sets the end, with check-ins for when you step away.
+
+This branch (`release/v3.0.0`) is the design: every page of the marketing site, the changelog and the app, in the blue theme, with no functionality wired in. Screens read from `data_sources/sample/`, which the Axum API replaces.
 
 ## Stack
 
-- **Framework:** SolidJS via Vite (no SSR)
-- **Language:** TypeScript strict (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`)
-- **Styling:** Tailwind CSS v4 (CSS-first `@theme` config)
-- **State:** Solid signals + stores; feature-local where possible
-- **Routing:** `@solidjs/router`
-- **Storage:** IndexedDB (`daibx_app` v3) via `idb`; localStorage for active timer runs
-- **Drag-and-drop:** `solid-dnd`
-- **Modals:** native HTML `<dialog>` element
-- **Icons:** `lucide-solid`
-- **Testing:** Vitest + `@solidjs/testing-library` (colocated `.test.tsx`)
+- Next.js 16 (App Router) and React 19, strict TypeScript
+- Tailwind CSS 4, tokens in `src/core/styles/globals.css`
+- Changelog entries as MDX in `content/changelog/`
+- Vitest, Testing Library
 
-## Bundle size
+## Layout
 
-Production `npm run build` output, measured 2026-05-26 after T18:
+- `src/app/` holds routes only, in three groups: `(marketing)`, `(auth)` and `(app)`.
+- `src/features/<feature>/` holds each feature's pages, components, entities and data sources.
+- `src/core/` holds what no single feature owns: config, the design system components, and styles.
 
-| Asset | Raw | Gzipped |
-|---|---|---|
-| `dist/assets/index-*.js` | 144 KB | 44 KB |
-| `dist/assets/index-*.css` | 34 KB | 7 KB |
-| `dist/index.html` | < 1 KB | < 1 KB |
-| **Total `dist/`** | **188 KB** | — |
+## Changelog
 
-Angular reference at `../client-web-old/dist/` is **632 KB**. The SolidJS port ships at ~3.4× smaller for the same surface area (workspace + alarms + timers + sounds + settings).
-
-## Reactivity discipline
-
-Anti-patterns audited at T18 — none present:
-
-- No destructured props (`const { x } = props` breaks reactivity in Solid).
-- No signal reads stored in `const` at component-body scope; derived values are functions (`const isX = () => signal() === 'x'`).
-- No `style={{ ... }}` outside genuinely dynamic transforms.
-- `createMemo` used only where a derivation is consumed in multiple places (scheduler, runner).
-- Task-store mutations go through `produce` from `solid-js/store` — only the touched field gets new identity, every other `Task` reference stays stable across the tree. Without this, `<For each={visibleTasks()}>` (which keys by identity) would remount every `TaskItem` on every field write. Profiled under 4× CPU throttle with 40 tasks × 6 groups: toggle complete = 0 unnecessary remounts; add task = 1 remount (the new task itself, correct).
+Add a release by adding `content/changelog/<yyyy-mm-dd>-<slug>.mdx` that exports `metadata` with `title`, `version`, `date` and `summary`.
 
 ## Scripts
 
 ```bash
-npm run dev         # start dev server
-npm run build       # type-check + production build
-npm run preview     # preview production build locally
-npm run test        # vitest in watch mode
-npm run test:run    # vitest, one-shot
-npm run typecheck   # tsc -b, no emit
+npm run dev
+npm run build
+npm run lint
+npm run typecheck
+npm run test:run
 ```

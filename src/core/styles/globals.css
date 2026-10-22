@@ -1,0 +1,257 @@
+@import 'tailwindcss';
+
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+:root {
+  --background: #ffffff;
+  --surface: #f5f7fc;
+  --surface-strong: #eaeef8;
+  --foreground: #0c1324;
+  --muted-foreground: #566079;
+  --border: #e2e7f1;
+  --border-strong: #cdd5e6;
+  --primary: #2456f0;
+  --primary-hover: #1a46d4;
+  --primary-foreground: #ffffff;
+  --primary-soft: #eaf0ff;
+  --primary-soft-foreground: #1a3fb8;
+  --glow: #4f80ff;
+  --success: #0f7a57;
+  --success-soft: #e3f5ee;
+  --warning: #a15207;
+  --warning-soft: #fdf1e1;
+  --danger: #cc2936;
+  --danger-soft: #fdebec;
+  --ink: #070b17;
+  --ink-foreground: #eef2fb;
+  --ink-muted: #9aa5c2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #080c18;
+    --surface: #0d1323;
+    --surface-strong: #141b2f;
+    --foreground: #eef2fb;
+    --muted-foreground: #9aa4bd;
+    --border: #1d2640;
+    --border-strong: #2a3554;
+    --primary: #6b92ff;
+    --primary-hover: #87a7ff;
+    --primary-foreground: #050b1f;
+    --primary-soft: #15214a;
+    --primary-soft-foreground: #b3c7ff;
+    --glow: #3d6bff;
+    --success: #4cc79a;
+    --success-soft: #0f2a22;
+    --warning: #f0a54a;
+    --warning-soft: #2c1d0b;
+    --danger: #ff7a84;
+    --danger-soft: #331318;
+    --ink: #04060d;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
+  --color-glow: var(--glow);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-ink-muted: var(--ink-muted);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --shadow-soft: 0 1px 2px rgb(12 19 36 / 0.04), 0 4px 12px -2px rgb(12 19 36 / 0.06);
+  --shadow-lift: 0 2px 4px rgb(12 19 36 / 0.04), 0 18px 40px -12px rgb(12 19 36 / 0.18);
+  --shadow-glow: 0 24px 80px -24px color-mix(in oklab, var(--glow) 55%, transparent);
+}
+
+@layer base {
+  html {
+    color-scheme: light dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    caret-color: var(--primary);
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 22%, transparent);
+    color: var(--foreground);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+
+  a {
+    text-underline-offset: 3px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  button:not(:disabled),
+  [role='button'],
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
+
+  [popover] {
+    color: inherit;
+  }
+}
+
+@layer components {
+  .prose-changelog {
+    max-width: 68ch;
+    color: var(--foreground);
+    line-height: 1.7;
+  }
+
+  .prose-changelog p {
+    margin-block: 0 1rem;
+    color: var(--muted-foreground);
+  }
+
+  .prose-changelog h2 {
+    margin-block: 2rem 0.75rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  .prose-changelog ul {
+    margin-block: 0 1rem;
+    padding-left: 1.25rem;
+    list-style: disc;
+    color: var(--muted-foreground);
+  }
+
+  .prose-changelog li {
+    margin-block: 0.375rem;
+  }
+
+  .prose-changelog li::marker {
+    color: var(--primary);
+  }
+
+  .prose-changelog strong {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+
+  .prose-changelog code {
+    border-radius: 6px;
+    background: var(--surface-strong);
+    padding: 0.125rem 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+  }
+}
+
+@keyframes track-grow {
+  from {
+    height: 18%;
+  }
+  to {
+    height: 100%;
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(calc(-50% - 0.5rem));
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@utility animate-track-grow {
+  animation: track-grow 2.4s var(--ease-out-expo) 0.6s both;
+}
+
+@utility animate-pulse-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+
+@utility animate-marquee {
+  animation: marquee 48s linear infinite;
+}
+
+@utility animate-rise-in {
+  animation: rise-in 0.9s var(--ease-out-expo) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

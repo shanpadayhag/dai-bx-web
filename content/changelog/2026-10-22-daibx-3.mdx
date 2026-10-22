@@ -1,0 +1,26 @@
+export const metadata = {
+  title: 'DaiBX 3: tasks, a board and a calendar in one app',
+  version: 'v3.0.0',
+  date: '2026-10-22',
+  summary: 'A first look at the rebuilt DaiBX. Nested tasks, a Trello-style board and a calendar now live in one workspace, in a new blue design.',
+};
+
+DaiBX started as a nested to-do list. Version 3 rebuilds it from scratch as one workspace for **tasks, a board and a calendar**, so the same piece of work shows up in all three without being copied.
+
+This release is the design: every screen of the app and this site, with nothing wired in yet. The Rust API lands next.
+
+## What’s in it
+
+- **Tasks** keep what made DaiBX useful: groups, and tasks nested as deep as the job needs. Create, edit and delete at any level.
+- **Board** gives you lists, cards and checklists for the big picture.
+- **Calendar** shows a week of what you planned and what you actually did.
+- **Workflows** reset a checklist, move a card back to To do and block time on a schedule.
+
+## Start a task, and the calendar records it
+
+Starting a task opens a calendar event. Finishing it sets the end. If a task runs past its estimate, a check-in asks whether you’re still on it, and when you finish after a missed check-in, DaiBX suggests your last confirmed time as the end. You can always set the end time yourself.
+
+## Under the hood
+
+- The frontend moves from SolidJS to **Next.js**.
+- The API will be **Rust and Axum** on AWS Lambda, with **Postgres** on Supabase as the one store.
