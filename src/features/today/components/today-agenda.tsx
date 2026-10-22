@@ -1,12 +1,7 @@
 import Link from 'next/link';
+import { categoryColorStyle } from '@/core/category';
 import joinClassNames from '@/core/class-names';
 import AgendaItem from '@/features/today/entities/agenda-item';
-
-const kindDotClassNames: Record<AgendaItem['kind'], string> = {
-  tracked: 'bg-primary',
-  running: 'bg-primary ring-4 ring-primary/20',
-  planned: 'border-2 border-primary/50 bg-background',
-};
 
 type TodayAgendaProps = {
   agendaItems: AgendaItem[];
@@ -31,9 +26,11 @@ const TodayAgenda = ({ agendaItems }: TodayAgendaProps) => (
           </span>
           <span className="relative flex justify-center pt-1">
             <span
+              style={categoryColorStyle(agendaItem.category)}
               className={joinClassNames(
                 'relative z-[1] size-2.5 rounded-full',
-                kindDotClassNames[agendaItem.kind],
+                agendaItem.kind === 'planned' ? 'category-soft' : 'category-swatch',
+                agendaItem.kind === 'running' && 'ring-4 ring-foreground/10',
               )}
             />
             {agendaIndex < agendaItems.length - 1 ? (

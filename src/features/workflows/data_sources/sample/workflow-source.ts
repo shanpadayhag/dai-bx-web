@@ -1,11 +1,13 @@
 import Workflow from '@/features/workflows/entities/workflow';
 import WorkflowRun from '@/features/workflows/entities/workflow-run';
 import WorkflowStep from '@/features/workflows/entities/workflow-step';
+import sampleCategories from '@/core/sample-categories';
 
 const workflows: Workflow[] = [
   {
     id: 'clean-room',
     name: 'Clean room',
+    category: sampleCategories.personal,
     description: 'Reset the cleaning checklist and block time for it.',
     triggerLabel: 'Every Saturday at 14:00',
     nextRunLabel: 'Sat, Oct 24',
@@ -17,6 +19,7 @@ const workflows: Workflow[] = [
   {
     id: 'chinese-cards',
     name: 'Chinese – daily cards',
+    category: sampleCategories.studies,
     description: 'Bring the study card back to To do and track the session.',
     triggerLabel: 'Every day at 13:00',
     nextRunLabel: 'Tomorrow',
@@ -28,6 +31,7 @@ const workflows: Workflow[] = [
   {
     id: 'plan-day',
     name: 'Plan the day',
+    category: sampleCategories.work,
     description: 'Pull today’s cards into Doing before the shift starts.',
     triggerLabel: 'Weekdays at 15:30',
     nextRunLabel: 'Fri, Oct 23',
@@ -39,6 +43,7 @@ const workflows: Workflow[] = [
   {
     id: 'market-session',
     name: 'Saturday market session',
+    category: sampleCategories.studies,
     description: 'Open the trade journal checklist for the weekly review.',
     triggerLabel: 'Every Saturday at 20:00',
     nextRunLabel: 'Paused',

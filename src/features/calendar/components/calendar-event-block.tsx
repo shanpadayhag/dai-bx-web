@@ -1,15 +1,8 @@
 import joinClassNames from '@/core/class-names';
-import CalendarEvent, { CalendarEventKind } from '@/features/calendar/entities/calendar-event';
+import { categoryColorStyle } from '@/core/category';
+import CalendarEvent from '@/features/calendar/entities/calendar-event';
 
 const minuteHeight = 56 / 60;
-
-const kindClassNames: Record<CalendarEventKind, string> = {
-  planned:
-    'border border-primary/35 bg-primary-soft/70 text-primary-soft-foreground hover:bg-primary-soft',
-  tracked: 'bg-primary text-primary-foreground shadow-soft hover:bg-primary-hover',
-  running: 'bg-primary text-primary-foreground shadow-glow ring-4 ring-primary/20',
-  trimmed: 'bg-primary text-primary-foreground shadow-soft',
-};
 
 type CalendarEventBlockProps = {
   calendarEvent: CalendarEvent;
@@ -21,6 +14,7 @@ const CalendarEventBlock = ({ calendarEvent }: CalendarEventBlockProps) => {
       ? 0
       : calendarEvent.startMinute + calendarEvent.durationMinutes - calendarEvent.awayFromMinute;
   const isShort = calendarEvent.durationMinutes < 40;
+  const isRoomy = calendarEvent.durationMinutes >= 75;
 
   return (
     <button
@@ -28,9 +22,13 @@ const CalendarEventBlock = ({ calendarEvent }: CalendarEventBlockProps) => {
       title={`${calendarEvent.title} · ${calendarEvent.timeLabel}`}
       className={joinClassNames(
         'absolute inset-x-1 overflow-hidden rounded-lg text-left transition-colors duration-150',
-        kindClassNames[calendarEvent.kind],
+        calendarEvent.kind === 'planned' ? 'category-soft' : 'category-solid',
+        calendarEvent.kind === 'running' &&
+          'shadow-lift ring-2 ring-foreground/70 ring-offset-2 ring-offset-background',
+        calendarEvent.kind !== 'planned' && 'shadow-soft',
       )}
       style={{
+        ...categoryColorStyle(calendarEvent.category),
         top: calendarEvent.startMinute * minuteHeight,
         height: Math.max(calendarEvent.durationMinutes * minuteHeight, 20),
       }}
@@ -44,7 +42,7 @@ const CalendarEventBlock = ({ calendarEvent }: CalendarEventBlockProps) => {
         <span
           className={joinClassNames(
             'text-xs leading-tight font-medium',
-            isShort ? 'truncate' : 'line-clamp-2',
+            isRoomy ? 'line-clamp-2' : 'truncate',
           )}
         >
           {calendarEvent.title}

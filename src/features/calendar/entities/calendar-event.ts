@@ -1,3 +1,5 @@
+import type { Category } from '@/core/category';
+
 type CalendarEventKind = 'planned' | 'tracked' | 'running' | 'trimmed';
 
 type CalendarEvent = {
@@ -8,6 +10,7 @@ type CalendarEvent = {
   durationMinutes: number;
   awayFromMinute: number | null;
   kind: CalendarEventKind;
+  category: Category;
   timeLabel: string;
 };
 

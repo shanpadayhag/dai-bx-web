@@ -1,6 +1,8 @@
 import { CalendarClock, Play, Repeat2, X } from 'lucide-react';
 import Badge from '@/core/components/atoms/badge';
 import Button from '@/core/components/atoms/button';
+import CategoryChip from '@/core/components/atoms/category-chip';
+import sampleCategories from '@/core/sample-categories';
 import CompletionCircle from '@/core/components/atoms/completion-circle';
 import IconButton from '@/core/components/atoms/icon-button';
 import PopoverPanel from '@/core/components/molecules/popover-panel';
@@ -30,7 +32,7 @@ const CardDetailDialog = ({ checklistItems }: CardDetailDialogProps) => {
               Ship the v3 frontend
             </h2>
             <div className="flex flex-wrap gap-1.5">
-              <Badge tone="primary">DaiBX</Badge>
+              <CategoryChip category={sampleCategories.goals} />
               <Badge tone="warning">Release</Badge>
               <Badge>
                 <CalendarClock />

@@ -1,12 +1,10 @@
-type BoardCardLabel = {
-  name: string;
-  tone: 'primary' | 'success' | 'warning' | 'neutral';
-};
+import type { Category } from '@/core/category';
 
 type BoardCard = {
   id: string;
   title: string;
-  labels: BoardCardLabel[];
+  category: Category;
+  labels: string[];
   checklistDoneCount: number | null;
   checklistItemCount: number | null;
   dueLabel: string | null;
@@ -14,5 +12,4 @@ type BoardCard = {
   noteCount: number;
 };
 
-export type { BoardCardLabel };
 export default BoardCard;

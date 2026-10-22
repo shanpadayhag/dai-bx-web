@@ -1,4 +1,5 @@
 import { Play } from 'lucide-react';
+import { categoryColorStyle } from '@/core/category';
 import CompletionCircle from '@/core/components/atoms/completion-circle';
 import IconButton from '@/core/components/atoms/icon-button';
 import UpNextTask from '@/features/today/entities/up-next-task';
@@ -19,7 +20,13 @@ const UpNextList = ({ upNextTasks }: UpNextListProps) => (
           <CompletionCircle isDone={false} label={`Mark ${upNextTask.name} as done`} />
           <span className="grid min-w-0 flex-1">
             <span className="truncate text-sm text-foreground">{upNextTask.name}</span>
-            <span className="text-xs text-muted-foreground">{upNextTask.groupName}</span>
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span
+                style={categoryColorStyle(upNextTask.category)}
+                className="category-swatch size-1.5 rounded-full"
+              />
+              {upNextTask.groupName}
+            </span>
           </span>
           {upNextTask.estimate ? (
             <span className="font-mono text-xs text-muted-foreground tabular-nums">

@@ -1,8 +1,10 @@
+import type { Category } from '@/core/category';
+
 type TaskGroup = {
   id: string;
   name: string;
+  category: Category;
   openTaskCount: number;
-  swatchClassName: string;
 };
 
 export default TaskGroup;

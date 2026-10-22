@@ -42,7 +42,7 @@ const CalendarPage = () => (
         hourLabels={sampleCalendarSource.findHourLabels()}
         nowMinute={sampleCalendarSource.findNowMinute()}
       />
-      <CalendarAside />
+      <CalendarAside categories={sampleCalendarSource.findCategories()} />
     </div>
   </div>
 );

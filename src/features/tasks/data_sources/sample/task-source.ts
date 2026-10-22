@@ -1,5 +1,6 @@
 import Task from '@/features/tasks/entities/task';
 import TaskGroup from '@/features/tasks/entities/task-group';
+import sampleCategories from '@/core/sample-categories';
 
 const buildTask = (task: Partial<Task> & Pick<Task, 'id' | 'name'>): Task => ({
   isDone: false,
@@ -11,10 +12,10 @@ const buildTask = (task: Partial<Task> & Pick<Task, 'id' | 'name'>): Task => ({
 });
 
 const taskGroups: TaskGroup[] = [
-  { id: 'daibx', name: 'DaiBX', openTaskCount: 9, swatchClassName: 'bg-primary' },
-  { id: 'work', name: 'Work', openTaskCount: 7, swatchClassName: 'bg-sky-500' },
-  { id: 'learning', name: 'Learning', openTaskCount: 5, swatchClassName: 'bg-indigo-400' },
-  { id: 'home', name: 'Home', openTaskCount: 3, swatchClassName: 'bg-teal-500' },
+  { id: 'daibx', name: 'DaiBX', category: sampleCategories.goals, openTaskCount: 9 },
+  { id: 'work', name: 'Shift', category: sampleCategories.work, openTaskCount: 7 },
+  { id: 'learning', name: 'Chinese', category: sampleCategories.studies, openTaskCount: 5 },
+  { id: 'home', name: 'Home', category: sampleCategories.personal, openTaskCount: 3 },
 ];
 
 const daibxTasks: Task[] = [

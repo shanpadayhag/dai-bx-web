@@ -1,8 +1,11 @@
 import BoardCard from '@/features/board/entities/board-card';
 import BoardList from '@/features/board/entities/board-list';
 import ChecklistItem from '@/features/board/entities/checklist-item';
+import sampleCategories from '@/core/sample-categories';
 
-const buildCard = (card: Partial<BoardCard> & Pick<BoardCard, 'id' | 'title'>): BoardCard => ({
+const buildCard = (
+  card: Partial<BoardCard> & Pick<BoardCard, 'id' | 'title' | 'category'>,
+): BoardCard => ({
   labels: [],
   checklistDoneCount: null,
   checklistItemCount: null,
@@ -20,12 +23,12 @@ const boardLists: BoardList[] = [
       buildCard({
         id: 'saturday-market',
         title: 'Plan the Saturday market session',
-        labels: [{ name: 'Learning', tone: 'neutral' }],
+        category: sampleCategories.studies,
       }),
       buildCard({
         id: 'adr-store',
         title: 'Write the ADR for Postgres-only storage',
-        labels: [{ name: 'DaiBX', tone: 'primary' }],
+        category: sampleCategories.goals,
         noteCount: 2,
       }),
     ],
@@ -37,7 +40,7 @@ const boardLists: BoardList[] = [
       buildCard({
         id: 'clean-room',
         title: 'Clean room',
-        labels: [{ name: 'Home', tone: 'success' }],
+        category: sampleCategories.personal,
         checklistDoneCount: 0,
         checklistItemCount: 6,
         recurrenceLabel: 'Every Saturday',
@@ -45,7 +48,7 @@ const boardLists: BoardList[] = [
       buildCard({
         id: 'chinese-cards',
         title: 'Chinese – daily cards',
-        labels: [{ name: 'Learning', tone: 'neutral' }],
+        category: sampleCategories.studies,
         recurrenceLabel: 'Daily',
         checklistDoneCount: 1,
         checklistItemCount: 3,
@@ -53,7 +56,7 @@ const boardLists: BoardList[] = [
       buildCard({
         id: 'workflow-editor',
         title: 'Design the workflow editor',
-        labels: [{ name: 'DaiBX', tone: 'primary' }],
+        category: sampleCategories.goals,
         dueLabel: 'Oct 28',
       }),
     ],
@@ -65,19 +68,25 @@ const boardLists: BoardList[] = [
       buildCard({
         id: 'ship-frontend',
         title: 'Ship the v3 frontend',
-        labels: [
-          { name: 'DaiBX', tone: 'primary' },
-          { name: 'Release', tone: 'warning' },
-        ],
+        category: sampleCategories.goals,
+        labels: ['Release'],
         checklistDoneCount: 3,
         checklistItemCount: 5,
         dueLabel: 'Oct 24',
         noteCount: 4,
       }),
       buildCard({
+        id: 'shift-notes',
+        title: 'Prepare the shift notes',
+        category: sampleCategories.work,
+        dueLabel: 'Today',
+        checklistDoneCount: 1,
+        checklistItemCount: 2,
+      }),
+      buildCard({
         id: 'afk-review',
         title: 'Review the AFK check-in flow',
-        labels: [{ name: 'DaiBX', tone: 'primary' }],
+        category: sampleCategories.goals,
       }),
     ],
   },
@@ -88,14 +97,14 @@ const boardLists: BoardList[] = [
       buildCard({
         id: 'shev-stack',
         title: 'Teach shev the new stack',
-        labels: [{ name: 'Systems', tone: 'neutral' }],
+        category: sampleCategories.goals,
         checklistDoneCount: 4,
         checklistItemCount: 4,
       }),
       buildCard({
         id: 'pick-lambda',
         title: 'Pick where the backend runs',
-        labels: [{ name: 'DaiBX', tone: 'primary' }],
+        category: sampleCategories.goals,
       }),
     ],
   },

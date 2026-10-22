@@ -8,6 +8,8 @@ import {
   Square,
   Sun,
 } from 'lucide-react';
+import { categoryColorStyle } from '@/core/category';
+import sampleCategories from '@/core/sample-categories';
 
 const previewTasks = [
   { name: 'Design the marketing site', isDone: true, depth: 1 },
@@ -123,8 +125,17 @@ const HeroProductPreview = () => (
                 </span>
               </div>
             ))}
-            <div className="absolute top-[64px] right-0 left-10 h-[86px]">
-              <div className="absolute inset-x-0 top-0 animate-track-grow overflow-hidden rounded-lg bg-primary px-2 py-1.5 text-primary-foreground shadow-glow">
+            <div
+              className="category-solid absolute top-[4px] right-0 left-10 h-[22px] overflow-hidden rounded-lg px-2 py-1"
+              style={categoryColorStyle(sampleCategories.studies)}
+            >
+              <p className="truncate text-[11px] font-medium">Chinese – daily cards</p>
+            </div>
+            <div
+              className="absolute top-[64px] right-0 left-10 h-[86px]"
+              style={categoryColorStyle(sampleCategories.goals)}
+            >
+              <div className="category-solid absolute inset-x-0 top-0 animate-track-grow overflow-hidden rounded-lg px-2 py-1.5 shadow-glow ring-2 ring-foreground/70 ring-offset-2 ring-offset-background">
                 <p className="truncate text-[11px] font-medium">Write the v3 changelog</p>
                 <p className="font-mono text-[10px] tabular-nums opacity-80">16:20 – now</p>
               </div>
@@ -133,10 +144,11 @@ const HeroProductPreview = () => (
               <span className="size-1.5 rounded-full bg-danger" />
               <span className="h-px flex-1 bg-danger" />
             </div>
-            <div className="absolute top-[200px] right-0 left-10 rounded-lg border border-primary/35 bg-primary-soft/70 px-2 py-1.5">
-              <p className="truncate text-[11px] font-medium text-primary-soft-foreground">
-                Review AFK flow
-              </p>
+            <div
+              className="category-soft absolute top-[200px] right-0 left-10 rounded-lg px-2 py-1.5"
+              style={categoryColorStyle(sampleCategories.goals)}
+            >
+              <p className="truncate text-[11px] font-medium text-foreground">Review AFK flow</p>
             </div>
           </div>
         </div>

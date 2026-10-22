@@ -1,4 +1,7 @@
 import { Check, ChevronRight, GripVertical, Repeat2 } from 'lucide-react';
+import { categoryColorStyle, type Category } from '@/core/category';
+import sampleCategories from '@/core/sample-categories';
+import joinClassNames from '@/core/class-names';
 import AccentWords from '@/features/landing/components/accent-words';
 import SectionHeading from '@/features/landing/components/section-heading';
 
@@ -17,25 +20,34 @@ const miniColumns = [
   { name: 'Done', cards: ['Pay the bills'] },
 ] as const;
 
-const miniWeek = [
-  { day: 'M', blocks: [{ top: 18, height: 34, isTracked: true }] },
+const miniWeek: Array<{
+  day: string;
+  blocks: Array<{ top: number; height: number; isTracked: boolean; category: Category }>;
+}> = [
+  { day: 'M', blocks: [{ top: 18, height: 34, isTracked: true, category: sampleCategories.work }] },
   {
     day: 'T',
     blocks: [
-      { top: 8, height: 22, isTracked: true },
-      { top: 56, height: 20, isTracked: false },
+      { top: 8, height: 22, isTracked: true, category: sampleCategories.studies },
+      { top: 56, height: 20, isTracked: false, category: sampleCategories.goals },
     ],
   },
-  { day: 'W', blocks: [{ top: 14, height: 52, isTracked: true }] },
+  {
+    day: 'W',
+    blocks: [{ top: 14, height: 52, isTracked: true, category: sampleCategories.goals }],
+  },
   {
     day: 'T',
     blocks: [
-      { top: 24, height: 30, isTracked: true },
-      { top: 64, height: 16, isTracked: false },
+      { top: 24, height: 30, isTracked: true, category: sampleCategories.work },
+      { top: 64, height: 16, isTracked: false, category: sampleCategories.studies },
     ],
   },
-  { day: 'F', blocks: [{ top: 40, height: 26, isTracked: false }] },
-] as const;
+  {
+    day: 'F',
+    blocks: [{ top: 40, height: 26, isTracked: false, category: sampleCategories.work }],
+  },
+];
 
 const ProductViewsSection = () => (
   <section id="product" className="mx-auto grid max-w-6xl scroll-mt-24 gap-14 px-4 py-24 sm:py-32">
@@ -132,12 +144,15 @@ const ProductViewsSection = () => (
                 {miniDay.blocks.map((miniBlock) => (
                   <span
                     key={miniBlock.top}
-                    className={
-                      miniBlock.isTracked
-                        ? 'absolute inset-x-1 rounded-md bg-glow'
-                        : 'absolute inset-x-1 rounded-md border border-glow/60 bg-glow/15'
-                    }
-                    style={{ top: miniBlock.top, height: miniBlock.height }}
+                    className={joinClassNames(
+                      'absolute inset-x-1 rounded-md',
+                      miniBlock.isTracked ? 'category-swatch' : 'category-soft',
+                    )}
+                    style={{
+                      ...categoryColorStyle(miniBlock.category),
+                      top: miniBlock.top,
+                      height: miniBlock.height,
+                    }}
                   />
                 ))}
               </div>
@@ -147,7 +162,7 @@ const ProductViewsSection = () => (
         <div className="grid gap-1.5">
           <h3 className="text-lg font-medium tracking-[-0.02em]">A calendar that remembers</h3>
           <p className="text-sm text-ink-muted">
-            Solid blocks are what you did. Outlines are what you planned.
+            Each category keeps its color. Solid is what you did, outlined is what you planned.
           </p>
         </div>
       </article>

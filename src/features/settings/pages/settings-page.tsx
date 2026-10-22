@@ -5,6 +5,9 @@ import Field from '@/core/components/molecules/field';
 import PageHeader from '@/core/components/molecules/page-header';
 import SegmentedControl from '@/core/components/molecules/segmented-control';
 import AccentPicker from '@/features/settings/components/accent-picker';
+import CategoryList from '@/features/settings/components/category-list';
+import DeleteCategoryDialog from '@/features/settings/components/delete-category-dialog';
+import sampleCategorySource from '@/features/settings/data_sources/sample/category-source';
 import SettingRow from '@/features/settings/components/setting-row';
 import SettingsSection from '@/features/settings/components/settings-section';
 
@@ -41,6 +44,12 @@ const SettingsPage = () => (
             />
           }
         />
+      </SettingsSection>
+      <SettingsSection
+        title="Categories"
+        description="Make as many as you need, in any color. Every group, card, event and workflow can belong to one, and its color follows it into the calendar."
+      >
+        <CategoryList categories={sampleCategorySource.findAll()} />
       </SettingsSection>
       <SettingsSection
         title="Time tracking"
@@ -98,6 +107,7 @@ const SettingsPage = () => (
         </div>
       </SettingsSection>
     </div>
+    <DeleteCategoryDialog />
   </div>
 );
 

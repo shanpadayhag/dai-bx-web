@@ -1,5 +1,7 @@
 import CalendarDay from '@/features/calendar/entities/calendar-day';
 import CalendarEvent from '@/features/calendar/entities/calendar-event';
+import type { Category } from '@/core/category';
+import sampleCategories from '@/core/sample-categories';
 
 const weekDays: CalendarDay[] = [
   { weekdayLabel: 'Mon', dateLabel: '19', isToday: false },
@@ -19,6 +21,7 @@ const minuteOfDay = (hour: number, minute = 0): number => (hour - firstHour) * 6
 const weekEvents: CalendarEvent[] = [
   {
     id: 'e1',
+    category: sampleCategories.work,
     title: 'Template review',
     dayIndex: 0,
     startMinute: minuteOfDay(16),
@@ -29,6 +32,7 @@ const weekEvents: CalendarEvent[] = [
   },
   {
     id: 'e2',
+    category: sampleCategories.studies,
     title: 'Chinese – daily cards',
     dayIndex: 0,
     startMinute: minuteOfDay(21),
@@ -39,6 +43,7 @@ const weekEvents: CalendarEvent[] = [
   },
   {
     id: 'e3',
+    category: sampleCategories.goals,
     title: 'Write the first migration',
     dayIndex: 1,
     startMinute: minuteOfDay(16, 10),
@@ -49,6 +54,7 @@ const weekEvents: CalendarEvent[] = [
   },
   {
     id: 'e4',
+    category: sampleCategories.personal,
     title: 'Gym',
     dayIndex: 1,
     startMinute: minuteOfDay(19),
@@ -59,6 +65,7 @@ const weekEvents: CalendarEvent[] = [
   },
   {
     id: 'e5',
+    category: sampleCategories.goals,
     title: 'Design the marketing site',
     dayIndex: 2,
     startMinute: minuteOfDay(16),
@@ -69,6 +76,7 @@ const weekEvents: CalendarEvent[] = [
   },
   {
     id: 'e6',
+    category: sampleCategories.goals,
     title: 'Teach shev the new stack',
     dayIndex: 2,
     startMinute: minuteOfDay(20),
@@ -79,6 +87,7 @@ const weekEvents: CalendarEvent[] = [
   },
   {
     id: 'e7',
+    category: sampleCategories.studies,
     title: 'Chinese – daily cards',
     dayIndex: 3,
     startMinute: minuteOfDay(13),
@@ -89,6 +98,7 @@ const weekEvents: CalendarEvent[] = [
   },
   {
     id: 'e8',
+    category: sampleCategories.goals,
     title: 'Write the v3 changelog',
     dayIndex: 3,
     startMinute: minuteOfDay(16, 20),
@@ -99,6 +109,7 @@ const weekEvents: CalendarEvent[] = [
   },
   {
     id: 'e9',
+    category: sampleCategories.goals,
     title: 'Review the AFK check-in flow',
     dayIndex: 3,
     startMinute: minuteOfDay(19),
@@ -109,6 +120,7 @@ const weekEvents: CalendarEvent[] = [
   },
   {
     id: 'e10',
+    category: sampleCategories.studies,
     title: 'Plan the Saturday market session',
     dayIndex: 4,
     startMinute: minuteOfDay(20),
@@ -119,6 +131,7 @@ const weekEvents: CalendarEvent[] = [
   },
   {
     id: 'e11',
+    category: sampleCategories.personal,
     title: 'Clean room',
     dayIndex: 5,
     startMinute: minuteOfDay(14),
@@ -130,6 +143,7 @@ const weekEvents: CalendarEvent[] = [
 ];
 
 const sampleCalendarSource = {
+  findCategories: (): Category[] => Object.values(sampleCategories),
   findWeekDays: (): CalendarDay[] => weekDays,
   findWeekEvents: (): CalendarEvent[] => weekEvents,
   findHourLabels: (): string[] =>

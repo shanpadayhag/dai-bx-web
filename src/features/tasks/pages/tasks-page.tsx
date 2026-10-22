@@ -1,5 +1,7 @@
 import { Plus } from 'lucide-react';
 import Button from '@/core/components/atoms/button';
+import CategoryChip from '@/core/components/atoms/category-chip';
+import sampleCategories from '@/core/sample-categories';
 import Input from '@/core/components/atoms/input';
 import PageHeader from '@/core/components/molecules/page-header';
 import SegmentedControl from '@/core/components/molecules/segmented-control';
@@ -18,6 +20,7 @@ const TasksPage = () => {
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">
         <PageHeader
           title="DaiBX"
+          titleAddon={<CategoryChip category={sampleCategories.goals} />}
           description="9 open · 5 done · nested up to any depth"
           actions={
             <>

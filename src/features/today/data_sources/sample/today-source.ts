@@ -1,19 +1,68 @@
 import ActivityEntry from '@/features/today/entities/activity-entry';
 import AgendaItem from '@/features/today/entities/agenda-item';
 import UpNextTask from '@/features/today/entities/up-next-task';
+import sampleCategories from '@/core/sample-categories';
 
 const agendaItems: AgendaItem[] = [
-  { id: 'a1', timeLabel: '13:00', title: 'Chinese – daily cards · 20m', kind: 'tracked' },
-  { id: 'a2', timeLabel: '16:20', title: 'Write the v3 changelog', kind: 'running' },
-  { id: 'a3', timeLabel: '19:00', title: 'Review the AFK check-in flow', kind: 'planned' },
-  { id: 'a4', timeLabel: '22:30', title: 'Design the calendar week view', kind: 'planned' },
+  {
+    id: 'a1',
+    timeLabel: '13:00',
+    title: 'Chinese – daily cards · 20m',
+    kind: 'tracked',
+    category: sampleCategories.studies,
+  },
+  {
+    id: 'a2',
+    timeLabel: '16:20',
+    title: 'Write the v3 changelog',
+    kind: 'running',
+    category: sampleCategories.goals,
+  },
+  {
+    id: 'a3',
+    timeLabel: '19:00',
+    title: 'Review the AFK check-in flow',
+    kind: 'planned',
+    category: sampleCategories.goals,
+  },
+  {
+    id: 'a4',
+    timeLabel: '22:30',
+    title: 'Gym',
+    kind: 'planned',
+    category: sampleCategories.personal,
+  },
 ];
 
 const upNextTasks: UpNextTask[] = [
-  { id: 'u1', name: 'Review the AFK check-in flow', groupName: 'DaiBX', estimate: '30m' },
-  { id: 'u2', name: 'Design the calendar week view', groupName: 'DaiBX', estimate: '2h' },
-  { id: 'u3', name: 'Create the Supabase project', groupName: 'DaiBX', estimate: '20m' },
-  { id: 'u4', name: 'Prepare the shift notes', groupName: 'Work', estimate: null },
+  {
+    id: 'u1',
+    name: 'Review the AFK check-in flow',
+    groupName: 'DaiBX',
+    category: sampleCategories.goals,
+    estimate: '30m',
+  },
+  {
+    id: 'u2',
+    name: 'Chinese – review 20 cards',
+    groupName: 'Chinese',
+    category: sampleCategories.studies,
+    estimate: '2h',
+  },
+  {
+    id: 'u3',
+    name: 'Create the Supabase project',
+    groupName: 'DaiBX',
+    category: sampleCategories.goals,
+    estimate: '20m',
+  },
+  {
+    id: 'u4',
+    name: 'Prepare the shift notes',
+    groupName: 'Shift',
+    category: sampleCategories.work,
+    estimate: null,
+  },
 ];
 
 const activityEntries: ActivityEntry[] = [

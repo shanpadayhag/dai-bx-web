@@ -1,4 +1,6 @@
 import { CalendarPlus, ClipboardCheck, History, MoveRight } from 'lucide-react';
+import { categoryColorStyle } from '@/core/category';
+import sampleCategories from '@/core/sample-categories';
 import AccentWords from '@/features/landing/components/accent-words';
 import SectionHeading from '@/features/landing/components/section-heading';
 
@@ -55,8 +57,8 @@ const WorkflowsSection = () => (
             <span className="text-xs text-muted-foreground">{pastRun.date}</span>
             <span className="h-2 overflow-hidden rounded-full bg-surface-strong">
               <span
-                className="block h-full rounded-full bg-primary"
-                style={{ width: pastRun.width }}
+                className="category-swatch block h-full rounded-full"
+                style={{ ...categoryColorStyle(sampleCategories.personal), width: pastRun.width }}
               />
             </span>
             <span className="text-right font-mono text-xs text-foreground tabular-nums">

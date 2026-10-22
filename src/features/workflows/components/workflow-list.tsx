@@ -1,6 +1,8 @@
 import { ChevronRight, Repeat2 } from 'lucide-react';
 import Link from 'next/link';
 import Badge from '@/core/components/atoms/badge';
+import CategoryChip from '@/core/components/atoms/category-chip';
+import { categoryColorStyle } from '@/core/category';
 import joinClassNames from '@/core/class-names';
 import Workflow from '@/features/workflows/entities/workflow';
 
@@ -26,17 +28,19 @@ const WorkflowList = ({ workflows }: WorkflowListProps) => (
           >
             <span className="flex items-start gap-3">
               <span
+                style={categoryColorStyle(workflow.category)}
                 className={joinClassNames(
                   'mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-xl',
-                  workflow.isPaused
-                    ? 'bg-surface-strong text-muted-foreground'
-                    : 'bg-primary-soft text-primary',
+                  workflow.isPaused ? 'bg-surface-strong text-muted-foreground' : 'category-solid',
                 )}
               >
                 <Repeat2 className="size-4" />
               </span>
               <span className="grid gap-0.5">
-                <span className="text-sm font-medium text-foreground">{workflow.name}</span>
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-foreground">{workflow.name}</span>
+                  <CategoryChip category={workflow.category} />
+                </span>
                 <span className="text-[13px] text-muted-foreground">{workflow.description}</span>
               </span>
             </span>

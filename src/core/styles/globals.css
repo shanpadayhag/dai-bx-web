@@ -145,6 +145,33 @@
 }
 
 @layer components {
+  .category-swatch {
+    background-color: var(--category);
+  }
+
+  .category-solid {
+    background-color: var(--category);
+    color: var(--category-foreground);
+  }
+
+  .category-soft {
+    border: 1px solid var(--category);
+    background-color: color-mix(in oklab, var(--category) 25%, transparent);
+    color: var(--foreground);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .category-swatch,
+    .category-solid {
+      background-color: color-mix(in oklab, var(--category) 82%, white);
+    }
+
+    .category-soft {
+      border-color: color-mix(in oklab, var(--category) 82%, white);
+      background-color: color-mix(in oklab, var(--category) 30%, transparent);
+    }
+  }
+
   .prose-changelog {
     max-width: 68ch;
     color: var(--foreground);
