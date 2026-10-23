@@ -3,17 +3,19 @@ import Logo from '@/core/components/atoms/logo';
 
 type AuthFrameProps = {
   title: string;
-  description: string;
+  description: ReactNode;
+  icon?: ReactNode;
   footer: ReactNode;
   children: ReactNode;
 };
 
-const AuthFrame = ({ title, description, footer, children }: AuthFrameProps) => (
+const AuthFrame = ({ title, description, icon, footer, children }: AuthFrameProps) => (
   <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
     <div className="flex flex-col px-6 py-8 sm:px-12">
       <Logo />
       <div className="mx-auto grid w-full max-w-[380px] flex-1 content-center gap-8 py-12">
         <div className="grid gap-2">
+          {icon ? <div className="mb-3">{icon}</div> : null}
           <h1 className="text-[28px] font-semibold tracking-[-0.025em] text-foreground">{title}</h1>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>

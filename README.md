@@ -17,6 +17,12 @@ This branch (`release/v3.0.0`) is the design: every page of the marketing site, 
 - `src/features/<feature>/` holds each feature's pages, components, entities and data sources.
 - `src/core/` holds what no single feature owns: config, the design system components, and styles.
 
+## Backend
+
+Next.js is frontend only: there are no route handlers, server actions or `proxy.ts`. The browser calls the Axum API at `/backend/...` on this app's own origin, and a rewrite in `next.config.ts` forwards it to `API_ORIGIN` with the `/backend` prefix removed. The page and the API share one origin, so the API's HttpOnly cookies are first-party.
+
+Set `API_ORIGIN` before `dev` or `build` (see `.env.example`). Locally it's the API's `cargo lambda watch` on `http://localhost:9000`; on Vercel each environment points at its own Lambda Function URL.
+
 ## Changelog
 
 Add a release by adding `content/changelog/<yyyy-mm-dd>-<slug>.mdx` that exports `metadata` with `title`, `version`, `date` and `summary`.

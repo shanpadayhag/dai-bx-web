@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Button from '@/core/components/atoms/button';
 import Input from '@/core/components/atoms/input';
 import Field from '@/core/components/molecules/field';
+import PasswordInput from '@/core/components/molecules/password-input';
 import AuthFrame from '@/features/auth/components/auth-frame';
 
 const SignInPage = () => (
@@ -25,12 +26,15 @@ const SignInPage = () => (
         label="Password"
         htmlFor="sign-in-password"
         trailing={
-          <Link href="/sign-in" className="text-xs text-muted-foreground hover:text-foreground">
+          <Link
+            href="/forgot-password"
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
             Forgot it?
           </Link>
         }
       >
-        <Input id="sign-in-password" type="password" autoComplete="current-password" />
+        <PasswordInput id="sign-in-password" name="password" autoComplete="current-password" />
       </Field>
       <Button type="submit" size="lg" className="mt-2 w-full">
         Sign in
