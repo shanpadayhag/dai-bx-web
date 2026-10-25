@@ -19,7 +19,7 @@ import DeleteAccountDialog from '@/features/settings/components/delete-account-d
 import DeleteCategoryDialog from '@/features/settings/components/delete-category-dialog';
 import NewRecoveryCodesDialog from '@/features/settings/components/new-recovery-codes-dialog';
 import ReplaceAuthenticatorDialog from '@/features/settings/components/replace-authenticator-dialog';
-import SignOutEverywhereDialog from '@/features/settings/components/sign-out-everywhere-dialog';
+import SessionsDialog, { SESSIONS_DIALOG_ID } from '@/features/settings/components/sessions-dialog';
 import sampleCategorySource from '@/features/settings/data_sources/sample/category-source';
 import SettingRow from '@/features/settings/components/setting-row';
 import SettingsSection from '@/features/settings/components/settings-section';
@@ -154,11 +154,11 @@ const SettingsPage = () => {
             }
           />
           <SettingRow
-            title="Sign out everywhere"
-            description={`You’re signed in on ${describeDeviceCount(account.security.activeSessionCount)}. This ends every session and forgets remembered devices.`}
+            title="Signed-in devices"
+            description={`You’re signed in on ${describeDeviceCount(account.security.activeSessionCount)}. See each one, end any you don’t recognise, or sign out everywhere.`}
             control={
-              <Button variant="secondary" size="sm" popoverTarget="sign-out-everywhere-dialog">
-                Sign out all
+              <Button variant="secondary" size="sm" popoverTarget={SESSIONS_DIALOG_ID}>
+                Manage
               </Button>
             }
           />
@@ -287,10 +287,11 @@ const SettingsPage = () => {
         onCopyCodes={() => void events.handleCopyNewRecoveryCodes()}
         onDone={events.handleFinishNewRecoveryCodes}
       />
-      <SignOutEverywhereDialog
-        activeSessionCount={account.security.activeSessionCount}
-        isSubmitting={states.submittingDialogId === 'sign-out-everywhere-dialog'}
-        onSubmit={(submitEvent) => void events.handleSignOutEverywhere(submitEvent)}
+      <SessionsDialog
+        accountSessions={states.accountSessions}
+        currentTime={new Date()}
+        isSubmitting={states.submittingDialogId === SESSIONS_DIALOG_ID}
+        onSubmit={(submitEvent) => void events.handleSubmitSessions(submitEvent)}
       />
       <DeleteAccountDialog
         isSubmitting={states.submittingDialogId === 'delete-account-dialog'}

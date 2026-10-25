@@ -12,13 +12,16 @@ import {
 } from '@/core/appearance';
 import readFormText from '@/core/form-text';
 import hidePopover from '@/core/popover';
+import { announceProfileChange } from '@/core/profile-change';
 import reportAppError from '@/core/report-app-error';
 import signOut from '@/features/auth/actions/sign-out';
-import signOutEverywhere from '@/features/auth/actions/sign-out-everywhere';
 import changePassword from '@/features/settings/actions/change-password';
 import confirmAuthenticatorReplacement from '@/features/settings/actions/confirm-authenticator-replacement';
 import deleteAccount from '@/features/settings/actions/delete-account';
+import endAllSessions from '@/features/settings/actions/end-all-sessions';
+import endOtherSession from '@/features/settings/actions/end-other-session';
 import findAccount from '@/features/settings/actions/find-account';
+import findAccountSessions from '@/features/settings/actions/find-account-sessions';
 import regenerateRecoveryCodes from '@/features/settings/actions/regenerate-recovery-codes';
 import requestEmailChange from '@/features/settings/actions/request-email-change';
 import startAuthenticatorReplacement from '@/features/settings/actions/start-authenticator-replacement';
@@ -27,12 +30,15 @@ import { CHANGE_EMAIL_DIALOG_ID } from '@/features/settings/components/change-em
 import { CHANGE_PASSWORD_DIALOG_ID } from '@/features/settings/components/change-password-dialog';
 import { NEW_RECOVERY_CODES_DIALOG_ID } from '@/features/settings/components/new-recovery-codes-dialog';
 import { REPLACE_AUTHENTICATOR_DIALOG_ID } from '@/features/settings/components/replace-authenticator-dialog';
+import {
+  END_ALL_SESSIONS_INTENT,
+  SESSIONS_DIALOG_ID,
+} from '@/features/settings/components/sessions-dialog';
 import type { IdentityProof, ProfileChanges } from '@/features/settings/entities/account';
 import type useSettingsStates from '@/features/settings/states/use-settings-states';
 
 const SIGN_IN_PATH = '/sign-in';
 const MARKETING_HOME_PATH = '/';
-const SIGN_OUT_EVERYWHERE_DIALOG_ID = 'sign-out-everywhere-dialog';
 const DELETE_ACCOUNT_DIALOG_ID = 'delete-account-dialog';
 
 const readIdentityProof = (submittedForm: FormData): IdentityProof => ({
@@ -50,6 +56,7 @@ const useSettingsEvents = (states: ReturnType<typeof useSettingsStates>) => {
     account,
     newRecoveryCodes,
     setAccount,
+    setAccountSessions,
     setAccountLoadError,
     setSubmittingDialogId,
     setNewRecoveryCodes,
@@ -61,12 +68,17 @@ const useSettingsEvents = (states: ReturnType<typeof useSettingsStates>) => {
   const handleLoadAccount = useCallback(async () => {
     setAccountLoadError(null);
     try {
-      setAccount(await findAccount());
+      const [loadedAccount, loadedSessions] = await Promise.all([
+        findAccount(),
+        findAccountSessions(),
+      ]);
+      setAccount(loadedAccount);
+      setAccountSessions(loadedSessions);
     } catch (accountError) {
       if (!(accountError instanceof AppError)) throw accountError;
       setAccountLoadError(accountError);
     }
-  }, [setAccount, setAccountLoadError]);
+  }, [setAccount, setAccountSessions, setAccountLoadError]);
 
   const saveProfileChanges = useCallback(
     async (profileChanges: ProfileChanges) => {
@@ -122,7 +134,9 @@ const useSettingsEvents = (states: ReturnType<typeof useSettingsStates>) => {
       const trimmedName = enteredName.trim();
       if (account === null || trimmedName === account.name) return;
       const isSaved = await saveProfileChanges({ name: trimmedName });
-      if (isSaved) toast.success('Name saved');
+      if (!isSaved) return;
+      announceProfileChange({ name: trimmedName });
+      toast.success('Name saved');
     },
     [account, saveProfileChanges],
   );
@@ -246,14 +260,28 @@ const useSettingsEvents = (states: ReturnType<typeof useSettingsStates>) => {
     }
   }, [leaveSignedOut, setIsSigningOut]);
 
-  const handleSignOutEverywhere = useCallback(
-    (submitEvent: FormEvent<HTMLFormElement>) =>
-      submitDialog(submitEvent, SIGN_OUT_EVERYWHERE_DIALOG_ID, async () => {
-        await signOutEverywhere();
-        hidePopover(SIGN_OUT_EVERYWHERE_DIALOG_ID);
-        leaveSignedOut(SIGN_IN_PATH);
-      }),
-    [leaveSignedOut, submitDialog],
+  const handleSubmitSessions = useCallback(
+    (submitEvent: FormEvent<HTMLFormElement>) => {
+      const submitterElement =
+        submitEvent.nativeEvent instanceof SubmitEvent ? submitEvent.nativeEvent.submitter : null;
+      const submittedIntent =
+        submitterElement instanceof HTMLButtonElement ? submitterElement.value : '';
+      return submitDialog(submitEvent, SESSIONS_DIALOG_ID, async (submittedForm) => {
+        const password = readFormText(submittedForm, 'password');
+        if (submittedIntent === END_ALL_SESSIONS_INTENT) {
+          await endAllSessions({ password });
+          hidePopover(SESSIONS_DIALOG_ID);
+          leaveSignedOut(SIGN_IN_PATH);
+          return;
+        }
+        await endOtherSession({ sessionId: submittedIntent, password });
+        toast.success('Device signed out', {
+          description: 'It needs your password and a code to sign in again.',
+        });
+        await handleLoadAccount();
+      });
+    },
+    [handleLoadAccount, leaveSignedOut, submitDialog],
   );
 
   const handleDeleteAccount = useCallback(
@@ -282,7 +310,7 @@ const useSettingsEvents = (states: ReturnType<typeof useSettingsStates>) => {
     handleStartAuthenticatorReplacement,
     handleConfirmAuthenticatorReplacement,
     handleSignOut,
-    handleSignOutEverywhere,
+    handleSubmitSessions,
     handleDeleteAccount,
   };
 };

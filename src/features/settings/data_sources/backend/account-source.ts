@@ -5,9 +5,14 @@ import type {
   IdentityProof,
   ProfileChanges,
 } from '@/features/settings/entities/account';
+import type { AccountSession } from '@/features/settings/entities/account-session';
 
 type StatusAnswer = {
   status: string;
+};
+
+type SessionsAnswer = {
+  sessions: AccountSession[];
 };
 
 type RecoveryCodesAnswer = {
@@ -28,6 +33,11 @@ const backendAccountSource = {
     apiClient.post<StatusAnswer>('/account/authenticator', identityProof),
   confirmAuthenticatorReplacement: (code: string) =>
     apiClient.post<StatusAnswer>('/account/authenticator/confirm', { code }),
+  listSessions: () => apiClient.get<SessionsAnswer>('/account/sessions'),
+  endSession: (sessionId: string, password: string) =>
+    apiClient.post<StatusAnswer>('/account/sessions/end', { sessionId, password }),
+  endAllSessions: (password: string) =>
+    apiClient.post<StatusAnswer>('/account/sessions/end-all', { password }),
   delete: (identityProof: IdentityProof, confirmation: string) =>
     apiClient.post<StatusAnswer>('/account/delete', { ...identityProof, confirmation }),
 };

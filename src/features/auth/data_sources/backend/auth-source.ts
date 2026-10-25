@@ -46,7 +46,6 @@ const backendAuthSource = {
   confirmEmailChange: (linkToken: string) =>
     apiClient.post<StatusAnswer>('/account/email/confirm', { token: linkToken }, reportOnly),
   signOut: () => apiClient.post<StatusAnswer>('/auth/sign-out'),
-  signOutEverywhere: () => apiClient.post<StatusAnswer>('/auth/sign-out-everywhere'),
 };
 
 export default backendAuthSource;

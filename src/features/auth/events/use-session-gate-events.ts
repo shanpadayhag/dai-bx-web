@@ -4,12 +4,13 @@ import { SignedOutError } from '@/core/api/api-error';
 import UnauthorizedHandling from '@/core/api/unauthorized-handling';
 import AppError from '@/core/app-error';
 import { applyAppearance } from '@/core/appearance';
+import { readProfileChange } from '@/core/profile-change';
 import findSignedInUser from '@/features/auth/actions/find-signed-in-user';
 import { buildSignInPath } from '@/features/auth/entities/return-path';
 import type useSessionGateStates from '@/features/auth/states/use-session-gate-states';
 
 const useSessionGateEvents = (states: ReturnType<typeof useSessionGateStates>) => {
-  const { setSessionCheckStatus, setSessionCheckError } = states;
+  const { setSessionCheckStatus, setSessionCheckError, setSignedInUser } = states;
   const router = useRouter();
 
   const handleSignedOut = useCallback(() => {
@@ -28,6 +29,7 @@ const useSessionGateEvents = (states: ReturnType<typeof useSessionGateStates>) =
         return;
       }
       applyAppearance(signedInUser);
+      setSignedInUser(signedInUser);
       setSessionCheckStatus('signed_in');
     } catch (sessionError) {
       if (sessionError instanceof SignedOutError) return;
@@ -35,9 +37,20 @@ const useSessionGateEvents = (states: ReturnType<typeof useSessionGateStates>) =
       setSessionCheckError(sessionError);
       setSessionCheckStatus('failed');
     }
-  }, [handleSignedOut, setSessionCheckStatus, setSessionCheckError]);
+  }, [handleSignedOut, setSessionCheckStatus, setSessionCheckError, setSignedInUser]);
 
-  return { handleCheckSession, handleSignedOut };
+  const handleProfileChanged = useCallback(
+    (profileChangeEvent: Event) => {
+      const profileChange = readProfileChange(profileChangeEvent);
+      if (profileChange === null) return;
+      setSignedInUser((currentUser) =>
+        currentUser === null ? currentUser : { ...currentUser, name: profileChange.name },
+      );
+    },
+    [setSignedInUser],
+  );
+
+  return { handleCheckSession, handleSignedOut, handleProfileChanged };
 };
 
 export default useSessionGateEvents;

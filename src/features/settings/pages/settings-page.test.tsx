@@ -34,11 +34,35 @@ const newRecoveryCodes = [
   'D4NF-8GKZ-5PQJ',
 ];
 
+const storedSessions = [
+  {
+    id: 'session-laptop',
+    createdAt: '2026-10-20T08:00:00Z',
+    lastSeenAt: new Date().toISOString(),
+    userAgent:
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36',
+    isCurrent: true,
+  },
+  {
+    id: 'session-phone',
+    createdAt: '2026-10-21T08:00:00Z',
+    lastSeenAt: '2026-10-24T08:00:00Z',
+    userAgent:
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+    isCurrent: false,
+  },
+];
+
 let currentAccount = storedAccount;
+let currentSessions = storedSessions;
 
 beforeEach(() => {
   currentAccount = structuredClone(storedAccount);
-  backendServer.use(http.get('/backend/account', () => HttpResponse.json(currentAccount)));
+  currentSessions = structuredClone(storedSessions);
+  backendServer.use(
+    http.get('/backend/account', () => HttpResponse.json(currentAccount)),
+    http.get('/backend/account/sessions', () => HttpResponse.json({ sessions: currentSessions })),
+  );
 });
 afterEach(() => {
   routerReplace.mockReset();
@@ -148,6 +172,8 @@ test('two quick appearance changes both stick', async () => {
 });
 
 test('a new name is saved when the field is left', async () => {
+  const profileChangedListener = vi.fn();
+  window.addEventListener('daibx:profile-changed', profileChangedListener);
   const readPatch = captureRequest('patch', '/backend/account', () =>
     HttpResponse.json({ ...storedAccount, name: 'Shan P.' }),
   );
@@ -159,6 +185,8 @@ test('a new name is saved when the field is left', async () => {
 
   expect(await screen.findByText('Name saved')).toBeInTheDocument();
   expect(readPatch()).toEqual({ name: 'Shan P.' });
+  expect(profileChangedListener).toHaveBeenCalledTimes(1);
+  window.removeEventListener('daibx:profile-changed', profileChangedListener);
 });
 
 test('changing the password reports success and the other devices signing out', async () => {
@@ -313,19 +341,56 @@ test('signing out goes to sign in and forgets this browser’s appearance', asyn
   expect(window.localStorage.getItem('daibx:appearance')).toBeNull();
 });
 
-test('signing out everywhere goes to sign in', async () => {
-  captureRequest('post', '/backend/auth/sign-out-everywhere', () =>
+test('the devices dialog lists every session, marking this one', async () => {
+  const user = await openSettings();
+
+  const sessionsDialog = await openDialog(user, 'Signed-in devices');
+
+  expect(within(sessionsDialog).getByText('Chrome on macOS')).toBeInTheDocument();
+  expect(within(sessionsDialog).getByText('Safari on iOS')).toBeInTheDocument();
+  expect(within(sessionsDialog).getByText('This device')).toBeInTheDocument();
+  expect(within(sessionsDialog).getAllByRole('button', { name: /^End / })).toHaveLength(1);
+});
+
+test('ending another device needs the password and refreshes the list', async () => {
+  const readEnd = captureRequest('post', '/backend/account/sessions/end', () => {
+    currentSessions = currentSessions.filter((listedSession) => listedSession.isCurrent);
+    return HttpResponse.json({ status: 'session_ended' });
+  });
+  const user = await openSettings();
+  const sessionsDialog = await openDialog(user, 'Signed-in devices');
+
+  await user.type(
+    within(sessionsDialog).getByLabelText('Your password'),
+    'violet lantern drifts past seven quiet docks',
+  );
+  await user.click(within(sessionsDialog).getByRole('button', { name: 'End Safari on iOS' }));
+
+  expect(await screen.findByText('Device signed out')).toBeInTheDocument();
+  expect(readEnd()).toEqual({
+    sessionId: 'session-phone',
+    password: 'violet lantern drifts past seven quiet docks',
+  });
+  await vi.waitFor(() =>
+    expect(within(sessionsDialog).queryByText('Safari on iOS')).not.toBeInTheDocument(),
+  );
+});
+
+test('signing out everywhere needs the password and goes to sign in', async () => {
+  const readEndAll = captureRequest('post', '/backend/account/sessions/end-all', () =>
     HttpResponse.json({ status: 'signed_out' }),
   );
   const user = await openSettings();
+  const sessionsDialog = await openDialog(user, 'Signed-in devices');
 
-  await user.click(
-    within(await openDialog(user, 'Sign out everywhere?')).getByRole('button', {
-      name: 'Sign out everywhere',
-    }),
+  await user.type(
+    within(sessionsDialog).getByLabelText('Your password'),
+    'violet lantern drifts past seven quiet docks',
   );
+  await user.click(within(sessionsDialog).getByRole('button', { name: 'Sign out everywhere' }));
 
   await vi.waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/sign-in'));
+  expect(readEndAll()).toEqual({ password: 'violet lantern drifts past seven quiet docks' });
 });
 
 test('deleting the account needs the exact words and lands on the marketing page', async () => {
