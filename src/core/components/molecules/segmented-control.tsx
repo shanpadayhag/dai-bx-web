@@ -4,9 +4,15 @@ type SegmentedControlProps = {
   label: string;
   options: readonly string[];
   selectedOption: string;
+  onSelectOption?: (option: string) => void;
 };
 
-const SegmentedControl = ({ label, options, selectedOption }: SegmentedControlProps) => (
+const SegmentedControl = ({
+  label,
+  options,
+  selectedOption,
+  onSelectOption,
+}: SegmentedControlProps) => (
   <div
     role="radiogroup"
     aria-label={label}
@@ -20,6 +26,7 @@ const SegmentedControl = ({ label, options, selectedOption }: SegmentedControlPr
           type="button"
           role="radio"
           aria-checked={isSelected}
+          onClick={onSelectOption === undefined ? undefined : () => onSelectOption(option)}
           className={joinClassNames(
             'h-8 rounded-lg px-3 text-[13px] font-medium transition-colors duration-150',
             isSelected

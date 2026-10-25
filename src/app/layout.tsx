@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono, Instrument_Serif } from 'next/font/google';
 import type { ReactNode } from 'react';
+import { Toaster } from 'sonner';
+import { APPEARANCE_BOOT_SCRIPT } from '@/core/appearance';
 import '@/core/styles/globals.css';
 
 const geistSans = Geist({ subsets: ['latin'], variable: '--font-geist-sans' });
@@ -29,8 +31,15 @@ const RootLayout = ({ children }: { children: ReactNode }) => (
   <html
     lang="en"
     className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable}`}
+    suppressHydrationWarning
   >
-    <body className="min-h-dvh">{children}</body>
+    <head>
+      <script dangerouslySetInnerHTML={{ __html: APPEARANCE_BOOT_SCRIPT }} />
+    </head>
+    <body className="min-h-dvh">
+      {children}
+      <Toaster theme="system" position="bottom-right" closeButton />
+    </body>
   </html>
 );
 

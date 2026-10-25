@@ -1,55 +1,85 @@
 @import 'tailwindcss';
 
-@custom-variant dark (@media (prefers-color-scheme: dark));
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
+}
 
 :root {
-  --background: #ffffff;
-  --surface: #f5f7fc;
-  --surface-strong: #eaeef8;
-  --foreground: #0c1324;
-  --muted-foreground: #566079;
-  --border: #e2e7f1;
-  --border-strong: #cdd5e6;
-  --primary: #2456f0;
-  --primary-hover: #1a46d4;
-  --primary-foreground: #ffffff;
-  --primary-soft: #eaf0ff;
-  --primary-soft-foreground: #1a3fb8;
-  --glow: #4f80ff;
-  --success: #0f7a57;
-  --success-soft: #e3f5ee;
-  --warning: #a15207;
-  --warning-soft: #fdf1e1;
-  --danger: #cc2936;
-  --danger-soft: #fdebec;
-  --ink: #070b17;
+  color-scheme: light dark;
+  --background: light-dark(#ffffff, #080c18);
+  --surface: light-dark(#f5f7fc, #0d1323);
+  --surface-strong: light-dark(#eaeef8, #141b2f);
+  --foreground: light-dark(#0c1324, #eef2fb);
+  --muted-foreground: light-dark(#566079, #9aa4bd);
+  --border: light-dark(#e2e7f1, #1d2640);
+  --border-strong: light-dark(#cdd5e6, #2a3554);
+  --primary: light-dark(#2456f0, #6b92ff);
+  --primary-hover: light-dark(#1a46d4, #87a7ff);
+  --primary-foreground: light-dark(#ffffff, #050b1f);
+  --primary-soft: light-dark(#eaf0ff, #15214a);
+  --primary-soft-foreground: light-dark(#1a3fb8, #b3c7ff);
+  --glow: light-dark(#4f80ff, #3d6bff);
+  --success: light-dark(#0f7a57, #4cc79a);
+  --success-soft: light-dark(#e3f5ee, #0f2a22);
+  --warning: light-dark(#a15207, #f0a54a);
+  --warning-soft: light-dark(#fdf1e1, #2c1d0b);
+  --danger: light-dark(#cc2936, #ff7a84);
+  --danger-soft: light-dark(#fdebec, #331318);
+  --ink: light-dark(#070b17, #04060d);
   --ink-foreground: #eef2fb;
   --ink-muted: #9aa5c2;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #080c18;
-    --surface: #0d1323;
-    --surface-strong: #141b2f;
-    --foreground: #eef2fb;
-    --muted-foreground: #9aa4bd;
-    --border: #1d2640;
-    --border-strong: #2a3554;
-    --primary: #6b92ff;
-    --primary-hover: #87a7ff;
-    --primary-foreground: #050b1f;
-    --primary-soft: #15214a;
-    --primary-soft-foreground: #b3c7ff;
-    --glow: #3d6bff;
-    --success: #4cc79a;
-    --success-soft: #0f2a22;
-    --warning: #f0a54a;
-    --warning-soft: #2c1d0b;
-    --danger: #ff7a84;
-    --danger-soft: #331318;
-    --ink: #04060d;
-  }
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+:root[data-accent='indigo'] {
+  --primary: light-dark(#4f46e5, #8b8cfb);
+  --primary-hover: light-dark(#4338ca, #a5a6fd);
+  --primary-foreground: light-dark(#ffffff, #0b0a2a);
+  --primary-soft: light-dark(#eef0ff, #1e1b4b);
+  --primary-soft-foreground: light-dark(#3730a3, #c7c8fe);
+  --glow: light-dark(#6d6af5, #5b55f0);
+}
+
+:root[data-accent='teal'] {
+  --primary: light-dark(#0d7f77, #3cc9bd);
+  --primary-hover: light-dark(#0a6b64, #63d8cf);
+  --primary-foreground: light-dark(#ffffff, #021714);
+  --primary-soft: light-dark(#e2f6f3, #0c2a28);
+  --primary-soft-foreground: light-dark(#0b5f59, #9be8e1);
+  --glow: light-dark(#22b8ac, #16a394);
+}
+
+:root[data-accent='violet'] {
+  --primary: light-dark(#7c3aed, #a98bff);
+  --primary-hover: light-dark(#6d28d9, #bea7ff);
+  --primary-foreground: light-dark(#ffffff, #14082c);
+  --primary-soft: light-dark(#f3ecff, #24124a);
+  --primary-soft-foreground: light-dark(#5b21b6, #d8c9ff);
+  --glow: light-dark(#9b6bff, #7c4dff);
+}
+
+:root[data-accent='graphite'] {
+  --primary: light-dark(#3b4256, #aab3c8);
+  --primary-hover: light-dark(#2c3243, #c3cad9);
+  --primary-foreground: light-dark(#ffffff, #0b0e16);
+  --primary-soft: light-dark(#eceef3, #1c2232);
+  --primary-soft-foreground: light-dark(#2c3243, #d5dae6);
+  --glow: light-dark(#6b7590, #5b6580);
 }
 
 @theme inline {
@@ -146,30 +176,21 @@
 
 @layer components {
   .category-swatch {
-    background-color: var(--category);
+    background-color: light-dark(var(--category), color-mix(in oklab, var(--category) 82%, white));
   }
 
   .category-solid {
-    background-color: var(--category);
+    background-color: light-dark(var(--category), color-mix(in oklab, var(--category) 82%, white));
     color: var(--category-foreground);
   }
 
   .category-soft {
-    border: 1px solid var(--category);
-    background-color: color-mix(in oklab, var(--category) 25%, transparent);
+    border: 1px solid light-dark(var(--category), color-mix(in oklab, var(--category) 82%, white));
+    background-color: light-dark(
+      color-mix(in oklab, var(--category) 25%, transparent),
+      color-mix(in oklab, var(--category) 30%, transparent)
+    );
     color: var(--foreground);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .category-swatch,
-    .category-solid {
-      background-color: color-mix(in oklab, var(--category) 82%, white);
-    }
-
-    .category-soft {
-      border-color: color-mix(in oklab, var(--category) 82%, white);
-      background-color: color-mix(in oklab, var(--category) 30%, transparent);
-    }
   }
 
   .prose-changelog {

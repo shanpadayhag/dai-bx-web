@@ -1,4 +1,7 @@
+'use client';
+
 import { Copy } from 'lucide-react';
+import { toast } from 'sonner';
 import IconButton from '@/core/components/atoms/icon-button';
 
 type ManualKeyProps = {
@@ -12,7 +15,15 @@ const ManualKey = ({ secretKey }: ManualKeyProps) => (
     <code className="font-mono text-[13px] tracking-wide text-foreground">
       {groupInFours(secretKey).join(' ')}
     </code>
-    <IconButton label="Copy key">
+    <IconButton
+      label="Copy key"
+      onClick={() =>
+        void navigator.clipboard
+          .writeText(secretKey)
+          .then(() => toast.success('Key copied'))
+          .catch(() => toast.error('Couldn’t copy', { description: 'Select the key and copy it.' }))
+      }
+    >
       <Copy />
     </IconButton>
   </div>
