@@ -45,4 +45,4 @@ jobs:
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Check the API through the rewrite
-        run: curl --fail --silent --show-error --retry 5 --retry-delay 5 "${ALPHA_ORIGIN}/backend/health"
+        run: curl --fail --silent --show-error --retry 12 --retry-delay 10 --retry-all-errors "${ALPHA_ORIGIN}/backend/health"
