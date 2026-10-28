@@ -15,6 +15,8 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://dai-bx.vercel.app'),
+  manifest: '/manifest.webmanifest',
   title: { default: 'DaiBX — tasks, board and calendar in one place', template: '%s · DaiBX' },
   description:
     'An open-source workspace where nested tasks, a board and a calendar share one source of truth. Start a task and your calendar records it.',

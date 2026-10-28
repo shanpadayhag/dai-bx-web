@@ -1,4 +1,12 @@
 import Link from 'next/link';
+import {
+  MARK_BAR_COLOR,
+  MARK_BAR_CORNER_RADIUS,
+  MARK_BAR_HEIGHT,
+  MARK_TILE_CORNER_RADIUS,
+  MARK_VIEWBOX_SIZE,
+  markBars,
+} from '@/core/brand/mark';
 import joinClassNames from '@/core/class-names';
 
 type LogoProps = {
@@ -8,11 +16,29 @@ type LogoProps = {
 };
 
 const LogoMark = () => (
-  <svg viewBox="0 0 28 28" aria-hidden="true" className="size-7 shrink-0">
-    <rect width="28" height="28" rx="8" className="fill-primary" />
-    <rect x="7" y="7.5" width="9" height="3" rx="1.5" fill="white" />
-    <rect x="11" y="12.5" width="10" height="3" rx="1.5" fill="white" fillOpacity="0.75" />
-    <rect x="11" y="17.5" width="6" height="3" rx="1.5" fill="white" fillOpacity="0.5" />
+  <svg
+    viewBox={`0 0 ${MARK_VIEWBOX_SIZE} ${MARK_VIEWBOX_SIZE}`}
+    aria-hidden="true"
+    className="size-7 shrink-0"
+  >
+    <rect
+      width={MARK_VIEWBOX_SIZE}
+      height={MARK_VIEWBOX_SIZE}
+      rx={MARK_TILE_CORNER_RADIUS}
+      className="fill-primary"
+    />
+    {markBars.map((markBar) => (
+      <rect
+        key={markBar.y}
+        x={markBar.x}
+        y={markBar.y}
+        width={markBar.width}
+        height={MARK_BAR_HEIGHT}
+        rx={MARK_BAR_CORNER_RADIUS}
+        fill={MARK_BAR_COLOR}
+        fillOpacity={markBar.opacity}
+      />
+    ))}
   </svg>
 );
 
