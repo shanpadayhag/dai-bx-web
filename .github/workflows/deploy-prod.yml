@@ -12,7 +12,7 @@ concurrency:
 
 env:
   VERCEL_CLI_VERSION: 65.2.0
-  ALPHA_ORIGIN: https://dai-bx-v3.vercel.app
+  ALPHA_ORIGIN: https://dai-bx.vercel.app
 
 jobs:
   deploy:
