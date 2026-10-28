@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
 import { categoryColorStyle } from '@/core/category';
 import joinClassNames from '@/core/class-names';
 import TaskGroup from '@/features/tasks/entities/task-group';
@@ -15,13 +15,25 @@ const TaskGroupList = ({ taskGroups, selectedTaskGroupId }: TaskGroupListProps) 
   >
     <div className="hidden items-center justify-between px-2.5 pb-1 lg:flex">
       <p className="text-xs font-medium text-muted-foreground">Groups</p>
-      <button
-        type="button"
-        aria-label="New group"
-        className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-surface-strong hover:text-foreground"
-      >
-        <Plus className="size-3.5" />
-      </button>
+      <span className="flex items-center gap-0.5">
+        <button
+          type="button"
+          aria-label="Import a group"
+          title="Import a group"
+          popoverTarget="import-group-dialog"
+          className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-surface-strong hover:text-foreground"
+        >
+          <Upload className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          aria-label="New group"
+          title="New group"
+          className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-surface-strong hover:text-foreground"
+        >
+          <Plus className="size-3.5" />
+        </button>
+      </span>
     </div>
     {taskGroups.map((taskGroup) => {
       const isSelected = taskGroup.id === selectedTaskGroupId;
@@ -37,10 +49,14 @@ const TaskGroupList = ({ taskGroups, selectedTaskGroupId }: TaskGroupListProps) 
               : 'text-muted-foreground hover:bg-surface-strong hover:text-foreground',
           )}
         >
-          <span
-            style={categoryColorStyle(taskGroup.category)}
-            className="category-swatch size-2 rounded-full"
-          />
+          {taskGroup.category ? (
+            <span
+              style={categoryColorStyle(taskGroup.category)}
+              className="category-swatch size-2 rounded-full"
+            />
+          ) : (
+            <span className="size-2 rounded-full border border-border-strong" />
+          )}
           <span className="flex-1 truncate">{taskGroup.name}</span>
           <span className="text-xs text-muted-foreground tabular-nums">
             {taskGroup.openTaskCount}
@@ -48,6 +64,23 @@ const TaskGroupList = ({ taskGroups, selectedTaskGroupId }: TaskGroupListProps) 
         </button>
       );
     })}
+    <span className="flex shrink-0 items-center gap-1 lg:hidden">
+      <button
+        type="button"
+        className="inline-flex h-9 items-center gap-1.5 rounded-[10px] px-2.5 text-sm text-muted-foreground hover:bg-surface-strong hover:text-foreground"
+      >
+        <Plus className="size-4" />
+        New
+      </button>
+      <button
+        type="button"
+        popoverTarget="import-group-dialog"
+        className="inline-flex h-9 items-center gap-1.5 rounded-[10px] px-2.5 text-sm text-muted-foreground hover:bg-surface-strong hover:text-foreground"
+      >
+        <Upload className="size-4" />
+        Import
+      </button>
+    </span>
   </nav>
 );
 

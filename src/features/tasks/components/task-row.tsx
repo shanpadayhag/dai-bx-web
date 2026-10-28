@@ -1,4 +1,12 @@
-import { ChevronRight, MoreHorizontal, Pencil, Play, Plus, Trash2 } from 'lucide-react';
+import {
+  ChevronRight,
+  GripVertical,
+  MoreHorizontal,
+  Pencil,
+  Play,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import Badge from '@/core/components/atoms/badge';
 import CompletionCircle from '@/core/components/atoms/completion-circle';
 import IconButton from '@/core/components/atoms/icon-button';
@@ -16,10 +24,17 @@ const TaskRow = ({ task }: TaskRowProps) => {
   return (
     <div
       className={joinClassNames(
-        'group/row flex min-h-11 items-center gap-2 rounded-[10px] pr-1.5 pl-1 transition-colors duration-150 focus-within:bg-surface hover:bg-surface',
+        'group/row flex min-h-11 items-center gap-1.5 rounded-[10px] pr-1.5 pl-0.5 transition-colors duration-150 focus-within:bg-surface hover:bg-surface',
         task.isTracking && 'bg-primary-soft/60 hover:bg-primary-soft/70',
       )}
     >
+      <span
+        aria-hidden="true"
+        title="Drag to reorder"
+        className="hidden h-6 w-3.5 shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground/70 opacity-0 transition-opacity duration-150 group-focus-within/row:opacity-100 group-hover/row:opacity-100 active:cursor-grabbing sm:inline-flex"
+      >
+        <GripVertical className="size-3.5" />
+      </span>
       <span className="inline-flex size-6 shrink-0 items-center justify-center">
         {hasSubtasks ? (
           <button
@@ -68,7 +83,12 @@ const TaskRow = ({ task }: TaskRowProps) => {
       </span>
       <span className="flex items-center opacity-100 transition-opacity duration-150 sm:opacity-0 sm:group-focus-within/row:opacity-100 sm:group-hover/row:opacity-100">
         {!task.isDone && !task.isTracking ? (
-          <IconButton label={`Start ${task.name}`} tone="primary">
+          <IconButton
+            label={`Start ${task.name}`}
+            title="Starting a task arrives with the calendar"
+            aria-disabled="true"
+            className="cursor-not-allowed text-muted-foreground/50 hover:bg-transparent hover:text-muted-foreground/50"
+          >
             <Play className="fill-current" />
           </IconButton>
         ) : null}
@@ -86,7 +106,7 @@ const TaskRow = ({ task }: TaskRowProps) => {
         >
           <Trash2 />
         </IconButton>
-        <IconButton label={`More actions for ${task.name}`} className="sm:hidden">
+        <IconButton label={`More actions for ${task.name}`} popoverTarget="task-actions-menu">
           <MoreHorizontal />
         </IconButton>
       </span>

@@ -15,7 +15,7 @@ const TaskTree = ({ tasks, editingTaskId, addingSubtaskToId, depth = 0 }: TaskTr
     className={
       depth === 0
         ? 'grid grid-cols-[minmax(0,1fr)] gap-0.5'
-        : 'ml-[23px] grid grid-cols-[minmax(0,1fr)] gap-0.5 border-l border-border pl-2'
+        : 'ml-[21px] grid grid-cols-[minmax(0,1fr)] gap-0.5 border-l border-border pl-2 sm:ml-[41px]'
     }
   >
     {tasks.map((task) => (
@@ -36,7 +36,7 @@ const TaskTree = ({ tasks, editingTaskId, addingSubtaskToId, depth = 0 }: TaskTr
               />
             ) : null}
             {task.id === addingSubtaskToId ? (
-              <div className="ml-[23px] border-l border-border pl-2">
+              <div className="ml-[21px] border-l border-border pl-2 sm:ml-[41px]">
                 <TaskEditorRow placeholder="New subtask" submitLabel="Add" />
               </div>
             ) : null}
