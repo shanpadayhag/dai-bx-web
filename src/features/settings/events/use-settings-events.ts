@@ -1,6 +1,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, type FormEvent } from 'react';
 import { toast } from 'sonner';
+import { ApiError } from '@/core/api/api-error';
 import AppError from '@/core/app-error';
 import {
   applyAppearance,
@@ -15,6 +16,10 @@ import hidePopover from '@/core/popover';
 import { announceProfileChange } from '@/core/profile-change';
 import reportAppError from '@/core/report-app-error';
 import signOut from '@/features/auth/actions/sign-out';
+import createCategory from '@/features/categories/actions/create-category';
+import deleteCategory from '@/features/categories/actions/delete-category';
+import findCategories from '@/features/categories/actions/find-categories';
+import updateCategory from '@/features/categories/actions/update-category';
 import changePassword from '@/features/settings/actions/change-password';
 import confirmAuthenticatorReplacement from '@/features/settings/actions/confirm-authenticator-replacement';
 import deleteAccount from '@/features/settings/actions/delete-account';
@@ -26,8 +31,10 @@ import regenerateRecoveryCodes from '@/features/settings/actions/regenerate-reco
 import requestEmailChange from '@/features/settings/actions/request-email-change';
 import startAuthenticatorReplacement from '@/features/settings/actions/start-authenticator-replacement';
 import updateProfile from '@/features/settings/actions/update-profile';
+import { NEW_CATEGORY_ERROR_KEY } from '@/features/settings/components/category-list';
 import { CHANGE_EMAIL_DIALOG_ID } from '@/features/settings/components/change-email-dialog';
 import { CHANGE_PASSWORD_DIALOG_ID } from '@/features/settings/components/change-password-dialog';
+import { DELETE_CATEGORY_DIALOG_ID } from '@/features/settings/components/delete-category-dialog';
 import { NEW_RECOVERY_CODES_DIALOG_ID } from '@/features/settings/components/new-recovery-codes-dialog';
 import { REPLACE_AUTHENTICATOR_DIALOG_ID } from '@/features/settings/components/replace-authenticator-dialog';
 import {
@@ -46,6 +53,16 @@ const readIdentityProof = (submittedForm: FormData): IdentityProof => ({
   code: readFormText(submittedForm, 'code').trim(),
 });
 
+const FIELD_PROBLEM_STATUSES: readonly number[] = [409, 422];
+
+const isFieldProblem = (categoryError: unknown): categoryError is AppError =>
+  categoryError instanceof ApiError
+    ? FIELD_PROBLEM_STATUSES.includes(categoryError.status)
+    : categoryError instanceof AppError;
+
+const withoutKey = (fieldErrors: Readonly<Record<string, string>>, removedKey: string) =>
+  Object.fromEntries(Object.entries(fieldErrors).filter(([errorKey]) => errorKey !== removedKey));
+
 const pickAppearanceChanges = (profileChanges: ProfileChanges): Partial<Appearance> => ({
   ...(profileChanges.accentColor === undefined ? {} : { accentColor: profileChanges.accentColor }),
   ...(profileChanges.theme === undefined ? {} : { theme: profileChanges.theme }),
@@ -62,23 +79,33 @@ const useSettingsEvents = (states: ReturnType<typeof useSettingsStates>) => {
     setNewRecoveryCodes,
     setReplacementSetup,
     setIsSigningOut,
+    categories,
+    deleteTargetCategoryId,
+    newCategoryColor,
+    setCategories,
+    setCategoryNameErrors,
+    setNewCategoryColor,
+    setIsAddingCategory,
+    setDeleteTargetCategoryId,
   } = states;
   const router = useRouter();
 
   const handleLoadAccount = useCallback(async () => {
     setAccountLoadError(null);
     try {
-      const [loadedAccount, loadedSessions] = await Promise.all([
+      const [loadedAccount, loadedSessions, loadedCategories] = await Promise.all([
         findAccount(),
         findAccountSessions(),
+        findCategories(),
       ]);
       setAccount(loadedAccount);
       setAccountSessions(loadedSessions);
+      setCategories(loadedCategories);
     } catch (accountError) {
       if (!(accountError instanceof AppError)) throw accountError;
       setAccountLoadError(accountError);
     }
-  }, [setAccount, setAccountSessions, setAccountLoadError]);
+  }, [setAccount, setAccountSessions, setAccountLoadError, setCategories]);
 
   const saveProfileChanges = useCallback(
     async (profileChanges: ProfileChanges) => {
@@ -297,7 +324,137 @@ const useSettingsEvents = (states: ReturnType<typeof useSettingsStates>) => {
     [leaveSignedOut, submitDialog],
   );
 
+  const showCategoryFieldError = useCallback(
+    (errorKey: string, categoryError: unknown) => {
+      if (!isFieldProblem(categoryError)) {
+        reportAppError(categoryError);
+        return;
+      }
+      setCategoryNameErrors((currentErrors) => ({
+        ...currentErrors,
+        [errorKey]: categoryError.description,
+      }));
+    },
+    [setCategoryNameErrors],
+  );
+
+  const handleRenameCategory = useCallback(
+    async (categoryId: string, enteredName: string) => {
+      const currentCategory = categories.find((category) => category.id === categoryId);
+      if (currentCategory === undefined || enteredName.trim() === currentCategory.name) {
+        setCategoryNameErrors((currentErrors) => withoutKey(currentErrors, categoryId));
+        return;
+      }
+      try {
+        const renamedCategory = await updateCategory({
+          categoryId,
+          categoryChanges: { name: enteredName },
+        });
+        setCategories((currentCategories) =>
+          currentCategories.map((category) =>
+            category.id === categoryId ? renamedCategory : category,
+          ),
+        );
+        setCategoryNameErrors((currentErrors) => withoutKey(currentErrors, categoryId));
+      } catch (renameError) {
+        showCategoryFieldError(categoryId, renameError);
+      }
+    },
+    [categories, setCategories, setCategoryNameErrors, showCategoryFieldError],
+  );
+
+  const handleRecolorCategory = useCallback(
+    async (categoryId: string, chosenColor: string) => {
+      const previousCategory = categories.find((category) => category.id === categoryId);
+      if (previousCategory === undefined || previousCategory.color === chosenColor) return;
+      const replaceCategory = (replacementCategory: (typeof categories)[number]) =>
+        setCategories((currentCategories) =>
+          currentCategories.map((category) =>
+            category.id === categoryId ? replacementCategory : category,
+          ),
+        );
+      replaceCategory({ ...previousCategory, color: chosenColor });
+      try {
+        replaceCategory(
+          await updateCategory({ categoryId, categoryChanges: { color: chosenColor } }),
+        );
+      } catch (recolorError) {
+        replaceCategory(previousCategory);
+        reportAppError(recolorError);
+      }
+    },
+    [categories, setCategories],
+  );
+
+  const handleAddCategory = useCallback(
+    async (submitEvent: FormEvent<HTMLFormElement>) => {
+      submitEvent.preventDefault();
+      const addCategoryForm = submitEvent.currentTarget;
+      setIsAddingCategory(true);
+      try {
+        const createdCategory = await createCategory({
+          categoryName: readFormText(new FormData(addCategoryForm), 'categoryName'),
+          categoryColor: newCategoryColor,
+        });
+        setCategories((currentCategories) => [...currentCategories, createdCategory]);
+        setCategoryNameErrors((currentErrors) => withoutKey(currentErrors, NEW_CATEGORY_ERROR_KEY));
+        addCategoryForm.reset();
+      } catch (addError) {
+        showCategoryFieldError(NEW_CATEGORY_ERROR_KEY, addError);
+      } finally {
+        setIsAddingCategory(false);
+      }
+    },
+    [
+      newCategoryColor,
+      setCategories,
+      setCategoryNameErrors,
+      setIsAddingCategory,
+      showCategoryFieldError,
+    ],
+  );
+
+  const handleChooseNewCategoryColor = useCallback(
+    (chosenColor: string) => setNewCategoryColor(chosenColor),
+    [setNewCategoryColor],
+  );
+
+  const handleRequestDeleteCategory = useCallback(
+    (categoryId: string) => setDeleteTargetCategoryId(categoryId),
+    [setDeleteTargetCategoryId],
+  );
+
+  const handleConfirmDeleteCategory = useCallback(async () => {
+    if (deleteTargetCategoryId === null) return;
+    setSubmittingDialogId(DELETE_CATEGORY_DIALOG_ID);
+    try {
+      await deleteCategory(deleteTargetCategoryId);
+      setCategories((currentCategories) =>
+        currentCategories.filter((category) => category.id !== deleteTargetCategoryId),
+      );
+      setCategoryNameErrors((currentErrors) => withoutKey(currentErrors, deleteTargetCategoryId));
+      setDeleteTargetCategoryId(null);
+      hidePopover(DELETE_CATEGORY_DIALOG_ID);
+    } catch (deleteError) {
+      reportAppError(deleteError);
+    } finally {
+      setSubmittingDialogId(null);
+    }
+  }, [
+    deleteTargetCategoryId,
+    setCategories,
+    setCategoryNameErrors,
+    setDeleteTargetCategoryId,
+    setSubmittingDialogId,
+  ]);
+
   return {
+    handleRenameCategory,
+    handleRecolorCategory,
+    handleAddCategory,
+    handleChooseNewCategoryColor,
+    handleRequestDeleteCategory,
+    handleConfirmDeleteCategory,
     handleLoadAccount,
     handleChooseAccentColor,
     handleChooseTheme,

@@ -1,10 +1,12 @@
 type Task = {
   id: string;
+  parentId: string | null;
+  position: number;
   name: string;
   isDone: boolean;
   isOpen: boolean;
   isTracking: boolean;
-  estimate: string | null;
+  estimateMinutes: number | null;
   tasks: Task[];
 };
 

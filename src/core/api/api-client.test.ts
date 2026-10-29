@@ -210,3 +210,42 @@ test('an unreachable backend becomes an ApiError the page can show', async () =>
   expect(accountFailure).toBeInstanceOf(ApiError);
   expect(accountFailure).toMatchObject({ status: 0, title: "Couldn't reach DaiBX" });
 });
+
+test('a delete sends DELETE as JSON and resolves with the answer', async () => {
+  let receivedMethod: string | undefined;
+  let receivedContentType: string | null = null;
+  server.use(
+    http.delete('/backend/categories/category-1', ({ request }) => {
+      receivedMethod = request.method;
+      receivedContentType = request.headers.get('Content-Type');
+      return HttpResponse.json({ status: 'deleted' });
+    }),
+  );
+
+  const deleteAnswer = await createApiClient().delete('/categories/category-1');
+
+  expect(deleteAnswer).toEqual({ status: 'deleted' });
+  expect(receivedMethod).toBe('DELETE');
+  expect(receivedContentType).toBe('application/json');
+});
+
+test('a located problem keeps the path the server names', async () => {
+  server.use(
+    http.post('/backend/task-groups/import', () =>
+      HttpResponse.json(
+        { error: 'every task needs a name', path: 'tasks[0].name' },
+        { status: 422 },
+      ),
+    ),
+  );
+
+  const importFailure = await createApiClient()
+    .post('/task-groups/import', {})
+    .catch((requestError: unknown) => requestError);
+
+  expect(importFailure).toMatchObject({
+    status: 422,
+    description: 'Every task needs a name.',
+    errorPath: 'tasks[0].name',
+  });
+});

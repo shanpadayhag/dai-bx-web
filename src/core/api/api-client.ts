@@ -7,7 +7,7 @@ import {
 import UnauthorizedHandling from '@/core/api/unauthorized-handling';
 import appConfig from '@/core/config/app-config';
 
-type RequestMethod = 'GET' | 'POST' | 'PATCH';
+type RequestMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 
 type ApiRequestOptions = {
   unauthorizedHandling?: UnauthorizedHandling;
@@ -42,17 +42,25 @@ const sendRequest = async (apiRequest: Pick<ApiRequest, 'method' | 'path' | 'bod
   }
 };
 
-const readSafeMessage = async (errorResponse: Response) => {
+type SafeErrorBody = {
+  safeMessage: string;
+  errorPath: string | null;
+};
+
+const readSafeErrorBody = async (errorResponse: Response): Promise<SafeErrorBody> => {
   const errorBody: unknown = await errorResponse.json().catch(() => null);
   if (
-    typeof errorBody === 'object' &&
-    errorBody !== null &&
-    'error' in errorBody &&
-    typeof errorBody.error === 'string'
+    typeof errorBody !== 'object' ||
+    errorBody === null ||
+    !('error' in errorBody) ||
+    typeof errorBody.error !== 'string'
   ) {
-    return errorBody.error;
+    return { safeMessage: FALLBACK_ERROR_MESSAGE, errorPath: null };
   }
-  return FALLBACK_ERROR_MESSAGE;
+  return {
+    safeMessage: errorBody.error,
+    errorPath: 'path' in errorBody && typeof errorBody.path === 'string' ? errorBody.path : null,
+  };
 };
 
 const parseRetryAfterSeconds = (retryAfterText: string | null) => {
@@ -62,12 +70,15 @@ const parseRetryAfterSeconds = (retryAfterText: string | null) => {
     : null;
 };
 
-const toApiError = async (errorResponse: Response) =>
-  new ApiError(
+const toApiError = async (errorResponse: Response) => {
+  const safeErrorBody = await readSafeErrorBody(errorResponse);
+  return new ApiError(
     errorResponse.status,
-    await readSafeMessage(errorResponse),
+    safeErrorBody.safeMessage,
     parseRetryAfterSeconds(errorResponse.headers.get('Retry-After')),
+    safeErrorBody.errorPath,
   );
+};
 
 const readResponse = async <ResponseBody>(response: Response): Promise<ResponseBody> => {
   if (!response.ok) throw await toApiError(response);
@@ -145,6 +156,12 @@ export const createApiClient = () => {
         method: 'PATCH',
         path: requestPath,
         body: requestBody,
+        unauthorizedHandling: unauthorizedHandlingFrom(requestOptions),
+      }),
+    delete: <ResponseBody>(requestPath: string, requestOptions?: ApiRequestOptions) =>
+      request<ResponseBody>({
+        method: 'DELETE',
+        path: requestPath,
         unauthorizedHandling: unauthorizedHandlingFrom(requestOptions),
       }),
   };

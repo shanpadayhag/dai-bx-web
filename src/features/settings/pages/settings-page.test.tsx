@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
@@ -53,6 +53,11 @@ const storedSessions = [
   },
 ];
 
+const storedCategories = [
+  { id: 'category-goals', name: 'Goals', color: '#7c95bd' },
+  { id: 'category-studies', name: 'Studies', color: '#be7e86' },
+];
+
 let currentAccount = storedAccount;
 let currentSessions = storedSessions;
 
@@ -62,6 +67,7 @@ beforeEach(() => {
   backendServer.use(
     http.get('/backend/account', () => HttpResponse.json(currentAccount)),
     http.get('/backend/account/sessions', () => HttpResponse.json({ sessions: currentSessions })),
+    http.get('/backend/categories', () => HttpResponse.json(storedCategories)),
   );
 });
 afterEach(() => {
@@ -434,4 +440,105 @@ test('deleting with the wrong words shows the backend message and stays', async 
 
   expect(await screen.findByText('Type "delete my account" to confirm.')).toBeInTheDocument();
   expect(routerReplace).not.toHaveBeenCalled();
+});
+
+test('the categories section lists the categories from the API', async () => {
+  await openSettings();
+
+  expect(screen.getByRole('textbox', { name: 'Rename Goals' })).toHaveValue('Goals');
+  expect(screen.getByRole('textbox', { name: 'Rename Studies' })).toHaveValue('Studies');
+});
+
+test('adding a category sends its trimmed name and color and lists it', async () => {
+  const readCreateBody = captureRequest('post', '/backend/categories', () =>
+    HttpResponse.json({ id: 'category-health', name: 'Health', color: '#8fae9a' }, { status: 201 }),
+  );
+  const user = await openSettings();
+
+  await user.type(screen.getByRole('textbox', { name: 'New category name' }), '  Health  ');
+  await user.click(screen.getByRole('button', { name: 'Add category' }));
+
+  expect(await screen.findByRole('textbox', { name: 'Rename Health' })).toHaveValue('Health');
+  expect(readCreateBody()).toEqual({ name: 'Health', color: '#8fae9a' });
+  expect(screen.getByRole('textbox', { name: 'New category name' })).toHaveValue('');
+});
+
+test('a name already in use shows under the new category field', async () => {
+  backendServer.use(
+    http.post('/backend/categories', () =>
+      HttpResponse.json({ error: 'you already have a category with that name' }, { status: 409 }),
+    ),
+  );
+  const user = await openSettings();
+
+  await user.type(screen.getByRole('textbox', { name: 'New category name' }), 'goals');
+  await user.click(screen.getByRole('button', { name: 'Add category' }));
+
+  expect(await screen.findByText('You already have a category with that name.')).toBeVisible();
+  expect(screen.getByRole('textbox', { name: 'New category name' })).toHaveAttribute(
+    'aria-invalid',
+    'true',
+  );
+});
+
+test('renaming a category saves on Enter and a clash shows on its row', async () => {
+  const readRenameBody = captureRequest('patch', '/backend/categories/category-studies', () =>
+    HttpResponse.json({ id: 'category-studies', name: 'Chinese', color: '#be7e86' }),
+  );
+  const user = await openSettings();
+  const studiesNameInput = screen.getByRole('textbox', { name: 'Rename Studies' });
+
+  await user.clear(studiesNameInput);
+  await user.type(studiesNameInput, 'Chinese{Enter}');
+
+  expect(await screen.findByRole('textbox', { name: 'Rename Chinese' })).toHaveValue('Chinese');
+  expect(readRenameBody()).toEqual({ name: 'Chinese' });
+
+  backendServer.use(
+    http.patch('/backend/categories/category-goals', () =>
+      HttpResponse.json({ error: 'you already have a category with that name' }, { status: 409 }),
+    ),
+  );
+  const goalsNameInput = screen.getByRole('textbox', { name: 'Rename Goals' });
+  await user.clear(goalsNameInput);
+  await user.type(goalsNameInput, 'Chinese{Enter}');
+
+  expect(await screen.findByText('You already have a category with that name.')).toBeVisible();
+  expect(goalsNameInput).toHaveAttribute('aria-invalid', 'true');
+});
+
+test('choosing a new color saves it', async () => {
+  const readRecolorBody = captureRequest('patch', '/backend/categories/category-goals', () =>
+    HttpResponse.json({ id: 'category-goals', name: 'Goals', color: '#123456' }),
+  );
+  await openSettings();
+  const goalsColorInput = screen.getByLabelText('Goals color');
+
+  fireEvent.input(goalsColorInput, { target: { value: '#123456' } });
+  fireEvent.change(goalsColorInput, { target: { value: '#123456' } });
+
+  await waitFor(() => expect(readRecolorBody()).toEqual({ color: '#123456' }));
+});
+
+test('deleting a category asks first, then removes it', async () => {
+  let isDeleted = false;
+  backendServer.use(
+    http.delete('/backend/categories/category-studies', () => {
+      isDeleted = true;
+      return HttpResponse.json({ status: 'deleted' });
+    }),
+  );
+  const user = await openSettings();
+
+  await user.click(screen.getByRole('button', { name: 'Delete Studies' }));
+  const deleteDialog = screen.getByRole('dialog', { name: 'Delete category', hidden: true });
+  expect(within(deleteDialog).getByText('Delete “Studies”?')).toBeInTheDocument();
+  await user.click(
+    within(deleteDialog).getByRole('button', { name: 'Delete category', hidden: true }),
+  );
+
+  await waitFor(() =>
+    expect(screen.queryByRole('textbox', { name: 'Rename Studies' })).not.toBeInTheDocument(),
+  );
+  expect(isDeleted).toBe(true);
 });

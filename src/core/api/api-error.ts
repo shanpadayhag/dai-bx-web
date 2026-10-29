@@ -41,12 +41,19 @@ const describeFailure = (safeMessage: string, retryAfterSeconds: number | null) 
 export class ApiError extends AppError {
   readonly status: number;
   readonly retryAfterSeconds: number | null;
+  readonly errorPath: string | null;
 
-  constructor(responseStatus: number, safeMessage: string, retryAfterSeconds: number | null) {
+  constructor(
+    responseStatus: number,
+    safeMessage: string,
+    retryAfterSeconds: number | null,
+    errorPath: string | null = null,
+  ) {
     super(titleForStatus(responseStatus), describeFailure(safeMessage, retryAfterSeconds));
     this.name = 'ApiError';
     this.status = responseStatus;
     this.retryAfterSeconds = retryAfterSeconds;
+    this.errorPath = errorPath;
   }
 }
 

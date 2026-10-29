@@ -20,7 +20,6 @@ import DeleteCategoryDialog from '@/features/settings/components/delete-category
 import NewRecoveryCodesDialog from '@/features/settings/components/new-recovery-codes-dialog';
 import ReplaceAuthenticatorDialog from '@/features/settings/components/replace-authenticator-dialog';
 import SessionsDialog, { SESSIONS_DIALOG_ID } from '@/features/settings/components/sessions-dialog';
-import sampleCategorySource from '@/features/settings/data_sources/sample/category-source';
 import SettingRow from '@/features/settings/components/setting-row';
 import SettingsSection from '@/features/settings/components/settings-section';
 import { LOW_RECOVERY_CODE_COUNT, RECOVERY_CODE_TOTAL } from '@/features/settings/entities/account';
@@ -191,9 +190,23 @@ const SettingsPage = () => {
         </SettingsSection>
         <SettingsSection
           title="Categories"
-          description="Make as many as you need, in any color. Every group, card, event and workflow can belong to one, and its color follows it into the calendar."
+          description="Make as many as you need, in any color. Every group, card and event can belong to one, and its color follows it into the calendar."
         >
-          <CategoryList categories={sampleCategorySource.findAll()} />
+          <CategoryList
+            categories={states.categories}
+            categoryNameErrors={states.categoryNameErrors}
+            newCategoryColor={states.newCategoryColor}
+            isAddingCategory={states.isAddingCategory}
+            onRenameCategory={(categoryId, enteredName) =>
+              void events.handleRenameCategory(categoryId, enteredName)
+            }
+            onRecolorCategory={(categoryId, chosenColor) =>
+              void events.handleRecolorCategory(categoryId, chosenColor)
+            }
+            onRequestDeleteCategory={events.handleRequestDeleteCategory}
+            onChooseNewCategoryColor={events.handleChooseNewCategoryColor}
+            onAddCategory={(submitEvent) => void events.handleAddCategory(submitEvent)}
+          />
         </SettingsSection>
         <SettingsSection
           title="Time tracking"
@@ -261,7 +274,14 @@ const SettingsPage = () => {
           </div>
         </SettingsSection>
       </div>
-      <DeleteCategoryDialog />
+      <DeleteCategoryDialog
+        categoryName={
+          states.categories.find((category) => category.id === states.deleteTargetCategoryId)
+            ?.name ?? null
+        }
+        isSubmitting={states.submittingDialogId === 'delete-category-dialog'}
+        onConfirm={() => void events.handleConfirmDeleteCategory()}
+      />
       <ChangeEmailDialog
         isSubmitting={states.submittingDialogId === 'change-email-dialog'}
         onSubmit={(submitEvent) => void events.handleChangeEmail(submitEvent)}
