@@ -1,5 +1,4 @@
 import { CornerDownRight, MoveRight } from 'lucide-react';
-import { categoryColorStyle } from '@/core/category';
 import joinClassNames from '@/core/class-names';
 import Button from '@/core/components/atoms/button';
 import PopoverPanel from '@/core/components/molecules/popover-panel';
@@ -68,14 +67,6 @@ const MoveTaskDialog = ({
                   onChange={() => onChooseTaskGroup(taskGroup.id)}
                   className="sr-only"
                 />
-                {taskGroup.category ? (
-                  <span
-                    style={categoryColorStyle(taskGroup.category)}
-                    className="category-swatch size-2 rounded-full"
-                  />
-                ) : (
-                  <span className="size-2 rounded-full border border-border-strong" />
-                )}
                 {taskGroup.name}
               </label>
             ))}

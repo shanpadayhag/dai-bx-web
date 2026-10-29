@@ -64,7 +64,7 @@ const PreviewSummary = ({ importPreview }: { importPreview: GroupImportPreview }
             New group “{importPreview.groupName === '' ? 'unnamed' : importPreview.groupName}”
           </p>
           <p className="text-xs text-muted-foreground tabular-nums">
-            {importPreview.taskCount} tasks · {importPreview.deepestLevel} levels deep · no category
+            {importPreview.taskCount} tasks · {importPreview.deepestLevel} levels deep
           </p>
         </div>
       </div>

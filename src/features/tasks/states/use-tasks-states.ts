@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type AppError from '@/core/app-error';
-import type { Category } from '@/core/category';
 import type { TaskView } from '@/features/tasks/data_sources/local_storage/task-view-source';
 import type { GroupImportReading } from '@/features/tasks/entities/group-import-preview';
 import type MoveTarget from '@/features/tasks/entities/move-target';
@@ -10,7 +9,6 @@ import type TaskGroup from '@/features/tasks/entities/task-group';
 
 const useTasksStates = () => {
   const [taskGroups, setTaskGroups] = useState<readonly TaskGroup[] | null>(null);
-  const [categories, setCategories] = useState<readonly Category[]>([]);
   const [pageLoadError, setPageLoadError] = useState<AppError | null>(null);
   const [selectedTaskGroupId, setSelectedTaskGroupId] = useState<string | null>(null);
   const [optimisticGroupTasks, setOptimisticGroupTasks] = useState<OptimisticGroupTasks | null>(
@@ -32,8 +30,6 @@ const useTasksStates = () => {
   return {
     taskGroups,
     setTaskGroups,
-    categories,
-    setCategories,
     pageLoadError,
     setPageLoadError,
     selectedTaskGroupId,

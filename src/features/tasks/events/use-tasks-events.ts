@@ -5,7 +5,6 @@ import AppError from '@/core/app-error';
 import readFormText from '@/core/form-text';
 import hidePopover from '@/core/popover';
 import reportAppError from '@/core/report-app-error';
-import findCategories from '@/features/categories/actions/find-categories';
 import addTask from '@/features/tasks/actions/add-task';
 import createTaskGroup from '@/features/tasks/actions/create-task-group';
 import deleteTask from '@/features/tasks/actions/delete-task';
@@ -56,10 +55,8 @@ const PENDING_TASK_ID_PREFIX = 'pending-task-';
 
 const readGroupForm = (submittedForm: HTMLFormElement) => {
   const groupFormData = new FormData(submittedForm);
-  const chosenCategoryId = readFormText(groupFormData, 'groupCategory');
   return {
     taskGroupName: readFormText(groupFormData, 'groupName'),
-    categoryId: chosenCategoryId === '' ? null : chosenCategoryId,
   };
 };
 
@@ -99,7 +96,6 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
     moveDialogRecords,
     groupImportReading,
     setTaskGroups,
-    setCategories,
     setPageLoadError,
     setSelectedTaskGroupId,
     setOptimisticGroupTasks,
@@ -168,18 +164,14 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
     setPageLoadError(null);
     setTaskView(localStorageTaskViewSource.findTaskView());
     try {
-      const [loadedTaskGroups, loadedCategories] = await Promise.all([
-        findTaskGroups(),
-        findCategories(),
-      ]);
+      const loadedTaskGroups = await findTaskGroups();
       setTaskGroups(loadedTaskGroups);
-      setCategories(loadedCategories);
       await openTaskGroup(pickStartingGroupId(loadedTaskGroups));
     } catch (pageError) {
       if (!(pageError instanceof AppError)) throw pageError;
       setPageLoadError(pageError);
     }
-  }, [openTaskGroup, setCategories, setPageLoadError, setTaskGroups, setTaskView]);
+  }, [openTaskGroup, setPageLoadError, setTaskGroups, setTaskView]);
 
   const handleSelectTaskGroup = useCallback(
     (taskGroupId: string) => {
@@ -414,7 +406,6 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
                   group: {
                     id: updatedTaskGroup.id,
                     name: updatedTaskGroup.name,
-                    category: updatedTaskGroup.category,
                   },
                 },
               },

@@ -4,7 +4,6 @@ import type TaskGroup from '@/features/tasks/entities/task-group';
 
 type CreateTaskGroupParams = {
   taskGroupName: string;
-  categoryId: string | null;
 };
 
 const createTaskGroup = async (params: CreateTaskGroupParams): Promise<TaskGroup> => {
@@ -14,7 +13,6 @@ const createTaskGroup = async (params: CreateTaskGroupParams): Promise<TaskGroup
   }
   return backendTaskGroupSource.create({
     name: trimmedTaskGroupName,
-    categoryId: params.categoryId,
   });
 };
 

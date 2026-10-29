@@ -5,7 +5,6 @@ import type TaskGroup from '@/features/tasks/entities/task-group';
 type UpdateTaskGroupParams = {
   taskGroupId: TaskGroup['id'];
   taskGroupName: string;
-  categoryId: string | null;
 };
 
 const updateTaskGroup = async (params: UpdateTaskGroupParams): Promise<TaskGroup> => {
@@ -15,7 +14,6 @@ const updateTaskGroup = async (params: UpdateTaskGroupParams): Promise<TaskGroup
   }
   return backendTaskGroupSource.update(params.taskGroupId, {
     name: trimmedTaskGroupName,
-    categoryId: params.categoryId,
   });
 };
 

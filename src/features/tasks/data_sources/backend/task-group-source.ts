@@ -4,12 +4,10 @@ import type TaskGroup from '@/features/tasks/entities/task-group';
 
 export type NewTaskGroup = {
   name: string;
-  categoryId: string | null;
 };
 
 export type TaskGroupChanges = {
-  name?: string;
-  categoryId?: string | null;
+  name: string;
 };
 
 type DeletedAnswer = {

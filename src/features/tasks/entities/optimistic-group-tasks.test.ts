@@ -9,7 +9,7 @@ import {
 } from '@/features/tasks/entities/optimistic-group-tasks';
 
 const serverGroupTasks: GroupTasks = {
-  group: { id: 'group-today', name: 'Today', category: null },
+  group: { id: 'group-today', name: 'Today' },
   tasks: [
     { id: 'a', parentId: null, position: 0, name: 'A', isDone: false, estimateMinutes: null },
     { id: 'b', parentId: null, position: 1, name: 'B', isDone: false, estimateMinutes: null },

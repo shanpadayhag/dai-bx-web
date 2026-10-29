@@ -1,5 +1,4 @@
 import { Plus, Upload } from 'lucide-react';
-import { categoryColorStyle } from '@/core/category';
 import joinClassNames from '@/core/class-names';
 import TaskGroup from '@/features/tasks/entities/task-group';
 
@@ -58,14 +57,6 @@ const TaskGroupList = ({
               : 'text-muted-foreground hover:bg-surface-strong hover:text-foreground',
           )}
         >
-          {taskGroup.category ? (
-            <span
-              style={categoryColorStyle(taskGroup.category)}
-              className="category-swatch size-2 rounded-full"
-            />
-          ) : (
-            <span className="size-2 rounded-full border border-border-strong" />
-          )}
           <span className="flex-1 truncate">{taskGroup.name}</span>
           <span className="text-xs text-muted-foreground tabular-nums">
             {taskGroup.openTaskCount}

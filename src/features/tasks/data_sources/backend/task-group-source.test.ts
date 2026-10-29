@@ -5,7 +5,7 @@ import startBackendServer from '@/test-support/backend-server';
 
 const backendServer = startBackendServer();
 
-const todayGroup = { id: 'g1', name: 'Today', category: null, openTaskCount: 0, taskCount: 0 };
+const todayGroup = { id: 'g1', name: 'Today', openTaskCount: 0, taskCount: 0 };
 
 const captureBody = (
   requestMethod: 'post' | 'patch',
@@ -28,20 +28,20 @@ test('lists groups from GET /task-groups', async () => {
   await expect(backendTaskGroupSource.findAll()).resolves.toEqual([todayGroup]);
 });
 
-test('creates a group with its name and optional category', async () => {
+test('creates a group with its name', async () => {
   const readBody = captureBody('post', '/backend/task-groups', todayGroup);
 
-  await backendTaskGroupSource.create({ name: 'Today', categoryId: null });
+  await backendTaskGroupSource.create({ name: 'Today' });
 
-  expect(readBody()).toEqual({ name: 'Today', categoryId: null });
+  expect(readBody()).toEqual({ name: 'Today' });
 });
 
-test('updates a group with PATCH /task-groups/{id}, null clearing the category', async () => {
+test('renames a group with PATCH /task-groups/{id}', async () => {
   const readBody = captureBody('patch', '/backend/task-groups/g1', todayGroup);
 
-  await backendTaskGroupSource.update('g1', { categoryId: null });
+  await backendTaskGroupSource.update('g1', { name: 'Monday' });
 
-  expect(readBody()).toEqual({ categoryId: null });
+  expect(readBody()).toEqual({ name: 'Monday' });
 });
 
 test('deletes a group with DELETE /task-groups/{id}', async () => {
@@ -61,7 +61,7 @@ test('deletes a group with DELETE /task-groups/{id}', async () => {
 test('imports a group file with POST /task-groups/import', async () => {
   const importFile = { name: 'Today', tasks: [{ name: 'A', tasks: [] }] };
   const readBody = captureBody('post', '/backend/task-groups/import', {
-    group: { id: 'g2', name: 'Today', category: null },
+    group: { id: 'g2', name: 'Today' },
     tasks: [],
     openCount: 0,
     doneCount: 0,

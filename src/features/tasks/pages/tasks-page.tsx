@@ -3,7 +3,6 @@
 import { Plus, RotateCw, Settings2, WifiOff } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
 import Button from '@/core/components/atoms/button';
-import CategoryChip from '@/core/components/atoms/category-chip';
 import IconButton from '@/core/components/atoms/icon-button';
 import Input from '@/core/components/atoms/input';
 import EmptyState from '@/core/components/molecules/empty-state';
@@ -76,8 +75,6 @@ const TasksPage = () => {
       description="A list of tasks, like a project or a day."
       submitLabel="Create group"
       initialName=""
-      initialCategoryId={null}
-      categories={states.categories}
       isSubmitting={states.submittingDialogId === NEW_GROUP_DIALOG_ID}
       onSubmit={(submitEvent) => void events.handleSubmitNewGroup(submitEvent)}
     />
@@ -157,7 +154,6 @@ const TasksPage = () => {
           title={shownGroupName}
           titleAddon={
             <span className="flex items-center gap-1">
-              {shownGroup?.category ? <CategoryChip category={shownGroup.category} /> : null}
               <IconButton label="Group settings" popoverTarget={GROUP_SETTINGS_DIALOG_ID}>
                 <Settings2 />
               </IconButton>
@@ -287,14 +283,12 @@ const TasksPage = () => {
       {newGroupDialog}
       {importGroupDialog}
       <GroupFormDialog
-        key={`${selectedTaskGroup?.id ?? 'none'}-${selectedTaskGroup?.name ?? ''}-${selectedTaskGroup?.category?.id ?? ''}`}
+        key={`${selectedTaskGroup?.id ?? 'none'}-${selectedTaskGroup?.name ?? ''}`}
         dialogId={GROUP_SETTINGS_DIALOG_ID}
         title="Group settings"
-        description="Rename the group or give it a category color."
+        description="Rename the group."
         submitLabel="Save"
         initialName={selectedTaskGroup?.name ?? ''}
-        initialCategoryId={selectedTaskGroup?.category?.id ?? null}
-        categories={states.categories}
         isSubmitting={states.submittingDialogId === GROUP_SETTINGS_DIALOG_ID}
         deleteDialogId={DELETE_GROUP_DIALOG_ID}
         onSubmit={(submitEvent) => void events.handleSubmitGroupSettings(submitEvent)}

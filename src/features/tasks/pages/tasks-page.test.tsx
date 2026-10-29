@@ -15,9 +15,6 @@ vi.mock('next/navigation', () => ({ useRouter: () => stableRouter }));
 
 const backendServer = startBackendServer();
 
-const goalsCategory = { id: 'category-goals', name: 'Goals', color: '#7c95bd' };
-const studiesCategory = { id: 'category-studies', name: 'Studies', color: '#be7e86' };
-
 const taskRecord = (
   id: string,
   name: string,
@@ -37,14 +34,12 @@ const taskRecord = (
 const todayGroup: TaskGroup = {
   id: 'group-today',
   name: 'Today',
-  category: null,
   openTaskCount: 3,
   taskCount: 3,
 };
 const daibxGroup: TaskGroup = {
   id: 'group-daibx',
   name: 'DaiBX',
-  category: goalsCategory,
   openTaskCount: 1,
   taskCount: 1,
 };
@@ -60,7 +55,7 @@ const todayTasks: TaskRecord[] = [
 const groupTasksOf = (taskGroup: TaskGroup, tasks: TaskRecord[]): GroupTasks => {
   const openCount = tasks.filter((task) => !task.isDone).length;
   return {
-    group: { id: taskGroup.id, name: taskGroup.name, category: taskGroup.category },
+    group: { id: taskGroup.id, name: taskGroup.name },
     tasks,
     openCount,
     doneCount: tasks.length - openCount,
@@ -80,7 +75,6 @@ beforeEach(() => {
   };
   backendServer.use(
     http.get('/backend/task-groups', () => HttpResponse.json(currentGroups)),
-    http.get('/backend/categories', () => HttpResponse.json([goalsCategory, studiesCategory])),
     http.get('/backend/task-groups/:taskGroupId/tasks', ({ params }) => {
       const taskGroup = currentGroups.find((group) => group.id === params.taskGroupId);
       if (taskGroup === undefined)
@@ -294,7 +288,7 @@ test('the start button stays disabled until the calendar arrives', async () => {
   );
 });
 
-test('creating a group sends its name and category and opens it', async () => {
+test('creating a group sends its name and opens it', async () => {
   let receivedBody: unknown;
   backendServer.use(
     http.post('/backend/task-groups', async ({ request }) => {
@@ -302,7 +296,6 @@ test('creating a group sends its name and category and opens it', async () => {
       const createdGroup: TaskGroup = {
         id: 'group-chinese',
         name: 'Chinese',
-        category: studiesCategory,
         openTaskCount: 0,
         taskCount: 0,
       };
@@ -319,22 +312,22 @@ test('creating a group sends its name and category and opens it', async () => {
     within(newGroupDialog).getByRole('textbox', { name: 'Name', hidden: true }),
     'Chinese',
   );
-  await user.click(within(newGroupDialog).getByText('Studies'));
+  expect(within(newGroupDialog).queryByText('Category')).not.toBeInTheDocument();
   await user.click(
     within(newGroupDialog).getByRole('button', { name: 'Create group', hidden: true }),
   );
 
   expect(await screen.findByRole('heading', { level: 1, name: 'Chinese' })).toBeInTheDocument();
-  expect(receivedBody).toEqual({ name: 'Chinese', categoryId: 'category-studies' });
+  expect(receivedBody).toEqual({ name: 'Chinese' });
   expect(screen.getByText(/has no tasks yet/)).toBeInTheDocument();
 });
 
-test('group settings rename the group and change its category', async () => {
+test('group settings rename the group', async () => {
   let receivedBody: unknown;
   backendServer.use(
     http.patch('/backend/task-groups/group-today', async ({ request }) => {
       receivedBody = await request.json();
-      return HttpResponse.json({ ...todayGroup, name: 'Monday', category: goalsCategory });
+      return HttpResponse.json({ ...todayGroup, name: 'Monday' });
     }),
   );
   const user = await openTasksPage();
@@ -344,11 +337,10 @@ test('group settings rename the group and change its category', async () => {
   const nameInput = within(settingsDialog).getByRole('textbox', { name: 'Name', hidden: true });
   await user.clear(nameInput);
   await user.type(nameInput, 'Monday');
-  await user.click(within(settingsDialog).getByText('Goals'));
   await user.click(within(settingsDialog).getByRole('button', { name: 'Save', hidden: true }));
 
   expect(await screen.findByRole('heading', { level: 1, name: 'Monday' })).toBeInTheDocument();
-  expect(receivedBody).toEqual({ name: 'Monday', categoryId: 'category-goals' });
+  expect(receivedBody).toEqual({ name: 'Monday' });
 });
 
 test('deleting a group asks first, then opens the next one', async () => {
@@ -520,7 +512,6 @@ test('importing a plan file previews it, sends it as it is and opens the new gro
       const importedGroup: TaskGroup = {
         id: 'group-imported',
         name: 'Today',
-        category: null,
         openTaskCount: 3,
         taskCount: 3,
       };

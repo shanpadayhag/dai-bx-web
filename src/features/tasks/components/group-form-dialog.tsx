@@ -1,6 +1,5 @@
 import { FolderPlus, Settings2, Trash2 } from 'lucide-react';
 import { useEffect, type FormEvent } from 'react';
-import { categoryColorStyle, type Category } from '@/core/category';
 import Button from '@/core/components/atoms/button';
 import Input from '@/core/components/atoms/input';
 import Field from '@/core/components/molecules/field';
@@ -12,15 +11,10 @@ type GroupFormDialogProps = {
   description: string;
   submitLabel: string;
   initialName: string;
-  initialCategoryId: string | null;
-  categories: readonly Category[];
   isSubmitting: boolean;
   deleteDialogId?: string;
   onSubmit: (submitEvent: FormEvent<HTMLFormElement>) => void;
 };
-
-const categoryOptionClassName =
-  'inline-flex h-8 cursor-pointer items-center gap-2 rounded-lg border border-border px-2.5 text-[13px] font-medium text-foreground transition-colors duration-150 hover:border-border-strong has-checked:border-primary has-checked:bg-primary-soft/60 has-focus-visible:ring-4 has-focus-visible:ring-primary/15';
 
 const GroupFormDialog = ({
   dialogId,
@@ -28,8 +22,6 @@ const GroupFormDialog = ({
   description,
   submitLabel,
   initialName,
-  initialCategoryId,
-  categories,
   isSubmitting,
   deleteDialogId,
   onSubmit,
@@ -73,39 +65,6 @@ const GroupFormDialog = ({
             placeholder="Like a project or a day"
           />
         </Field>
-        <fieldset className="grid gap-2">
-          <legend className="mb-1.5 text-[13px] font-medium text-foreground">Category</legend>
-          <div className="flex flex-wrap gap-2">
-            <label className={categoryOptionClassName}>
-              <input
-                type="radio"
-                name="groupCategory"
-                value=""
-                defaultChecked={initialCategoryId === null}
-                className="sr-only"
-              />
-              <span className="size-2 rounded-full border border-border-strong" />
-              No category
-            </label>
-            {categories.map((category) => (
-              <label
-                key={category.id}
-                style={categoryColorStyle(category)}
-                className={categoryOptionClassName}
-              >
-                <input
-                  type="radio"
-                  name="groupCategory"
-                  value={category.id}
-                  defaultChecked={initialCategoryId === category.id}
-                  className="sr-only"
-                />
-                <span className="category-swatch size-2 rounded-full" />
-                {category.name}
-              </label>
-            ))}
-          </div>
-        </fieldset>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
           {deleteDialogId === undefined ? (
             <span />

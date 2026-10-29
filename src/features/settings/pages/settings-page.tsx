@@ -190,7 +190,7 @@ const SettingsPage = () => {
         </SettingsSection>
         <SettingsSection
           title="Categories"
-          description="Make as many as you need, in any color. Every group, card and event can belong to one, and its color follows it into the calendar."
+          description="Make as many as you need, in any color. Every calendar event belongs to one, and its color shows on the calendar."
         >
           <CategoryList
             categories={states.categories}
