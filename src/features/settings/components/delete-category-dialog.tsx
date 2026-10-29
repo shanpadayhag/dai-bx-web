@@ -28,9 +28,7 @@ const DeleteCategoryDialog = ({
         <h2 className="text-base font-semibold text-foreground">
           Delete “{categoryName ?? 'this category'}”?
         </h2>
-        <p className="text-sm text-muted-foreground">
-          Groups that use it stay where they are, with no category.
-        </p>
+        <p className="text-sm text-muted-foreground">You can’t undo this.</p>
       </div>
       <div className="flex justify-end gap-2">
         <Button
