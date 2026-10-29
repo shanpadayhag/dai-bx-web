@@ -25,7 +25,7 @@ describe('contentChangelogEntrySource', () => {
   });
 
   test('compiles an entry body that renders as markup', async () => {
-    const compiledEntry = await contentChangelogEntrySource.findBySlug('2026-10-22-daibx-3');
+    const compiledEntry = await contentChangelogEntrySource.findBySlug('2026-10-29-daibx-3');
 
     expect(compiledEntry?.changelogEntry.version).toBe('v3.0.0');
     const { container } = render(createElement(compiledEntry!.Content));

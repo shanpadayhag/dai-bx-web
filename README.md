@@ -2,7 +2,13 @@
 
 The web frontend for DaiBX: one open-source workspace for nested tasks, a board and a calendar. Starting a task opens a calendar event and finishing it sets the end, with check-ins for when you step away.
 
-This branch (`release/v3.0.0`) is the design: every page of the marketing site, the changelog and the app, in the blue theme, with no functionality wired in. Screens read from `data_sources/sample/`, which the Axum API replaces.
+Live at [dai-bx.vercel.app](https://dai-bx.vercel.app). Accounts and tasks run on the [Axum API](https://github.com/shanpadayhag/dai-bx-api). The board, calendar, today and workflow screens are designed and still read from `data_sources/sample/`; each milestone replaces a feature's sample source with `data_sources/backend/`. DaiBX 2 stays at [dai-bx-web.vercel.app](https://dai-bx-web.vercel.app), deployed from the `v2` branch.
+
+## Releases
+
+- Every push runs CI: format, lint, typecheck, tests and build.
+- Pushing a `v3.*` tag deploys prod to `dai-bx.vercel.app` once CI passes on the tagged commit.
+- Each milestone is a minor version on its own release branch, merged into `master` when it ships.
 
 ## Stack
 

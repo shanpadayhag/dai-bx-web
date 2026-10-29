@@ -1,26 +1,37 @@
 export const metadata = {
   title: 'DaiBX 3: tasks, a board and a calendar in one app',
   version: 'v3.0.0',
-  date: '2026-10-22',
-  summary: 'A first look at the rebuilt DaiBX. Nested tasks, a Trello-style board and a calendar now live in one workspace, in a new blue design.',
+  date: '2026-10-29',
+  summary: 'The rebuilt DaiBX: accounts, nested tasks and group import on a new Rust API, in a new blue design, with the board and calendar coming next.',
 };
 
 DaiBX started as a nested to-do list. Version 3 rebuilds it from scratch as one workspace for **tasks, a board and a calendar**, so the same piece of work shows up in all three without being copied.
 
-This release is the design: every screen of the app and this site, with nothing wired in yet. The Rust API lands next.
+This release brings accounts and tasks. The board and the calendar are designed and show sample data; they come to life in the next releases.
 
-## What’s in it
+## Accounts
 
-- **Tasks** keep what made DaiBX useful: groups, and tasks nested as deep as the job needs. Create, edit and delete at any level.
-- **Board** gives you lists, cards and checklists for the big picture.
-- **Calendar** shows a week of what you planned and what you actually did.
-- **Workflows** reset a checklist, move a card back to To do and block time on a schedule.
+- Sign up with an invite, confirm your email, and protect the account with an authenticator app and recovery codes.
+- Reset a forgotten password by email.
+- See where you're signed in and sign out of any session, or all of them.
+- Change your name, email, password, theme and authenticator, get new recovery codes, or delete the account and everything in it.
 
-## Start a task, and the calendar records it
+## Tasks
 
-Starting a task opens a calendar event. Finishing it sets the end. If a task runs past its estimate, a check-in asks whether you’re still on it, and when you finish after a missed check-in, DaiBX suggests your last confirmed time as the end. You can always set the end time yourself.
+- **Groups** hold tasks nested as deep as the job needs, up to 32 levels.
+- Add, rename, estimate and delete at any level. Completing a task completes everything under it; reopening it reopens the tasks above it.
+- Reorder by dragging or from a task's menu, and move a task with all its subtasks into another group.
+- **Import a group** from a JSON file. It always arrives as a new group, beside any group with the same name.
+- Every change shows at once and rolls back with a message if the server refuses it.
+
+## Coming next
+
+- **Board:** lists and cards, with your own properties on each card.
+- **Calendar:** starting a task opens a calendar event and finishing it sets the end, with check-ins for when you step away.
+- **Workflows:** cards that move themselves when their tasks start or finish, on a date, or on a routine.
 
 ## Under the hood
 
 - The frontend moves from SolidJS to **Next.js**.
-- The API will be **Rust and Axum** on AWS Lambda, with **Postgres** on Supabase as the one store.
+- The API is **Rust and Axum** on AWS Lambda, with **Postgres** on Supabase as the one store.
+- DaiBX 2 stays available at its old address.
