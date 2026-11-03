@@ -7,7 +7,7 @@ import {
 import UnauthorizedHandling from '@/core/api/unauthorized-handling';
 import appConfig from '@/core/config/app-config';
 
-type RequestMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+type RequestMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 type ApiRequestOptions = {
   unauthorizedHandling?: UnauthorizedHandling;
@@ -143,6 +143,17 @@ export const createApiClient = () => {
     ) =>
       request<ResponseBody>({
         method: 'POST',
+        path: requestPath,
+        body: requestBody,
+        unauthorizedHandling: unauthorizedHandlingFrom(requestOptions),
+      }),
+    put: <ResponseBody>(
+      requestPath: string,
+      requestBody: unknown,
+      requestOptions?: ApiRequestOptions,
+    ) =>
+      request<ResponseBody>({
+        method: 'PUT',
         path: requestPath,
         body: requestBody,
         unauthorizedHandling: unauthorizedHandlingFrom(requestOptions),

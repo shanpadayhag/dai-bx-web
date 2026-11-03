@@ -46,12 +46,15 @@ const noteComponents: Components = {
   ),
 };
 
-const CardNotes = ({ notes }: CardNotesProps) => (
-  <div className="text-sm leading-relaxed text-muted-foreground">
-    <Markdown remarkPlugins={[remarkGfm]} components={noteComponents}>
-      {notes}
-    </Markdown>
-  </div>
-);
+const CardNotes = ({ notes }: CardNotesProps) =>
+  notes.trim() === '' ? (
+    <p className="text-[13px] text-muted-foreground">No notes yet. Use Edit to write some.</p>
+  ) : (
+    <div className="text-sm leading-relaxed text-muted-foreground">
+      <Markdown remarkPlugins={[remarkGfm]} components={noteComponents}>
+        {notes}
+      </Markdown>
+    </div>
+  );
 
 export default CardNotes;

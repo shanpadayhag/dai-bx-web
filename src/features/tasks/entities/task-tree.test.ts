@@ -14,6 +14,7 @@ const taskRecord = (
   name: id,
   isDone: false,
   estimateMinutes: null,
+  card: null,
   ...overrides,
 });
 

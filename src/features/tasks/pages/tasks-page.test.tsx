@@ -28,6 +28,7 @@ const taskRecord = (
   position,
   isDone: false,
   estimateMinutes: null,
+  card: null,
   ...overrides,
 });
 
@@ -113,6 +114,20 @@ test('opens the newest group and nests its tasks', async () => {
     within(parentItem as HTMLElement).getByText('Create the Supabase project'),
   ).toBeInTheDocument();
   expect(within(taskRow('Create the Supabase project')).getByText('20m')).toBeInTheDocument();
+});
+
+test('a task linked to a card shows the card and links to it on the board', async () => {
+  currentTasksByGroupId['group-today'] = [
+    taskRecord('task-plan', 'Plan the backend', null, 0, {
+      card: { id: 'card-plan', title: 'Plan the week', boardId: 'board-personal' },
+    }),
+  ];
+  await openTasksPage();
+
+  const cardLink = within(taskRow('Plan the backend')).getByRole('link', {
+    name: 'Card: Plan the week',
+  });
+  expect(cardLink).toHaveAttribute('href', '/board?board=board-personal&card=card-plan');
 });
 
 test('opens the group named in the address, and remembers it', async () => {

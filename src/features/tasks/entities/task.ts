@@ -1,3 +1,5 @@
+import type TaskCard from '@/features/tasks/entities/task-card';
+
 type Task = {
   id: string;
   parentId: string | null;
@@ -7,6 +9,7 @@ type Task = {
   isOpen: boolean;
   isTracking: boolean;
   estimateMinutes: number | null;
+  card: TaskCard | null;
   tasks: Task[];
 };
 

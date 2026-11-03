@@ -7,6 +7,7 @@ type ConfirmDeleteDialogProps = {
   title: string;
   description: string;
   confirmLabel: string;
+  onConfirm?: () => void;
 };
 
 const ConfirmDeleteDialog = ({
@@ -14,6 +15,7 @@ const ConfirmDeleteDialog = ({
   title,
   description,
   confirmLabel,
+  onConfirm,
 }: ConfirmDeleteDialogProps) => (
   <PopoverPanel id={dialogId} label={title} className="w-[min(400px,calc(100vw-2rem))]">
     <div className="grid gap-4 p-5">
@@ -28,7 +30,9 @@ const ConfirmDeleteDialog = ({
         <Button variant="ghost" popoverTarget={dialogId} popoverTargetAction="hide">
           Cancel
         </Button>
-        <Button variant="danger">{confirmLabel}</Button>
+        <Button variant="danger" onClick={onConfirm}>
+          {confirmLabel}
+        </Button>
       </div>
     </div>
   </PopoverPanel>

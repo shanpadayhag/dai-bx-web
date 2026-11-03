@@ -248,6 +248,7 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
             name: enteredName.trim(),
             isDone: false,
             estimateMinutes: null,
+            card: null,
           },
         },
         () => addTask({ taskGroupId: selectedTaskGroupId, taskName: enteredName, parentTaskId }),

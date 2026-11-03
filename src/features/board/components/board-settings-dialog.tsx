@@ -1,4 +1,16 @@
-import { Hash, ListFilter, Pencil, Plus, Settings2, Trash2, Type, X } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Hash,
+  ListFilter,
+  Pencil,
+  Plus,
+  Settings2,
+  Trash2,
+  Type,
+  X,
+} from 'lucide-react';
+import type { FormEvent } from 'react';
 import Badge from '@/core/components/atoms/badge';
 import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
@@ -12,13 +24,20 @@ import BoardPropertyKind, {
   boardPropertyKindLabels,
 } from '@/features/board/enums/board-property-kind';
 
+export const BOARD_PROPERTIES_MAX = 20;
+
 type BoardSettingsDialogProps = {
   dialogId: string;
   board: Board;
   properties: readonly BoardProperty[];
+  newPropertyDialogId: string;
   propertyFormDialogId: string;
   deletePropertyDialogId: string;
   deleteBoardDialogId: string;
+  onSubmit: (submitEvent: FormEvent<HTMLFormElement>) => void;
+  onStartEditProperty: (propertyId: string) => void;
+  onMovePropertyBy: (propertyId: string, positionStep: number) => void;
+  onStartDeleteProperty: (propertyId: string) => void;
 };
 
 const kindIcons = {
@@ -31,15 +50,24 @@ const BoardSettingsDialog = ({
   dialogId,
   board,
   properties,
+  newPropertyDialogId,
   propertyFormDialogId,
   deletePropertyDialogId,
   deleteBoardDialogId,
+  onSubmit,
+  onStartEditProperty,
+  onMovePropertyBy,
+  onStartDeleteProperty,
 }: BoardSettingsDialogProps) => {
   const nameInputId = `${dialogId}-name`;
+  const isPropertyLimitReached = properties.length >= BOARD_PROPERTIES_MAX;
 
   return (
     <PopoverPanel id={dialogId} label="Board settings" className="w-[min(560px,calc(100vw-2rem))]">
-      <div className="grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]">
+      <form
+        onSubmit={onSubmit}
+        className="grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]"
+      >
         <div className="flex items-start gap-3 p-5 pb-4 sm:px-6 sm:pt-6">
           <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
             <Settings2 className="size-5" />
@@ -60,17 +88,28 @@ const BoardSettingsDialog = ({
         </div>
         <div className="grid content-start gap-6 overflow-y-auto overscroll-contain px-5 pb-5 sm:px-6">
           <Field label="Name" htmlFor={nameInputId}>
-            <Input id={nameInputId} name="boardName" defaultValue={board.name} maxLength={100} />
+            <Input
+              key={board.name}
+              id={nameInputId}
+              name="name"
+              defaultValue={board.name}
+              maxLength={100}
+            />
           </Field>
           <section className="grid gap-3" aria-labelledby={`${dialogId}-properties`}>
             <div className="flex items-center justify-between gap-3">
               <h3 id={`${dialogId}-properties`} className="text-[13px] font-medium text-foreground">
                 Properties{' '}
                 <span className="font-normal text-muted-foreground tabular-nums">
-                  {properties.length} of 20
+                  {properties.length} of {BOARD_PROPERTIES_MAX}
                 </span>
               </h3>
-              <Button size="sm" variant="secondary" popoverTarget={propertyFormDialogId}>
+              <Button
+                size="sm"
+                variant="secondary"
+                popoverTarget={newPropertyDialogId}
+                disabled={isPropertyLimitReached}
+              >
                 <Plus />
                 Add property
               </Button>
@@ -81,7 +120,7 @@ const BoardSettingsDialog = ({
               </p>
             ) : (
               <ul className="grid divide-y divide-border rounded-xl border border-border">
-                {properties.map((property) => (
+                {properties.map((property, propertyIndex) => (
                   <li key={property.id} className="grid gap-2 px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground [&_svg]:size-4">
@@ -93,8 +132,25 @@ const BoardSettingsDialog = ({
                       <Badge>{boardPropertyKindLabels[property.kind]}</Badge>
                       <span className="ml-auto flex items-center">
                         <IconButton
+                          label={`Move ${property.name} up`}
+                          disabled={propertyIndex === 0}
+                          onClick={() => onMovePropertyBy(property.id, -1)}
+                          className="size-7 disabled:opacity-30"
+                        >
+                          <ArrowUp />
+                        </IconButton>
+                        <IconButton
+                          label={`Move ${property.name} down`}
+                          disabled={propertyIndex === properties.length - 1}
+                          onClick={() => onMovePropertyBy(property.id, 1)}
+                          className="size-7 disabled:opacity-30"
+                        >
+                          <ArrowDown />
+                        </IconButton>
+                        <IconButton
                           label={`Edit ${property.name}`}
                           popoverTarget={propertyFormDialogId}
+                          onClick={() => onStartEditProperty(property.id)}
                           className="size-7"
                         >
                           <Pencil />
@@ -103,6 +159,7 @@ const BoardSettingsDialog = ({
                           label={`Delete ${property.name}`}
                           tone="danger"
                           popoverTarget={deletePropertyDialogId}
+                          onClick={() => onStartDeleteProperty(property.id)}
                           className="size-7"
                         >
                           <Trash2 />
@@ -142,7 +199,7 @@ const BoardSettingsDialog = ({
             <Button type="submit">Save name</Button>
           </div>
         </div>
-      </div>
+      </form>
     </PopoverPanel>
   );
 };

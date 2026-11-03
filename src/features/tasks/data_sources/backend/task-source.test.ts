@@ -8,7 +8,15 @@ const backendServer = startBackendServer();
 const groupTasks = {
   group: { id: 'g1', name: 'Today' },
   tasks: [
-    { id: 't1', parentId: null, position: 0, name: 'A', isDone: false, estimateMinutes: null },
+    {
+      id: 't1',
+      parentId: null,
+      position: 0,
+      name: 'A',
+      isDone: false,
+      estimateMinutes: null,
+      card: null,
+    },
   ],
   openCount: 1,
   doneCount: 0,

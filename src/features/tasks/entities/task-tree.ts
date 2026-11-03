@@ -26,6 +26,7 @@ export const buildTaskTree = (
         isOpen: !collapsedTaskIds.has(taskRecord.id),
         isTracking: false,
         estimateMinutes: taskRecord.estimateMinutes,
+        card: taskRecord.card,
         tasks: buildChildren(taskRecord.id),
       }));
   return buildChildren(TOP_LEVEL_KEY);

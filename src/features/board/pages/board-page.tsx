@@ -1,6 +1,10 @@
-import { Columns3, LayoutGrid, Pencil, Plus, Settings2 } from 'lucide-react';
+'use client';
+
+import { Columns3, LayoutGrid, Pencil, Plus, RotateCw, Settings2, WifiOff } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
 import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
+import EmptyState from '@/core/components/molecules/empty-state';
 import PageHeader from '@/core/components/molecules/page-header';
 import BoardColumn from '@/features/board/components/board-column';
 import BoardNameDialog from '@/features/board/components/board-name-dialog';
@@ -9,72 +13,148 @@ import BoardSwitcher from '@/features/board/components/board-switcher';
 import CardDetailDialog from '@/features/board/components/card-detail-dialog';
 import ConfirmDeleteDialog from '@/features/board/components/confirm-delete-dialog';
 import MoveCardDialog from '@/features/board/components/move-card-dialog';
+import NewPropertyDialog from '@/features/board/components/new-property-dialog';
 import NoBoardsState from '@/features/board/components/no-boards-state';
 import NoListsState from '@/features/board/components/no-lists-state';
 import PropertyFormDialog from '@/features/board/components/property-form-dialog';
-import sampleBoardSource from '@/features/board/data_sources/sample/board-source';
+import { arrangeBoard, arrangeCardDetail } from '@/features/board/entities/board-arrangement';
 import {
   describeBoardDeletion,
   describeCardDeletion,
   describeListDeletion,
   describePropertyUseDeletion,
 } from '@/features/board/entities/delete-summary';
+import useBoardEvents, {
+  BOARD_SETTINGS_DIALOG_ID,
+  BOARD_SWITCHER_MENU_ID,
+  CARD_DETAIL_DIALOG_ID,
+  DELETE_BOARD_DIALOG_ID,
+  DELETE_CARD_DIALOG_ID,
+  DELETE_LIST_DIALOG_ID,
+  DELETE_OPTION_DIALOG_ID,
+  DELETE_PROPERTY_DIALOG_ID,
+  MOVE_CARD_DIALOG_ID,
+  NEW_BOARD_DIALOG_ID,
+  NEW_LIST_DIALOG_ID,
+  NEW_PROPERTY_DIALOG_ID,
+  PENDING_CARD_ID_PREFIX,
+  PROPERTY_FORM_DIALOG_ID,
+  RENAME_LIST_DIALOG_ID,
+} from '@/features/board/events/use-board-events';
+import {
+  countCardsUsingOption,
+  countCardsUsingProperty,
+} from '@/features/board/entities/property-use';
+import useBoardStates from '@/features/board/states/use-board-states';
 
-const NEW_BOARD_DIALOG_ID = 'new-board-dialog';
-const NEW_LIST_DIALOG_ID = 'new-list-dialog';
-const RENAME_LIST_DIALOG_ID = 'rename-list-dialog';
-const DELETE_LIST_DIALOG_ID = 'delete-list-dialog';
-const BOARD_SETTINGS_DIALOG_ID = 'board-settings-dialog';
-const DELETE_BOARD_DIALOG_ID = 'delete-board-dialog';
-const PROPERTY_FORM_DIALOG_ID = 'property-form-dialog';
-const DELETE_PROPERTY_DIALOG_ID = 'delete-property-dialog';
-const DELETE_OPTION_DIALOG_ID = 'delete-option-dialog';
-const CARD_DETAIL_DIALOG_ID = 'card-detail-dialog';
-const MOVE_CARD_DIALOG_ID = 'move-card-dialog';
-const DELETE_CARD_DIALOG_ID = 'delete-card-dialog';
+const isPendingCard = (cardId: string) => cardId.startsWith(PENDING_CARD_ID_PREFIX);
 
-type BoardPageProps = {
-  boardId: string | undefined;
-  hasNoBoards: boolean;
-};
+const BoardPage = () => {
+  const states = useBoardStates();
+  const events = useBoardEvents(states);
+  const { handleLoadPage, handleOpenAddressedCard, shownBoard } = events;
 
-const NewBoardDialog = () => (
-  <BoardNameDialog
-    dialogId={NEW_BOARD_DIALOG_ID}
-    icon={<LayoutGrid />}
-    title="New board"
-    description="It starts empty. Add the lists you want, like Backlog, Doing and Done."
-    nameLabel="Name"
-    namePlaceholder="Like Personal or Work"
-    initialName=""
-    submitLabel="Create board"
-  />
-);
+  useEffect(() => {
+    void handleLoadPage();
+  }, [handleLoadPage]);
 
-const BoardPage = ({ boardId, hasNoBoards }: BoardPageProps) => {
-  if (hasNoBoards) {
+  useEffect(() => {
+    handleOpenAddressedCard();
+  }, [handleOpenAddressedCard]);
+
+  const boardContents = useMemo(
+    () => (shownBoard === null ? null : arrangeBoard(shownBoard)),
+    [shownBoard],
+  );
+
+  const newBoardDialog = (
+    <BoardNameDialog
+      dialogId={NEW_BOARD_DIALOG_ID}
+      icon={<LayoutGrid />}
+      title="New board"
+      description="It starts empty. Add the lists you want, like Backlog, Doing and Done."
+      nameLabel="Name"
+      namePlaceholder="Like Personal or Work"
+      initialName=""
+      submitLabel="Create board"
+      submittingLabel="Creating…"
+      isSubmitting={states.submittingDialogId === NEW_BOARD_DIALOG_ID}
+      onSubmit={(submitEvent) => void events.handleSubmitNewBoard(submitEvent)}
+    />
+  );
+
+  if (states.boards === null) {
     return (
       <div className="grid gap-6">
-        <PageHeader title="Board" />
-        <NoBoardsState newBoardDialogId={NEW_BOARD_DIALOG_ID} />
-        <NewBoardDialog />
+        {states.pageLoadError === null ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            Loading your boards…
+          </p>
+        ) : (
+          <EmptyState
+            icon={<WifiOff />}
+            title={states.pageLoadError.title}
+            description={states.pageLoadError.description}
+            action={
+              <Button variant="secondary" onClick={() => void handleLoadPage()}>
+                <RotateCw />
+                Try again
+              </Button>
+            }
+          />
+        )}
       </div>
     );
   }
 
-  const boards = sampleBoardSource.findBoards();
-  const boardContents = sampleBoardSource.findBoardContents(boardId);
-  const cardDetail = sampleBoardSource.findCardDetail();
-  if (boardContents === undefined) return null;
+  if (states.boards.length === 0) {
+    return (
+      <div className="grid gap-6">
+        <PageHeader title="Board" />
+        <NoBoardsState newBoardDialogId={NEW_BOARD_DIALOG_ID} />
+        {newBoardDialog}
+      </div>
+    );
+  }
+
+  if (boardContents === null || shownBoard === null) {
+    return (
+      <div className="grid gap-6">
+        <PageHeader title="Board" />
+        <p role="status" className="text-sm text-muted-foreground">
+          Loading the board…
+        </p>
+        {newBoardDialog}
+      </div>
+    );
+  }
 
   const { board, lists, properties } = boardContents;
   const now = new Date();
-  const cardCount = lists.reduce(
-    (runningCardCount, boardList) => runningCardCount + boardList.cards.length,
-    0,
+  const cardCount = shownBoard.cards.length;
+  const renameTargetList = lists.find((boardList) => boardList.id === states.renameTargetListId);
+  const deleteTargetList = lists.find((boardList) => boardList.id === states.deleteTargetListId);
+  const openCardRecord = shownBoard.cards.find((cardRecord) => cardRecord.id === states.openCardId);
+  const isOpenCardDetailLoaded = states.openCardDetail?.card.id === states.openCardId;
+  const openCardDetail =
+    openCardRecord === undefined
+      ? null
+      : arrangeCardDetail(
+          {
+            card: openCardRecord,
+            notes: isOpenCardDetailLoaded ? (states.openCardDetail?.notes ?? '') : '',
+            linkedTasks: isOpenCardDetailLoaded ? (states.openCardDetail?.linkedTasks ?? []) : [],
+          },
+          shownBoard,
+        );
+  const editingProperty =
+    properties.find((property) => property.id === states.editingPropertyId) ?? null;
+  const deleteTargetProperty = properties.find(
+    (property) => property.id === states.deleteTargetPropertyId,
   );
-  const doingList = lists.find((boardList) => boardList.id === 'doing');
-  const projectProperty = properties[0];
+  const deleteTargetOption = properties
+    .flatMap((property) => property.options)
+    .find((option) => option.id === states.deleteTargetOptionId);
 
   return (
     <div className="grid min-h-0 grid-cols-[minmax(0,1fr)] gap-6">
@@ -82,9 +162,11 @@ const BoardPage = ({ boardId, hasNoBoards }: BoardPageProps) => {
         <div className="flex min-w-0 items-center gap-1">
           <h1 className="sr-only">Board</h1>
           <BoardSwitcher
-            boards={boards}
+            menuId={BOARD_SWITCHER_MENU_ID}
+            boards={states.boards}
             currentBoard={board}
             newBoardDialogId={NEW_BOARD_DIALOG_ID}
+            onSelectBoard={events.handleSelectBoard}
           />
           <IconButton label="Board settings" popoverTarget={BOARD_SETTINGS_DIALOG_ID}>
             <Settings2 />
@@ -109,11 +191,21 @@ const BoardPage = ({ boardId, hasNoBoards }: BoardPageProps) => {
                 properties={properties}
                 isFirstList={listIndex === 0}
                 isLastList={listIndex === lists.length - 1}
-                isComposing={boardList.id === 'backlog'}
-                cardDetailDialogId={CARD_DETAIL_DIALOG_ID}
+                isComposing={boardList.id === states.composingListId}
                 renameListDialogId={RENAME_LIST_DIALOG_ID}
                 deleteListDialogId={DELETE_LIST_DIALOG_ID}
                 now={now}
+                isPendingCard={isPendingCard}
+                onStartComposing={events.handleStartComposingCard}
+                onCancelComposing={events.handleCancelComposingCard}
+                onAddCard={events.handleAddCard}
+                onOpenCard={(cardId) => void events.handleOpenCard(cardId)}
+                onDropCard={events.handleDropCard}
+                onDropList={events.handleDropList}
+                onRenameList={events.handleStartRenameList}
+                onMoveListBy={events.handleMoveListBy}
+                onDeleteList={events.handleStartDeleteList}
+                onCopyListForPlanning={(listId) => void events.handleCopyListForPlanning(listId)}
               />
             ))}
             <button
@@ -127,7 +219,7 @@ const BoardPage = ({ boardId, hasNoBoards }: BoardPageProps) => {
           </div>
         </div>
       )}
-      <NewBoardDialog />
+      {newBoardDialog}
       <BoardNameDialog
         dialogId={NEW_LIST_DIALOG_ID}
         icon={<Columns3 />}
@@ -137,6 +229,9 @@ const BoardPage = ({ boardId, hasNoBoards }: BoardPageProps) => {
         namePlaceholder="Like Backlog or Doing"
         initialName=""
         submitLabel="Add list"
+        submittingLabel="Adding…"
+        isSubmitting={states.submittingDialogId === NEW_LIST_DIALOG_ID}
+        onSubmit={(submitEvent) => void events.handleSubmitNewList(submitEvent)}
       />
       <BoardNameDialog
         dialogId={RENAME_LIST_DIALOG_ID}
@@ -145,70 +240,105 @@ const BoardPage = ({ boardId, hasNoBoards }: BoardPageProps) => {
         description="Its cards stay where they are."
         nameLabel="Name"
         namePlaceholder="Like Backlog or Doing"
-        initialName={doingList?.name ?? ''}
+        initialName={renameTargetList?.name ?? ''}
         submitLabel="Save name"
+        onSubmit={events.handleSubmitRenameList}
       />
       <ConfirmDeleteDialog
         dialogId={DELETE_LIST_DIALOG_ID}
-        title={`Delete the “${doingList?.name ?? 'this'}” list?`}
-        description={describeListDeletion(doingList?.cards.length ?? 0)}
+        title={`Delete the “${deleteTargetList?.name ?? 'this'}” list?`}
+        description={describeListDeletion(deleteTargetList?.cards.length ?? 0)}
         confirmLabel="Delete list and cards"
+        onConfirm={events.handleConfirmDeleteList}
       />
       <BoardSettingsDialog
         dialogId={BOARD_SETTINGS_DIALOG_ID}
         board={board}
         properties={properties}
+        newPropertyDialogId={NEW_PROPERTY_DIALOG_ID}
         propertyFormDialogId={PROPERTY_FORM_DIALOG_ID}
         deletePropertyDialogId={DELETE_PROPERTY_DIALOG_ID}
         deleteBoardDialogId={DELETE_BOARD_DIALOG_ID}
+        onSubmit={(submitEvent) => void events.handleSubmitBoardSettings(submitEvent)}
+        onStartEditProperty={events.handleStartEditProperty}
+        onMovePropertyBy={events.handleMovePropertyBy}
+        onStartDeleteProperty={events.handleStartDeleteProperty}
       />
       <ConfirmDeleteDialog
         dialogId={DELETE_BOARD_DIALOG_ID}
         title={`Delete the “${board.name}” board?`}
         description={describeBoardDeletion(lists.length, cardCount)}
         confirmLabel="Delete board"
+        onConfirm={() => void events.handleConfirmDeleteBoard()}
       />
-      {projectProperty === undefined ? null : (
-        <>
-          <PropertyFormDialog
-            dialogId={PROPERTY_FORM_DIALOG_ID}
-            property={projectProperty}
-            deleteOptionDialogId={DELETE_OPTION_DIALOG_ID}
-          />
-          <ConfirmDeleteDialog
-            dialogId={DELETE_PROPERTY_DIALOG_ID}
-            title={`Delete the “${projectProperty.name}” property?`}
-            description={describePropertyUseDeletion(7)}
-            confirmLabel="Delete property"
-          />
-          <ConfirmDeleteDialog
-            dialogId={DELETE_OPTION_DIALOG_ID}
-            title="Delete the “Trading” option?"
-            description={describePropertyUseDeletion(2)}
-            confirmLabel="Delete option"
-          />
-        </>
-      )}
+      <NewPropertyDialog
+        dialogId={NEW_PROPERTY_DIALOG_ID}
+        isSubmitting={states.submittingDialogId === NEW_PROPERTY_DIALOG_ID}
+        onSubmit={events.handleSubmitNewProperty}
+      />
+      <PropertyFormDialog
+        dialogId={PROPERTY_FORM_DIALOG_ID}
+        property={editingProperty}
+        deleteOptionDialogId={DELETE_OPTION_DIALOG_ID}
+        onRenameProperty={events.handleRenameProperty}
+        onAddOption={events.handleAddOption}
+        onRenameOption={events.handleRenameOption}
+        onChooseOptionColor={events.handleChooseOptionColor}
+        onMoveOptionBy={events.handleMoveOptionBy}
+        onStartDeleteOption={events.handleStartDeleteOption}
+      />
+      <ConfirmDeleteDialog
+        dialogId={DELETE_PROPERTY_DIALOG_ID}
+        title={`Delete the “${deleteTargetProperty?.name ?? 'this'}” property?`}
+        description={describePropertyUseDeletion(
+          deleteTargetProperty === undefined
+            ? 0
+            : countCardsUsingProperty(shownBoard.cards, deleteTargetProperty.id),
+        )}
+        confirmLabel="Delete property"
+        onConfirm={events.handleConfirmDeleteProperty}
+      />
+      <ConfirmDeleteDialog
+        dialogId={DELETE_OPTION_DIALOG_ID}
+        title={`Delete the “${deleteTargetOption?.name ?? 'this'}” option?`}
+        description={describePropertyUseDeletion(
+          deleteTargetOption === undefined
+            ? 0
+            : countCardsUsingOption(shownBoard.cards, deleteTargetOption.id),
+        )}
+        confirmLabel="Delete option"
+        onConfirm={events.handleConfirmDeleteOption}
+      />
       <CardDetailDialog
         dialogId={CARD_DETAIL_DIALOG_ID}
         board={board}
         properties={properties}
-        cardDetail={cardDetail}
+        cardDetail={openCardDetail}
+        areDetailsLoading={!isOpenCardDetailLoaded}
         moveCardDialogId={MOVE_CARD_DIALOG_ID}
         deleteCardDialogId={DELETE_CARD_DIALOG_ID}
         now={now}
+        onRenameCard={events.handleRenameCard}
+        onEnterValue={events.handleEnterCardValue}
+        onChangeDue={events.handleChangeCardDue}
+        onSaveNotes={events.handleSaveCardNotes}
+        onOpenMoveCard={events.handleOpenMoveCard}
       />
       <MoveCardDialog
+        key={states.openCardId ?? 'none'}
         dialogId={MOVE_CARD_DIALOG_ID}
-        card={cardDetail.card}
+        card={openCardDetail?.card ?? null}
         lists={lists}
-        chosenListId="done"
+        chosenListId={states.moveDialogListId}
+        onChooseList={events.handleChooseMoveList}
+        onSubmit={events.handleSubmitMoveCard}
       />
       <ConfirmDeleteDialog
         dialogId={DELETE_CARD_DIALOG_ID}
-        title={`Delete “${cardDetail.card.title}”?`}
-        description={describeCardDeletion(cardDetail.linkedTasks.length)}
+        title={`Delete “${openCardDetail?.card.title ?? 'this card'}”?`}
+        description={describeCardDeletion(openCardDetail?.card.linkedTaskCount ?? 0)}
         confirmLabel="Delete card"
+        onConfirm={events.handleConfirmDeleteCard}
       />
     </div>
   );

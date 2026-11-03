@@ -19,5 +19,6 @@ export const describeCardDeletion = (linkedTaskCount: number): string => {
 
 export const describePropertyUseDeletion = (usingCardCount: number): string => {
   if (usingCardCount === 0) return 'No card uses it.';
-  return `It’s cleared from the ${countNoun(usingCardCount, 'card', 'cards')} that use it.`;
+  if (usingCardCount === 1) return 'It’s cleared from the 1 card that uses it.';
+  return `It’s cleared from the ${usingCardCount} cards that use it.`;
 };

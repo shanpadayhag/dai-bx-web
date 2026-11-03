@@ -35,4 +35,5 @@ test('a card deletion says its tasks stay', () => {
 test('a property or option deletion names the cards it clears', () => {
   expect(describePropertyUseDeletion(0)).toBe('No card uses it.');
   expect(describePropertyUseDeletion(7)).toBe('It’s cleared from the 7 cards that use it.');
+  expect(describePropertyUseDeletion(1)).toBe('It’s cleared from the 1 card that uses it.');
 });

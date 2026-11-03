@@ -11,8 +11,24 @@ import {
 const serverGroupTasks: GroupTasks = {
   group: { id: 'group-today', name: 'Today' },
   tasks: [
-    { id: 'a', parentId: null, position: 0, name: 'A', isDone: false, estimateMinutes: null },
-    { id: 'b', parentId: null, position: 1, name: 'B', isDone: false, estimateMinutes: null },
+    {
+      id: 'a',
+      parentId: null,
+      position: 0,
+      name: 'A',
+      isDone: false,
+      estimateMinutes: null,
+      card: null,
+    },
+    {
+      id: 'b',
+      parentId: null,
+      position: 1,
+      name: 'B',
+      isDone: false,
+      estimateMinutes: null,
+      card: null,
+    },
   ],
   openCount: 2,
   doneCount: 0,

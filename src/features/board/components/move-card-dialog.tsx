@@ -1,4 +1,5 @@
 import { MoveRight } from 'lucide-react';
+import type { FormEvent } from 'react';
 import Button from '@/core/components/atoms/button';
 import PopoverPanel from '@/core/components/molecules/popover-panel';
 import type BoardCard from '@/features/board/entities/board-card';
@@ -6,28 +7,38 @@ import type BoardList from '@/features/board/entities/board-list';
 
 type MoveCardDialogProps = {
   dialogId: string;
-  card: BoardCard;
+  card: BoardCard | null;
   lists: readonly BoardList[];
-  chosenListId: BoardList['id'];
+  chosenListId: BoardList['id'] | null;
+  onChooseList: (listId: BoardList['id']) => void;
+  onSubmit: (submitEvent: FormEvent<HTMLFormElement>) => void;
 };
 
 const optionClassName =
   'flex h-9 cursor-pointer items-center gap-2 rounded-lg px-2.5 text-[13px] text-foreground transition-colors duration-150 hover:bg-surface has-checked:bg-primary-soft/70 has-checked:font-medium has-focus-visible:ring-4 has-focus-visible:ring-primary/15';
 
-const MoveCardDialog = ({ dialogId, card, lists, chosenListId }: MoveCardDialogProps) => {
+const MoveCardDialog = ({
+  dialogId,
+  card,
+  lists,
+  chosenListId,
+  onChooseList,
+  onSubmit,
+}: MoveCardDialogProps) => {
+  const cardTitle = card?.title ?? 'this card';
   const chosenList = lists.find((boardList) => boardList.id === chosenListId);
-  const otherCards = (chosenList?.cards ?? []).filter((listCard) => listCard.id !== card.id);
+  const otherCards = (chosenList?.cards ?? []).filter((listCard) => listCard.id !== card?.id);
 
   return (
-    <PopoverPanel id={dialogId} label={`Move ${card.title}`}>
-      <form className="grid gap-5 p-5 sm:p-6">
+    <PopoverPanel id={dialogId} label={`Move ${cardTitle}`}>
+      <form className="grid gap-5 p-5 sm:p-6" onSubmit={onSubmit}>
         <div className="flex items-start gap-3">
           <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
             <MoveRight className="size-5" />
           </span>
           <div className="grid min-w-0 gap-1">
             <h2 className="text-base font-semibold text-balance text-foreground">
-              Move “{card.title}”
+              Move “{cardTitle}”
             </h2>
             <p className="text-sm text-muted-foreground">Pick a list on this board, then a spot.</p>
           </div>
@@ -44,7 +55,8 @@ const MoveCardDialog = ({ dialogId, card, lists, chosenListId }: MoveCardDialogP
                   type="radio"
                   name="move-list"
                   value={boardList.id}
-                  defaultChecked={boardList.id === chosenListId}
+                  checked={boardList.id === chosenListId}
+                  onChange={() => onChooseList(boardList.id)}
                   className="sr-only"
                 />
                 {boardList.name}
@@ -52,11 +64,17 @@ const MoveCardDialog = ({ dialogId, card, lists, chosenListId }: MoveCardDialogP
             ))}
           </div>
         </fieldset>
-        <fieldset className="grid gap-2">
+        <fieldset key={chosenListId} className="grid gap-2">
           <legend className="mb-1.5 text-[13px] font-medium text-foreground">Put it</legend>
           <div className="grid max-h-64 grid-cols-[minmax(0,1fr)] gap-0.5 overflow-y-auto overscroll-contain rounded-xl border border-border p-1.5">
             <label className={optionClassName}>
-              <input type="radio" name="move-position" value="0" className="sr-only" />
+              <input
+                type="radio"
+                name="move-position"
+                value="0"
+                defaultChecked={otherCards.length === 0}
+                className="sr-only"
+              />
               At the top of {chosenList?.name ?? 'the list'}
             </label>
             {otherCards.map((listCard, cardIndex) => (
@@ -77,7 +95,9 @@ const MoveCardDialog = ({ dialogId, card, lists, chosenListId }: MoveCardDialogP
           <Button variant="ghost" popoverTarget={dialogId} popoverTargetAction="hide">
             Cancel
           </Button>
-          <Button type="submit">Move card</Button>
+          <Button type="submit" disabled={card === null || chosenList === undefined}>
+            Move card
+          </Button>
         </div>
       </form>
     </PopoverPanel>

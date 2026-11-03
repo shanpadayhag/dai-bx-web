@@ -1,5 +1,11 @@
 import { CalendarClock, ListChecks } from 'lucide-react';
+import { useState } from 'react';
 import joinClassNames from '@/core/class-names';
+import {
+  DRAGGED_CARD_DATA_TYPE,
+  isDragCarrying,
+  isLeavingElement,
+} from '@/features/board/components/board-drag';
 import OptionChip from '@/features/board/components/option-chip';
 import type BoardCard from '@/features/board/entities/board-card';
 import type BoardProperty from '@/features/board/entities/board-property';
@@ -9,11 +15,21 @@ import { findChosenOptions } from '@/features/board/entities/chosen-options';
 type BoardCardTileProps = {
   card: BoardCard;
   properties: readonly BoardProperty[];
-  cardDetailDialogId: string;
+  isPending: boolean;
   now: Date;
+  onOpenCard: (cardId: string) => void;
+  onDropCard: (draggedCardId: string) => void;
 };
 
-const BoardCardTile = ({ card, properties, cardDetailDialogId, now }: BoardCardTileProps) => {
+const BoardCardTile = ({
+  card,
+  properties,
+  isPending,
+  now,
+  onOpenCard,
+  onDropCard,
+}: BoardCardTileProps) => {
+  const [isDropTarget, setIsDropTarget] = useState(false);
   const chosenOptions = findChosenOptions(properties, card.values);
   const cardDue = card.dueDate === null ? null : { dueDate: card.dueDate, dueTime: card.dueTime };
   const isOverdue = cardDue !== null && isCardDueOverdue(cardDue, now);
@@ -23,8 +39,37 @@ const BoardCardTile = ({ card, properties, cardDetailDialogId, now }: BoardCardT
   return (
     <button
       type="button"
-      popoverTarget={cardDetailDialogId}
-      className="relative grid w-full gap-2 rounded-xl border border-border bg-background p-3 text-left shadow-soft transition-[border-color,box-shadow] duration-150 hover:border-border-strong hover:shadow-lift focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/15 focus-visible:outline-none"
+      draggable={!isPending}
+      aria-disabled={isPending}
+      onClick={() => onOpenCard(card.id)}
+      onDragStart={(dragEvent) => {
+        dragEvent.dataTransfer.setData(DRAGGED_CARD_DATA_TYPE, card.id);
+        dragEvent.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragOver={(dragEvent) => {
+        if (!isDragCarrying(dragEvent, DRAGGED_CARD_DATA_TYPE)) return;
+        dragEvent.preventDefault();
+        dragEvent.stopPropagation();
+        dragEvent.dataTransfer.dropEffect = 'move';
+        setIsDropTarget(true);
+      }}
+      onDragLeave={(dragEvent) => {
+        if (isLeavingElement(dragEvent)) setIsDropTarget(false);
+      }}
+      onDrop={(dropEvent) => {
+        const draggedCardId = dropEvent.dataTransfer.getData(DRAGGED_CARD_DATA_TYPE);
+        if (draggedCardId === '') return;
+        dropEvent.preventDefault();
+        dropEvent.stopPropagation();
+        setIsDropTarget(false);
+        onDropCard(draggedCardId);
+      }}
+      className={joinClassNames(
+        'relative grid w-full cursor-pointer gap-2 rounded-xl border border-border bg-background p-3 text-left shadow-soft transition-[border-color,box-shadow,opacity] duration-150 hover:border-border-strong hover:shadow-lift focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/15 focus-visible:outline-none active:cursor-grabbing',
+        isPending && 'cursor-default opacity-60',
+        isDropTarget &&
+          'before:absolute before:inset-x-1 before:-top-[5px] before:h-0.5 before:rounded-full before:bg-primary',
+      )}
     >
       {chosenOptions.length > 0 ? (
         <span className="flex flex-wrap gap-1">

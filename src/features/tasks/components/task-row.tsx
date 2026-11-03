@@ -1,12 +1,14 @@
 import {
   ChevronRight,
   GripVertical,
+  KanbanSquare,
   MoreHorizontal,
   Pencil,
   Play,
   Plus,
   Trash2,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import Badge from '@/core/components/atoms/badge';
 import CompletionCircle from '@/core/components/atoms/completion-circle';
@@ -100,15 +102,28 @@ const TaskRow = ({
         label={`Mark ${task.name} as done`}
         onToggle={() => onToggleTaskDone(task.id, !task.isDone)}
       />
-      <span
-        className={joinClassNames(
-          'min-w-0 flex-1 truncate text-sm',
-          task.isDone
-            ? 'text-muted-foreground line-through decoration-border-strong'
-            : 'text-foreground',
+      <span className="flex min-w-0 flex-1 items-center gap-2">
+        <span
+          className={joinClassNames(
+            'min-w-0 truncate text-sm',
+            task.isDone
+              ? 'text-muted-foreground line-through decoration-border-strong'
+              : 'text-foreground',
+          )}
+        >
+          {task.name}
+        </span>
+        {task.card === null ? null : (
+          <Link
+            href={`/board?board=${task.card.boardId}&card=${task.card.id}`}
+            aria-label={`Card: ${task.card.title}`}
+            title={`Open the card “${task.card.title}”`}
+            className="inline-flex h-5.5 max-w-[45%] shrink-0 items-center gap-1 rounded-md bg-surface-strong px-1.5 text-xs text-muted-foreground transition-colors duration-150 hover:bg-primary-soft hover:text-primary-soft-foreground focus-visible:ring-4 focus-visible:ring-primary/25 focus-visible:outline-none"
+          >
+            <KanbanSquare aria-hidden="true" className="size-3 shrink-0" />
+            <span className="truncate">{task.card.title}</span>
+          </Link>
         )}
-      >
-        {task.name}
       </span>
       <span className="flex items-center gap-1.5">
         {hasSubtasks ? (

@@ -229,6 +229,24 @@ test('a delete sends DELETE as JSON and resolves with the answer', async () => {
   expect(receivedContentType).toBe('application/json');
 });
 
+test('a put sends its body as JSON with PUT and resolves with the answer', async () => {
+  let receivedMethod: string | undefined;
+  let receivedBody: unknown;
+  server.use(
+    http.put('/backend/cards/card-1/values/size', async ({ request }) => {
+      receivedMethod = request.method;
+      receivedBody = await request.json();
+      return HttpResponse.json({ status: 'set' });
+    }),
+  );
+
+  const putAnswer = await createApiClient().put('/cards/card-1/values/size', { optionId: 'small' });
+
+  expect(putAnswer).toEqual({ status: 'set' });
+  expect(receivedMethod).toBe('PUT');
+  expect(receivedBody).toEqual({ optionId: 'small' });
+});
+
 test('a located problem keeps the path the server names', async () => {
   server.use(
     http.post('/backend/task-groups/import', () =>
