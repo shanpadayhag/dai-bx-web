@@ -1,0 +1,62 @@
+import type { ReactNode } from 'react';
+import Button from '@/core/components/atoms/button';
+import Input from '@/core/components/atoms/input';
+import Field from '@/core/components/molecules/field';
+import PopoverPanel from '@/core/components/molecules/popover-panel';
+
+type BoardNameDialogProps = {
+  dialogId: string;
+  icon: ReactNode;
+  title: string;
+  description: string;
+  nameLabel: string;
+  namePlaceholder: string;
+  initialName: string;
+  submitLabel: string;
+};
+
+const BoardNameDialog = ({
+  dialogId,
+  icon,
+  title,
+  description,
+  nameLabel,
+  namePlaceholder,
+  initialName,
+  submitLabel,
+}: BoardNameDialogProps) => {
+  const nameInputId = `${dialogId}-name`;
+
+  return (
+    <PopoverPanel id={dialogId} label={title}>
+      <form className="grid gap-5 p-5 sm:p-6">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground [&_svg]:size-5">
+            {icon}
+          </span>
+          <div className="grid gap-1">
+            <h2 className="text-base font-semibold text-foreground">{title}</h2>
+            <p className="text-sm text-muted-foreground">{description}</p>
+          </div>
+        </div>
+        <Field label={nameLabel} htmlFor={nameInputId}>
+          <Input
+            id={nameInputId}
+            name="name"
+            defaultValue={initialName}
+            maxLength={100}
+            placeholder={namePlaceholder}
+          />
+        </Field>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" popoverTarget={dialogId} popoverTargetAction="hide">
+            Cancel
+          </Button>
+          <Button type="submit">{submitLabel}</Button>
+        </div>
+      </form>
+    </PopoverPanel>
+  );
+};
+
+export default BoardNameDialog;

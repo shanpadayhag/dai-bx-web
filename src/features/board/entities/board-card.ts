@@ -1,15 +1,13 @@
-import type { Category } from '@/core/category';
+import type CardPropertyValue from '@/features/board/entities/card-property-value';
 
 type BoardCard = {
   id: string;
   title: string;
-  category: Category;
-  labels: string[];
-  checklistDoneCount: number | null;
-  checklistItemCount: number | null;
-  dueLabel: string | null;
-  recurrenceLabel: string | null;
-  noteCount: number;
+  dueDate: string | null;
+  dueTime: string | null;
+  values: CardPropertyValue[];
+  linkedTaskCount: number;
+  doneLinkedTaskCount: number;
 };
 
 export default BoardCard;
