@@ -1,0 +1,36 @@
+export const metadata = {
+  title: 'The board: lists, cards and your own properties',
+  version: 'v3.1.0',
+  date: '2026-11-03',
+  summary: 'Boards with lists and cards, card properties you define, due dates, Markdown notes, and tasks that remember the card they came from.',
+};
+
+The board is live. It holds the bigger picture, while tasks keep the steps, and the two now point at each other.
+
+## Boards, lists and cards
+
+- Make as many **boards** as you need and switch between them from the board name. DaiBX opens the one you used last.
+- Add, rename, reorder and delete **lists**. Deleting a list or a board tells you how many cards go with it first.
+- Add **cards** straight into a list, then drag them within a list or across lists. On a phone or from the keyboard, use **Move to…** on the card and **Move left / Move right** on the list.
+- Every change shows at once and rolls back with a message if the server refuses it.
+
+## Properties
+
+- Each board has its own **properties**, set in Board settings: **choice** (options with an optional color), **text** or **number**.
+- A card's choice values show as colored chips on the board. Text and numbers stay inside the card.
+- Rename, recolor and reorder as you go. Deleting a property or an option tells you how many cards use it and clears it from them.
+
+## Inside a card
+
+- A **due date** with an optional time. Cards past due are marked overdue.
+- **Notes** in Markdown, starting from the outline Outcome, Context, Open questions and Done when. Links open in a new tab, and raw HTML shows as plain text.
+- The **tasks** made from the card, with how many are done. Each one opens its group on the Tasks page.
+
+## Planning with tasks
+
+- **Copy for planning** in a list's menu copies its cards as Markdown, each with its card id, due date, properties and notes, ready for the daily plan.
+- A group import can name a card on each top-level task. The task then shows its card on the Tasks page, and clicking it opens the board with that card open.
+
+## Coming next
+
+- **Calendar:** starting a task opens a calendar event and finishing it sets the end, with check-ins for when you step away.
