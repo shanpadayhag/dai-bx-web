@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono, Instrument_Serif } from 'next/font/google';
+import Script from 'next/script';
 import type { ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import { APPEARANCE_BOOT_SCRIPT } from '@/core/appearance';
+import { IOS_INPUT_ZOOM_SCRIPT } from '@/core/ios-input-zoom';
 import '@/core/styles/globals.css';
 
 const geistSans = Geist({ subsets: ['latin'], variable: '--font-geist-sans' });
@@ -37,6 +39,9 @@ const RootLayout = ({ children }: { children: ReactNode }) => (
   >
     <head>
       <script dangerouslySetInnerHTML={{ __html: APPEARANCE_BOOT_SCRIPT }} />
+      <Script id="ios-input-zoom" strategy="beforeInteractive">
+        {IOS_INPUT_ZOOM_SCRIPT}
+      </Script>
     </head>
     <body className="min-h-dvh">
       {children}

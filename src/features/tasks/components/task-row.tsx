@@ -134,7 +134,7 @@ const TaskRow = ({
         {task.isTracking ? (
           <Badge tone="primary">
             <span className="size-1.5 rounded-full bg-primary" />
-            Tracking
+            Running
           </Badge>
         ) : null}
         {task.estimateMinutes !== null && !task.isTracking ? (
@@ -144,12 +144,10 @@ const TaskRow = ({
         ) : null}
       </span>
       <span className="flex items-center opacity-100 transition-opacity duration-150 sm:pointer-events-none sm:absolute sm:top-1/2 sm:right-1.5 sm:-translate-y-1/2 sm:rounded-lg sm:bg-surface sm:pl-1 sm:opacity-0 sm:group-focus-within/row:pointer-events-auto sm:group-focus-within/row:opacity-100 sm:group-hover/row:pointer-events-auto sm:group-hover/row:opacity-100">
-        {!task.isDone && !task.isTracking ? (
+        {task.parentId === null && !task.isDone && !task.isTracking ? (
           <IconButton
             label={`Start ${task.name}`}
-            title="Starting a task arrives with the calendar"
-            aria-disabled="true"
-            className="cursor-not-allowed text-muted-foreground/50 hover:bg-transparent hover:text-muted-foreground/50"
+            className="text-primary hover:bg-primary-soft hover:text-primary-soft-foreground"
           >
             <Play className="fill-current" />
           </IconButton>
