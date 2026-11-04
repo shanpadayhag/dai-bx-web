@@ -294,13 +294,15 @@ test('the Open view hides done tasks and is remembered on this device', async ()
   expect(window.localStorage.getItem('daibx:task-view')).toBe('open');
 });
 
-test('the start button stays disabled until the calendar arrives', async () => {
+test('only top-level open tasks offer a start button', async () => {
   await openTasksPage();
 
-  expect(screen.getByRole('button', { name: 'Start Review the check-in flow' })).toHaveAttribute(
-    'aria-disabled',
-    'true',
-  );
+  expect(screen.getByRole('button', { name: 'Start Review the check-in flow' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Start Plan the backend' })).toBeEnabled();
+  expect(screen.getByText('Create the Supabase project')).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Start Create the Supabase project' }),
+  ).not.toBeInTheDocument();
 });
 
 test('creating a group sends its name and opens it', async () => {

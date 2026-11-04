@@ -8,6 +8,7 @@ import Button from '@/core/components/atoms/button';
 import Input from '@/core/components/atoms/input';
 import Switch from '@/core/components/atoms/switch';
 import EmptyState from '@/core/components/molecules/empty-state';
+import CategoryPicker from '@/core/components/molecules/category-picker';
 import Field from '@/core/components/molecules/field';
 import PageHeader from '@/core/components/molecules/page-header';
 import SegmentedControl from '@/core/components/molecules/segmented-control';
@@ -20,6 +21,7 @@ import DeleteCategoryDialog from '@/features/settings/components/delete-category
 import NewRecoveryCodesDialog from '@/features/settings/components/new-recovery-codes-dialog';
 import ReplaceAuthenticatorDialog from '@/features/settings/components/replace-authenticator-dialog';
 import SessionsDialog, { SESSIONS_DIALOG_ID } from '@/features/settings/components/sessions-dialog';
+import MinutesInput from '@/features/settings/components/minutes-input';
 import SettingRow from '@/features/settings/components/setting-row';
 import SettingsSection from '@/features/settings/components/settings-section';
 import { LOW_RECOVERY_CODE_COUNT, RECOVERY_CODE_TOTAL } from '@/features/settings/entities/account';
@@ -210,12 +212,12 @@ const SettingsPage = () => {
         </SettingsSection>
         <SettingsSection
           title="Time tracking"
-          description="Starting a task creates a calendar event. Finishing it sets the end."
+          description="Starting a task or a card creates a calendar event. Finishing it sets the end."
         >
           <SettingRow
-            title="Check in on running tasks"
-            description="A notification asks if you’re still on it once a task passes its estimate."
-            control={<Switch isOn label="Check in on running tasks" />}
+            title="Check in on running items"
+            description="A card asks if you’re still on it once a task passes its estimate."
+            control={<Switch isOn label="Check in on running items" />}
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
@@ -223,20 +225,21 @@ const SettingsPage = () => {
               htmlFor="check-in-interval"
               hint="After the first check-in, this repeats until you finish."
             >
-              <Input id="check-in-interval" defaultValue="30 min" className="font-mono" />
+              <MinutesInput id="check-in-interval" defaultMinutes={30} />
             </Field>
             <Field
               label="First check-in with no estimate"
               htmlFor="first-check-in"
               hint="Used when a task has no estimate."
             >
-              <Input id="first-check-in" defaultValue="30 min" className="font-mono" />
+              <MinutesInput id="first-check-in" defaultMinutes={30} />
             </Field>
           </div>
-          <SettingRow
-            title="Suggest my last check-in as the end"
-            description="When a check-in went unanswered, finishing suggests the last time you confirmed."
-            control={<Switch isOn label="Suggest my last check-in as the end" />}
+          <CategoryPicker
+            name="default-tracking-category"
+            legend="Category for new tracked events"
+            categories={states.categories}
+            selectedCategoryId={null}
           />
         </SettingsSection>
         <SettingsSection
@@ -247,7 +250,11 @@ const SettingsPage = () => {
             <Field label="Day starts" htmlFor="day-starts">
               <Input id="day-starts" type="time" defaultValue="16:00" />
             </Field>
-            <Field label="Day ends" htmlFor="day-ends" hint="Past midnight counts as the same day.">
+            <Field
+              label="Day ends"
+              htmlFor="day-ends"
+              hint="Can end after midnight. The calendar opens at the start."
+            >
               <Input id="day-ends" type="time" defaultValue="02:00" />
             </Field>
           </div>

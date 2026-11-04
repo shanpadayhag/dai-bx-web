@@ -3,7 +3,6 @@ import RunningTaskCard from '@/features/today/components/running-task-card';
 import TodayAgenda from '@/features/today/components/today-agenda';
 import UpNextList from '@/features/today/components/up-next-list';
 import sampleTodaySource from '@/features/today/data_sources/sample/today-source';
-import CheckInCard from '@/features/tracking/components/check-in-card';
 import sampleTaskSessionSource from '@/features/tracking/data_sources/sample/task-session-source';
 
 const TodayPage = () => {
@@ -23,7 +22,6 @@ const TodayPage = () => {
           <UpNextList upNextTasks={sampleTodaySource.findUpNext()} />
         </div>
         <div className="grid content-start gap-6">
-          <CheckInCard taskSession={runningTaskSession} />
           <TodayAgenda agendaItems={sampleTodaySource.findAgenda()} />
           <ActivityFeed activityEntries={sampleTodaySource.findActivity()} />
         </div>

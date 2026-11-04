@@ -1,4 +1,4 @@
-import { CalendarClock, Check, MoveRight, Pencil, Trash2, X } from 'lucide-react';
+import { CalendarClock, Check, MoveRight, Pencil, Play, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 import joinClassNames from '@/core/class-names';
@@ -121,6 +121,10 @@ const CardDetailContent = ({
             className="-mx-1.5 field-sizing-content resize-none rounded-lg px-1.5 py-0.5 text-xl font-semibold tracking-[-0.01em] text-balance text-foreground transition-colors duration-150 hover:bg-surface focus-visible:bg-background focus-visible:ring-4 focus-visible:ring-primary/15 focus-visible:outline-none"
           />
         </div>
+        <Button size="sm" aria-label={`Start ${card.title}`} className="mt-0.5">
+          <Play className="fill-current" />
+          Start
+        </Button>
         <IconButton label="Close card" popoverTarget={dialogId} popoverTargetAction="hide">
           <X />
         </IconButton>

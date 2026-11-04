@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import joinClassNames from '@/core/class-names';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'inverse';
@@ -9,6 +9,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
   href?: string;
+  ref?: Ref<HTMLButtonElement>;
   children: ReactNode;
 };
 

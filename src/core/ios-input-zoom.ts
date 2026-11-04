@@ -1,0 +1,1 @@
+export const IOS_INPUT_ZOOM_SCRIPT = `(function(){var u=navigator.userAgent;var isIos=/iPad|iPhone|iPod/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1);var viewport=document.querySelector('meta[name="viewport"]');if(isIos&&viewport)viewport.setAttribute('content',viewport.content+', maximum-scale=1');})();`;
