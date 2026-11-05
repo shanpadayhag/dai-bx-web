@@ -33,6 +33,16 @@ const noteComponents: Components = {
       {children}
     </a>
   ),
+  pre: ({ children }) => (
+    <pre className="mt-1.5 overflow-x-auto rounded-lg bg-surface-strong px-3 py-2.5 font-mono text-[12px] leading-relaxed text-foreground [&>code]:bg-transparent [&>code]:p-0">
+      {children}
+    </pre>
+  ),
+  table: ({ children }) => (
+    <div className="mt-1.5 overflow-x-auto">
+      <table>{children}</table>
+    </div>
+  ),
   code: ({ children }) => (
     <code className="rounded-md bg-surface-strong px-1 py-0.5 font-mono text-[12px] text-foreground">
       {children}
@@ -50,7 +60,7 @@ const CardNotes = ({ notes }: CardNotesProps) =>
   notes.trim() === '' ? (
     <p className="text-[13px] text-muted-foreground">No notes yet. Use Edit to write some.</p>
   ) : (
-    <div className="text-sm leading-relaxed text-muted-foreground">
+    <div className="text-sm leading-relaxed wrap-break-word text-muted-foreground">
       <Markdown remarkPlugins={[remarkGfm]} components={noteComponents}>
         {notes}
       </Markdown>

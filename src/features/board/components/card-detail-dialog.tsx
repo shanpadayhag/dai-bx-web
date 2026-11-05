@@ -125,7 +125,7 @@ const CardDetailContent = ({
           <X />
         </IconButton>
       </div>
-      <div className="grid content-start gap-6 overflow-y-auto overscroll-contain px-5 pb-5 sm:px-6">
+      <div className="grid grid-cols-1 content-start gap-6 overflow-y-auto overscroll-contain px-5 pb-5 sm:px-6">
         <section className="grid gap-3 sm:gap-2" aria-label="Properties">
           {properties.map((property) => (
             <CardPropertyField
@@ -198,7 +198,7 @@ const CardDetailContent = ({
             <p className="text-xs font-medium text-danger sm:pl-[calc(7rem+0.75rem)]">Overdue</p>
           ) : null}
         </section>
-        <section className="grid gap-2" aria-labelledby="card-notes-heading">
+        <section className="grid grid-cols-1 gap-2" aria-labelledby="card-notes-heading">
           <div className="flex items-center justify-between">
             <h3 id="card-notes-heading" className="text-[13px] font-semibold text-foreground">
               Notes
