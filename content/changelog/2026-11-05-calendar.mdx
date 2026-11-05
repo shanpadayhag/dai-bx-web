@@ -1,0 +1,41 @@
+export const metadata = {
+  title: 'The calendar and time tracking',
+  version: 'v3.2.0',
+  date: '2026-11-05',
+  summary: 'A day and week calendar, and starting a task or a card now records its time there, with check-ins for when you step away.',
+};
+
+The calendar is live. Plan time on it, and start a task or a card to record what actually happened.
+
+## The calendar
+
+- **Week** and **Day** views, midnight to midnight. The calendar opens at the start of your working hours, and the address keeps the view and the day, so a link opens the same page.
+- **Planned events** have a title, an optional category and a start and end. They can run past midnight and across several days.
+- Drag over empty time to create an event, drag an event to move it (to another day too), and drag its bottom edge to resize it. Everything snaps to 15 minutes. On a phone, tap **New event** instead.
+- Two events at the same time sit side by side as a cascade. Three or more join into one block that lists them when you open it.
+- Pick an event to edit or delete it in the panel beside the calendar.
+
+## Time tracking
+
+- **Start** an open top-level task on the Tasks page, or a card from its details. It opens a calendar event named after it, in the category set in Settings. Several things can run at once.
+- The top bar shows what's running and for how long, with a count when there's more than one.
+- **Check-ins** ask "Were you on it since …?" once a task passes its estimate (or the first check-in, if it has none), then on every interval. **Yes** keeps the clock running. **No** opens Finish at your last answer.
+- **Finish** ends the event now, at your last check-in, or at a time you set. **Mark it done** also completes the task and its subtasks; untick it to just stop the clock.
+- A finished tracked event can have its times and category changed, or be deleted. Time trimmed off its end shows on the event.
+
+## Renaming
+
+- Renaming a task or a card with tracked time asks whether to rename its calendar events too. **Rename all** is the default; **Keep old names** leaves past events as they were.
+
+## Settings
+
+- **Time tracking:** turn check-ins on or off, set the check-in interval and the first check-in (5 minutes to 4 hours), and pick the category for new tracked events.
+- **Working hours** set where the calendar opens. They can end after midnight.
+
+## Fixes
+
+- Long words and links in card notes now wrap instead of scrolling the card sideways.
+
+## Coming next
+
+- **Workflows:** board rules that move a card when its tasks start or finish, and cards that come back on a schedule.
