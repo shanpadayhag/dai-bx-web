@@ -4,31 +4,41 @@ import { CalendarClock } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import Button from '@/core/components/atoms/button';
 import PopoverPanel from '@/core/components/molecules/popover-panel';
+import type { RenameEventsAnswer, RenameEventsRequest } from '@/core/rename-events';
 
 type RenameEventsDialogProps = {
   id: string;
-  eventCount: number;
-  previousName: string;
-  nextName: string;
+  renameRequest: RenameEventsRequest | null;
+  onAnswer: (renameAnswer: RenameEventsAnswer) => void;
 };
 
-const RenameEventsDialog = ({
-  id,
-  eventCount,
-  previousName,
-  nextName,
-}: RenameEventsDialogProps) => {
+const describeEventCount = (eventCount: number) =>
+  `${eventCount} calendar event${eventCount === 1 ? '' : 's'}`;
+
+const RenameEventsDialog = ({ id, renameRequest, onAnswer }: RenameEventsDialogProps) => {
   const renameAllButtonRef = useRef<HTMLButtonElement>(null);
-  const eventCountLabel = `${eventCount} calendar event${eventCount === 1 ? '' : 's'}`;
+  const chosenAnswerRef = useRef<RenameEventsAnswer>('cancel');
+  const onAnswerRef = useRef(onAnswer);
+
+  useEffect(() => {
+    onAnswerRef.current = onAnswer;
+  }, [onAnswer]);
 
   useEffect(() => {
     const dialogElement = document.getElementById(id);
-    const focusRenameAll = (toggleEvent: Event) => {
-      if ((toggleEvent as ToggleEvent).newState === 'open') renameAllButtonRef.current?.focus();
+    const answerOnToggle = (toggleEvent: Event) => {
+      if ((toggleEvent as ToggleEvent).newState === 'open') {
+        chosenAnswerRef.current = 'cancel';
+        renameAllButtonRef.current?.focus();
+        return;
+      }
+      onAnswerRef.current(chosenAnswerRef.current);
     };
-    dialogElement?.addEventListener('toggle', focusRenameAll);
-    return () => dialogElement?.removeEventListener('toggle', focusRenameAll);
+    dialogElement?.addEventListener('toggle', answerOnToggle);
+    return () => dialogElement?.removeEventListener('toggle', answerOnToggle);
   }, [id]);
+
+  const eventCountLabel = describeEventCount(renameRequest?.eventCount ?? 0);
 
   return (
     <PopoverPanel
@@ -46,16 +56,31 @@ const RenameEventsDialog = ({
           </h2>
           <p className="text-[13px] text-muted-foreground">
             Time you tracked still says{' '}
-            <span className="font-medium text-foreground">“{previousName}”</span>. Rename it to{' '}
-            <span className="font-medium text-foreground">“{nextName}”</span>, or keep the old name
-            on past events.
+            <span className="font-medium text-foreground">“{renameRequest?.previousName}”</span>.
+            Rename it to{' '}
+            <span className="font-medium text-foreground">“{renameRequest?.nextName}”</span>, or
+            keep the old name on past events.
           </p>
         </div>
         <div className="flex flex-wrap justify-end gap-2 pt-1">
-          <Button variant="secondary" popoverTarget={id} popoverTargetAction="hide">
+          <Button
+            variant="secondary"
+            popoverTarget={id}
+            popoverTargetAction="hide"
+            onClick={() => {
+              chosenAnswerRef.current = 'keep-old-names';
+            }}
+          >
             Keep old names
           </Button>
-          <Button ref={renameAllButtonRef} popoverTarget={id} popoverTargetAction="hide">
+          <Button
+            ref={renameAllButtonRef}
+            popoverTarget={id}
+            popoverTargetAction="hide"
+            onClick={() => {
+              chosenAnswerRef.current = 'rename-all';
+            }}
+          >
             Rename all
           </Button>
         </div>

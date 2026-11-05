@@ -5,12 +5,14 @@ import { checkInSinceMoment } from '@/features/tracking/entities/running-item';
 
 type CheckInCardProps = {
   dueItems: readonly RunningItem[];
+  onAnswerYes: (eventId: string) => void;
+  onAnswerNo: (eventId: string) => void;
 };
 
 const formatClock = (moment: Date): string =>
   `${String(moment.getHours()).padStart(2, '0')}:${String(moment.getMinutes()).padStart(2, '0')}`;
 
-const CheckInCard = ({ dueItems }: CheckInCardProps) => {
+const CheckInCard = ({ dueItems, onAnswerYes, onAnswerNo }: CheckInCardProps) => {
   if (dueItems.length === 0) return null;
 
   return (
@@ -40,12 +42,16 @@ const CheckInCard = ({ dueItems }: CheckInCardProps) => {
                 <Button
                   variant="secondary"
                   size="sm"
-                  popoverTarget="finish-task-dialog"
+                  onClick={() => onAnswerNo(dueItem.id)}
                   aria-label={`No, I wasn’t on ${dueItem.title} since ${sinceLabel}`}
                 >
                   No
                 </Button>
-                <Button size="sm" aria-label={`Yes, I was on ${dueItem.title} since ${sinceLabel}`}>
+                <Button
+                  size="sm"
+                  onClick={() => onAnswerYes(dueItem.id)}
+                  aria-label={`Yes, I was on ${dueItem.title} since ${sinceLabel}`}
+                >
                   Yes
                 </Button>
               </div>

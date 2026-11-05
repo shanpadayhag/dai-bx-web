@@ -92,6 +92,25 @@ describe('splitAtMidnight', () => {
     });
   });
 
+  test('a night the clocks go back splits at local midnight with wall-clock minutes', () => {
+    const pieces = splitAtMidnight(
+      buildEvent('clock change', new Date(2026, 9, 31, 22), new Date(2026, 10, 1, 3)),
+      now,
+    );
+
+    expect(pieces).toHaveLength(2);
+    expect(pieces[0]).toMatchObject({
+      dayStart: new Date(2026, 9, 31),
+      startMinute: 22 * 60,
+      endMinute: 24 * 60,
+    });
+    expect(pieces[1]).toMatchObject({
+      dayStart: new Date(2026, 10, 1),
+      startMinute: 0,
+      endMinute: 3 * 60,
+    });
+  });
+
   test('an event ending exactly at midnight stays in its own day', () => {
     const pieces = splitAtMidnight(
       buildEvent('evening', localMoment(4, 22), localMoment(5, 0)),

@@ -4,6 +4,8 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { forgetAppearance } from '@/core/appearance';
 import SettingsPage from '@/features/settings/pages/settings-page';
+import TrackingProvider from '@/features/tracking/components/tracking-provider';
+import type TimeTrackingSettings from '@/features/tracking/entities/time-tracking-settings';
 import startBackendServer from '@/test-support/backend-server';
 import renderWithToaster from '@/test-support/render-with-toaster';
 
@@ -58,13 +60,35 @@ const storedCategories = [
   { id: 'category-studies', name: 'Studies', color: '#be7e86' },
 ];
 
+const storedTimeTrackingSettings: TimeTrackingSettings = {
+  checkInsEnabled: true,
+  checkInIntervalMinutes: 30,
+  firstCheckInMinutes: 30,
+  workingHoursStart: '16:00',
+  workingHoursEnd: '02:00',
+  trackedCategoryId: null,
+};
+
 let currentAccount = storedAccount;
+let currentTimeTrackingSettings = storedTimeTrackingSettings;
+let timeTrackingPatches: unknown[] = [];
 let currentSessions = storedSessions;
 
 beforeEach(() => {
   currentAccount = structuredClone(storedAccount);
   currentSessions = structuredClone(storedSessions);
+  currentTimeTrackingSettings = structuredClone(storedTimeTrackingSettings);
+  timeTrackingPatches = [];
   backendServer.use(
+    http.get('/backend/account/time-tracking', () =>
+      HttpResponse.json(currentTimeTrackingSettings),
+    ),
+    http.patch('/backend/account/time-tracking', async ({ request }) => {
+      const timeTrackingPatch = (await request.json()) as Partial<TimeTrackingSettings>;
+      timeTrackingPatches.push(timeTrackingPatch);
+      currentTimeTrackingSettings = { ...currentTimeTrackingSettings, ...timeTrackingPatch };
+      return HttpResponse.json(currentTimeTrackingSettings);
+    }),
     http.get('/backend/account', () => HttpResponse.json(currentAccount)),
     http.get('/backend/account/sessions', () => HttpResponse.json({ sessions: currentSessions })),
     http.get('/backend/categories', () => HttpResponse.json(storedCategories)),
@@ -541,4 +565,85 @@ test('deleting a category asks first, then removes it', async () => {
     expect(screen.queryByRole('textbox', { name: 'Rename Studies' })).not.toBeInTheDocument(),
   );
   expect(isDeleted).toBe(true);
+});
+
+test('the time tracking settings show what is saved, and each change saves', async () => {
+  const user = await openSettings();
+  const checkInSwitch = screen.getByRole('switch', { name: 'Check in on running items' });
+  expect(checkInSwitch).toHaveAttribute('aria-checked', 'true');
+  expect(screen.getByLabelText('Day ends')).toHaveValue('02:00');
+
+  await user.click(checkInSwitch);
+  await waitFor(() => expect(checkInSwitch).toHaveAttribute('aria-checked', 'false'));
+
+  const firstCheckInInput = screen.getByLabelText('First check-in with no estimate');
+  await user.clear(firstCheckInInput);
+  await user.type(firstCheckInInput, '45{Enter}');
+  await user.click(screen.getByRole('radio', { name: 'Studies' }));
+  fireEvent.change(screen.getByLabelText('Day starts'), { target: { value: '09:30' } });
+  fireEvent.blur(screen.getByLabelText('Day starts'));
+
+  await waitFor(() =>
+    expect(timeTrackingPatches).toEqual([
+      { checkInsEnabled: false },
+      { firstCheckInMinutes: 45 },
+      { trackedCategoryId: 'category-studies' },
+      { workingHoursStart: '09:30' },
+    ]),
+  );
+});
+
+test('a check-in gap outside 5 to 240 minutes is refused and put back', async () => {
+  const user = await openSettings();
+  const intervalInput = screen.getByLabelText('Check in every');
+
+  await user.clear(intervalInput);
+  await user.type(intervalInput, '300{Enter}');
+
+  expect(await screen.findByText('Check the minutes')).toBeInTheDocument();
+  expect(screen.getByLabelText('Check in every')).toHaveValue(30);
+  expect(timeTrackingPatches).toEqual([]);
+});
+
+test('a shorter check-in gap brings the next check-in forward', async () => {
+  vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 10, 5, 17, 45) });
+  backendServer.use(
+    http.get('/backend/tracking/running', () =>
+      HttpResponse.json([
+        {
+          id: 'changelog',
+          kind: 'tracked',
+          title: 'Write the changelog',
+          categoryId: null,
+          startsAt: new Date(2026, 10, 5, 17, 0).toISOString(),
+          endsAt: null,
+          finishedAt: null,
+          lastAnsweredAt: new Date(2026, 10, 5, 17, 20).toISOString(),
+          source: { kind: 'task', id: 'task-changelog', groupId: 'group-1' },
+          estimateMinutes: null,
+          sourceName: 'Today',
+        },
+      ]),
+    ),
+  );
+  try {
+    const user = userEvent.setup();
+    renderWithToaster(
+      <TrackingProvider>
+        <SettingsPage />
+      </TrackingProvider>,
+    );
+    await screen.findByText(/shan@daibx\.test/);
+    expect(screen.queryByRole('region', { name: 'Check-in' })).not.toBeInTheDocument();
+
+    const intervalInput = screen.getByLabelText('Check in every');
+    await user.clear(intervalInput);
+    await user.type(intervalInput, '15{Enter}');
+
+    expect(await screen.findByRole('region', { name: 'Check-in' })).toHaveTextContent(
+      'Were you on “Write the changelog” since 17:20?',
+    );
+  } finally {
+    vi.useRealTimers();
+  }
 });

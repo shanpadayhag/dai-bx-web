@@ -10,6 +10,7 @@ export type NewTask = {
 export type TaskChanges = {
   name?: string;
   estimateMinutes?: number | null;
+  renameEvents?: boolean;
 };
 
 export type MoveTarget = {

@@ -6,6 +6,8 @@ import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
 import Input from '@/core/components/atoms/input';
 import PopoverPanel from '@/core/components/molecules/popover-panel';
+import RenameEventsDialog from '@/core/components/organisms/rename-events-dialog';
+import type { RenameEventsAnswer, RenameEventsRequest } from '@/core/rename-events';
 import CardNotes from '@/features/board/components/card-notes';
 import CardPropertyField from '@/features/board/components/card-property-field';
 import { CARD_NOTES_MAX_CHARACTERS } from '@/features/board/actions/update-card-notes';
@@ -28,11 +30,24 @@ type CardDetailDialogProps = {
   onChangeDue: (cardId: string, dueDate: string | null, dueTime: string | null) => void;
   onSaveNotes: (cardId: string, notes: string) => Promise<boolean>;
   onOpenMoveCard: () => void;
+  isCardRunning: boolean;
+  runningListId: string;
+  onStartCard: (cardId: string) => void;
+  renameEventsDialogId: string;
+  renameRequest: RenameEventsRequest | null;
+  titleResetCount: number;
+  onAnswerRename: (renameAnswer: RenameEventsAnswer) => void;
 };
 
 const COMPLETE_DATE_PATTERN = /^[1-9]\d{3}-\d{2}-\d{2}$/;
 
-const CardDetailDialog = ({ cardDetail, ...contentProps }: CardDetailDialogProps) => (
+const CardDetailDialog = ({
+  cardDetail,
+  renameEventsDialogId,
+  renameRequest,
+  onAnswerRename,
+  ...contentProps
+}: CardDetailDialogProps) => (
   <PopoverPanel
     id={contentProps.dialogId}
     label="Card details"
@@ -41,10 +56,18 @@ const CardDetailDialog = ({ cardDetail, ...contentProps }: CardDetailDialogProps
     {cardDetail === null ? null : (
       <CardDetailContent key={cardDetail.card.id} cardDetail={cardDetail} {...contentProps} />
     )}
+    <RenameEventsDialog
+      id={renameEventsDialogId}
+      renameRequest={renameRequest}
+      onAnswer={onAnswerRename}
+    />
   </PopoverPanel>
 );
 
-type CardDetailContentProps = Omit<CardDetailDialogProps, 'cardDetail'> & {
+type CardDetailContentProps = Omit<
+  CardDetailDialogProps,
+  'cardDetail' | 'renameEventsDialogId' | 'renameRequest' | 'onAnswerRename'
+> & {
   cardDetail: CardDetail;
 };
 
@@ -62,6 +85,10 @@ const CardDetailContent = ({
   onChangeDue,
   onSaveNotes,
   onOpenMoveCard,
+  isCardRunning,
+  runningListId,
+  onStartCard,
+  titleResetCount,
 }: CardDetailContentProps) => {
   const { card, listName, notes, linkedTasks } = cardDetail;
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -98,7 +125,7 @@ const CardDetailContent = ({
             Card title
           </label>
           <textarea
-            key={`${card.id}-${card.title}`}
+            key={`${card.id}-${card.title}-${titleResetCount}`}
             id="card-title"
             rows={1}
             maxLength={500}
@@ -121,10 +148,30 @@ const CardDetailContent = ({
             className="-mx-1.5 field-sizing-content resize-none rounded-lg px-1.5 py-0.5 text-xl font-semibold tracking-[-0.01em] text-balance text-foreground transition-colors duration-150 hover:bg-surface focus-visible:bg-background focus-visible:ring-4 focus-visible:ring-primary/15 focus-visible:outline-none"
           />
         </div>
-        <Button size="sm" aria-label={`Start ${card.title}`} className="mt-0.5">
-          <Play className="fill-current" />
-          Start
-        </Button>
+        {isCardRunning ? (
+          <Button
+            key="running"
+            variant="secondary"
+            size="sm"
+            popoverTarget={runningListId}
+            aria-label={`${card.title} is running: show what’s running`}
+            className="mt-0.5 text-primary"
+          >
+            <span className="size-1.5 animate-pulse-dot rounded-full bg-primary" />
+            Running
+          </Button>
+        ) : (
+          <Button
+            key="start"
+            size="sm"
+            aria-label={`Start ${card.title}`}
+            className="mt-0.5"
+            onClick={() => onStartCard(card.id)}
+          >
+            <Play className="fill-current" />
+            Start
+          </Button>
+        )}
         <IconButton label="Close card" popoverTarget={dialogId} popoverTargetAction="hide">
           <X />
         </IconButton>

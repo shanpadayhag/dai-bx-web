@@ -6,6 +6,7 @@ import type MoveTarget from '@/features/tasks/entities/move-target';
 import type { OptimisticGroupTasks } from '@/features/tasks/entities/optimistic-group-tasks';
 import type TaskRecord from '@/features/tasks/entities/task-record';
 import type TaskGroup from '@/features/tasks/entities/task-group';
+import type PendingTaskRename from '@/features/tasks/entities/pending-task-rename';
 
 const useTasksStates = () => {
   const [taskGroups, setTaskGroups] = useState<readonly TaskGroup[] | null>(null);
@@ -17,6 +18,7 @@ const useTasksStates = () => {
   const [taskView, setTaskView] = useState<TaskView>('all');
   const [collapsedTaskIds, setCollapsedTaskIds] = useState<ReadonlySet<string>>(new Set());
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [pendingTaskRename, setPendingTaskRename] = useState<PendingTaskRename | null>(null);
   const [addingSubtaskToId, setAddingSubtaskToId] = useState<string | null>(null);
   const [deleteTargetTaskId, setDeleteTargetTaskId] = useState<string | null>(null);
   const [submittingDialogId, setSubmittingDialogId] = useState<string | null>(null);
@@ -42,6 +44,8 @@ const useTasksStates = () => {
     setCollapsedTaskIds,
     editingTaskId,
     setEditingTaskId,
+    pendingTaskRename,
+    setPendingTaskRename,
     addingSubtaskToId,
     setAddingSubtaskToId,
     deleteTargetTaskId,

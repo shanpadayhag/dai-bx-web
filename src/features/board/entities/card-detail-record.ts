@@ -5,6 +5,7 @@ type CardDetailRecord = {
   card: BoardCardRecord;
   notes: string;
   linkedTasks: LinkedTask[];
+  trackedEventCount: number;
 };
 
 export default CardDetailRecord;

@@ -8,6 +8,7 @@ type TaskRecord = {
   isDone: boolean;
   estimateMinutes: number | null;
   card: TaskCard | null;
+  trackedEventCount: number;
 };
 
 export default TaskRecord;

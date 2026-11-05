@@ -43,6 +43,16 @@ import {
 } from '@/features/settings/components/sessions-dialog';
 import type { IdentityProof, ProfileChanges } from '@/features/settings/entities/account';
 import type useSettingsStates from '@/features/settings/states/use-settings-states';
+import findTimeTrackingSettings from '@/features/tracking/actions/find-time-tracking-settings';
+import updateTimeTrackingSettings, {
+  readCheckInMinutes,
+  readClockTime,
+} from '@/features/tracking/actions/update-time-tracking-settings';
+import type { TimeTrackingChanges } from '@/features/tracking/entities/time-tracking-settings';
+import { useTracking } from '@/features/tracking/states/tracking-context';
+
+type CheckInMinutesField = 'checkInIntervalMinutes' | 'firstCheckInMinutes';
+type WorkingHoursField = 'workingHoursStart' | 'workingHoursEnd';
 
 const SIGN_IN_PATH = '/sign-in';
 const MARKETING_HOME_PATH = '/';
@@ -87,25 +97,97 @@ const useSettingsEvents = (states: ReturnType<typeof useSettingsStates>) => {
     setNewCategoryColor,
     setIsAddingCategory,
     setDeleteTargetCategoryId,
+    timeTrackingSettings,
+    setTimeTrackingSettings,
+    setTimeTrackingResetCount,
   } = states;
   const router = useRouter();
+  const { handleApplyTimeTrackingSettings } = useTracking();
 
   const handleLoadAccount = useCallback(async () => {
     setAccountLoadError(null);
     try {
-      const [loadedAccount, loadedSessions, loadedCategories] = await Promise.all([
-        findAccount(),
-        findAccountSessions(),
-        findCategories(),
-      ]);
+      const [loadedAccount, loadedSessions, loadedCategories, loadedTimeTrackingSettings] =
+        await Promise.all([
+          findAccount(),
+          findAccountSessions(),
+          findCategories(),
+          findTimeTrackingSettings(),
+        ]);
       setAccount(loadedAccount);
       setAccountSessions(loadedSessions);
       setCategories(loadedCategories);
+      setTimeTrackingSettings(loadedTimeTrackingSettings);
     } catch (accountError) {
       if (!(accountError instanceof AppError)) throw accountError;
       setAccountLoadError(accountError);
     }
-  }, [setAccount, setAccountSessions, setAccountLoadError, setCategories]);
+  }, [setAccount, setAccountSessions, setAccountLoadError, setCategories, setTimeTrackingSettings]);
+
+  const saveTimeTrackingChanges = useCallback(
+    async (timeTrackingChanges: TimeTrackingChanges) => {
+      if (timeTrackingSettings === null) return;
+      const previousSettings = timeTrackingSettings;
+      setTimeTrackingSettings({ ...previousSettings, ...timeTrackingChanges });
+      try {
+        const savedSettings = await updateTimeTrackingSettings({ timeTrackingChanges });
+        setTimeTrackingSettings(savedSettings);
+        handleApplyTimeTrackingSettings(savedSettings);
+      } catch (settingsError) {
+        setTimeTrackingSettings(previousSettings);
+        setTimeTrackingResetCount((resetCount) => resetCount + 1);
+        reportAppError(settingsError);
+      }
+    },
+    [
+      handleApplyTimeTrackingSettings,
+      setTimeTrackingResetCount,
+      setTimeTrackingSettings,
+      timeTrackingSettings,
+    ],
+  );
+
+  const refuseTimeTrackingInput = useCallback(
+    (inputError: unknown) => {
+      setTimeTrackingResetCount((resetCount) => resetCount + 1);
+      reportAppError(inputError);
+    },
+    [setTimeTrackingResetCount],
+  );
+
+  const handleToggleCheckIns = useCallback(() => {
+    if (timeTrackingSettings === null) return;
+    void saveTimeTrackingChanges({ checkInsEnabled: !timeTrackingSettings.checkInsEnabled });
+  }, [saveTimeTrackingChanges, timeTrackingSettings]);
+
+  const handleCommitCheckInMinutes = useCallback(
+    (minutesField: CheckInMinutesField, minutesText: string) => {
+      try {
+        const checkInMinutes = readCheckInMinutes(minutesText);
+        void saveTimeTrackingChanges({ [minutesField]: checkInMinutes });
+      } catch (minutesError) {
+        refuseTimeTrackingInput(minutesError);
+      }
+    },
+    [refuseTimeTrackingInput, saveTimeTrackingChanges],
+  );
+
+  const handleCommitWorkingHours = useCallback(
+    (hoursField: WorkingHoursField, clockText: string) => {
+      try {
+        const clockTime = readClockTime(clockText);
+        void saveTimeTrackingChanges({ [hoursField]: clockTime });
+      } catch (clockError) {
+        refuseTimeTrackingInput(clockError);
+      }
+    },
+    [refuseTimeTrackingInput, saveTimeTrackingChanges],
+  );
+
+  const handleSelectTrackedCategory = useCallback(
+    (categoryId: string | null) => void saveTimeTrackingChanges({ trackedCategoryId: categoryId }),
+    [saveTimeTrackingChanges],
+  );
 
   const saveProfileChanges = useCallback(
     async (profileChanges: ProfileChanges) => {
@@ -449,6 +531,10 @@ const useSettingsEvents = (states: ReturnType<typeof useSettingsStates>) => {
   ]);
 
   return {
+    handleToggleCheckIns,
+    handleCommitCheckInMinutes,
+    handleCommitWorkingHours,
+    handleSelectTrackedCategory,
     handleRenameCategory,
     handleRecolorCategory,
     handleAddCategory,

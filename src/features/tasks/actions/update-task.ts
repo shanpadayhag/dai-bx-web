@@ -7,6 +7,7 @@ type UpdateTaskParams = {
   taskId: string;
   taskName: string;
   estimateText: string;
+  renameEvents: boolean;
 };
 
 export type ReadTaskEdit = {
@@ -34,6 +35,7 @@ const updateTask = (params: UpdateTaskParams): Promise<GroupTasks> => {
   return backendTaskSource.update(params.taskId, {
     name: taskEdit.taskName,
     estimateMinutes: taskEdit.estimateMinutes,
+    renameEvents: params.renameEvents,
   });
 };
 

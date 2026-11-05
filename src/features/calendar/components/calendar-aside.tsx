@@ -1,4 +1,5 @@
 import { Layers } from 'lucide-react';
+import type { ComponentProps } from 'react';
 import { categoryColorStyle, type Category } from '@/core/category';
 import EventDetailPanel from '@/features/calendar/components/event-detail-panel';
 import type CalendarEvent from '@/features/calendar/entities/calendar-event';
@@ -18,26 +19,41 @@ const shapeLegendItems = [
   },
 ] as const;
 
-type CalendarAsideProps = {
+type PanelHandlers = Omit<
+  ComponentProps<typeof EventDetailPanel>,
+  'calendarEvent' | 'categories' | 'now'
+>;
+
+type CalendarAsideProps = PanelHandlers & {
+  panelId: string;
   categories: readonly Category[];
   selectedEvent: CalendarEvent | null;
   now: Date;
 };
 
-const CalendarAside = ({ categories, selectedEvent, now }: CalendarAsideProps) => (
+const CalendarAside = ({
+  panelId,
+  categories,
+  selectedEvent,
+  now,
+  ...panelHandlers
+}: CalendarAsideProps) => (
   <aside className="grid content-start gap-4">
-    {selectedEvent === null ? (
-      <p className="rounded-2xl border border-dashed border-border-strong p-4 text-[13px] text-muted-foreground">
-        Pick an event to see its details.
-      </p>
-    ) : (
-      <EventDetailPanel
-        key={selectedEvent.id}
-        calendarEvent={selectedEvent}
-        categories={categories}
-        now={now}
-      />
-    )}
+    <div id={panelId} className="grid scroll-mt-20">
+      {selectedEvent === null ? (
+        <p className="rounded-2xl border border-dashed border-border-strong p-4 text-[13px] text-muted-foreground">
+          Pick an event to see its details.
+        </p>
+      ) : (
+        <EventDetailPanel
+          key={`${selectedEvent.id}-${selectedEvent.startsAt.getTime()}-${selectedEvent.endsAt?.getTime() ?? 'running'}`}
+          calendarEvent={selectedEvent}
+          categories={categories}
+          now={now}
+          {...panelHandlers}
+        />
+      )}
+    </div>
     <section className="grid gap-4 rounded-2xl border border-border bg-background p-4 shadow-soft">
       <div className="grid gap-2.5">
         <h2 className="text-[13px] font-semibold text-foreground">Categories</h2>

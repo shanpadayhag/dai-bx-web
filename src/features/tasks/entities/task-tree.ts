@@ -6,6 +6,7 @@ const TOP_LEVEL_KEY = '';
 export const buildTaskTree = (
   taskRecords: readonly TaskRecord[],
   collapsedTaskIds: ReadonlySet<string>,
+  trackingTaskIds: ReadonlySet<string> = new Set(),
 ): Task[] => {
   const childRecordsByParentKey = new Map<string, TaskRecord[]>();
   for (const taskRecord of taskRecords) {
@@ -24,7 +25,7 @@ export const buildTaskTree = (
         name: taskRecord.name,
         isDone: taskRecord.isDone,
         isOpen: !collapsedTaskIds.has(taskRecord.id),
-        isTracking: false,
+        isTracking: taskRecord.parentId === null && trackingTaskIds.has(taskRecord.id),
         estimateMinutes: taskRecord.estimateMinutes,
         card: taskRecord.card,
         tasks: buildChildren(taskRecord.id),

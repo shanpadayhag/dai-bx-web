@@ -46,7 +46,7 @@ export const arrangeBoard = (boardRecord: BoardRecord): BoardContents => {
 };
 
 export const arrangeCardDetail = (
-  cardDetailRecord: CardDetailRecord,
+  cardDetailRecord: Omit<CardDetailRecord, 'trackedEventCount'>,
   boardRecord: BoardRecord,
 ): CardDetail | null => {
   const cardList = boardRecord.lists.find(

@@ -19,6 +19,7 @@ const serverGroupTasks: GroupTasks = {
       isDone: false,
       estimateMinutes: null,
       card: null,
+      trackedEventCount: 0,
     },
     {
       id: 'b',
@@ -28,6 +29,7 @@ const serverGroupTasks: GroupTasks = {
       isDone: false,
       estimateMinutes: null,
       card: null,
+      trackedEventCount: 0,
     },
   ],
   openCount: 2,

@@ -27,6 +27,8 @@ export type TaskRowCallbacks = {
   onStartAddingSubtask: (taskId: string) => void;
   onStartEditingTask: (taskId: string) => void;
   onRequestDeleteTask: (taskId: string) => void;
+  onStartTask: (taskId: string) => void;
+  runningListId: string;
 };
 
 type TaskRowProps = TaskRowCallbacks & {
@@ -42,6 +44,8 @@ const TaskRow = ({
   onRequestDeleteTask,
   onOpenTaskActions,
   onDropTask,
+  onStartTask,
+  runningListId,
 }: TaskRowProps) => {
   const [isDropTarget, setIsDropTarget] = useState(false);
   const hasSubtasks = task.tasks.length > 0;
@@ -132,10 +136,17 @@ const TaskRow = ({
           </span>
         ) : null}
         {task.isTracking ? (
-          <Badge tone="primary">
-            <span className="size-1.5 rounded-full bg-primary" />
-            Running
-          </Badge>
+          <button
+            type="button"
+            popoverTarget={runningListId}
+            aria-label={`${task.name} is running: show what’s running`}
+            className="rounded-md focus-visible:ring-4 focus-visible:ring-primary/25 focus-visible:outline-none"
+          >
+            <Badge tone="primary">
+              <span className="size-1.5 rounded-full bg-primary" />
+              Running
+            </Badge>
+          </button>
         ) : null}
         {task.estimateMinutes !== null && !task.isTracking ? (
           <span className="hidden font-mono text-xs text-muted-foreground tabular-nums sm:inline">
@@ -147,6 +158,7 @@ const TaskRow = ({
         {task.parentId === null && !task.isDone && !task.isTracking ? (
           <IconButton
             label={`Start ${task.name}`}
+            onClick={() => onStartTask(task.id)}
             className="text-primary hover:bg-primary-soft hover:text-primary-soft-foreground"
           >
             <Play className="fill-current" />

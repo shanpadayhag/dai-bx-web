@@ -3,6 +3,7 @@ import type AppError from '@/core/app-error';
 import type Board from '@/features/board/entities/board';
 import type CardDetailRecord from '@/features/board/entities/card-detail-record';
 import type { OptimisticBoard } from '@/features/board/entities/optimistic-board';
+import type PendingCardRename from '@/features/board/entities/pending-card-rename';
 
 const useBoardStates = () => {
   const [boards, setBoards] = useState<readonly Board[] | null>(null);
@@ -18,6 +19,8 @@ const useBoardStates = () => {
   const [deleteTargetOptionId, setDeleteTargetOptionId] = useState<string | null>(null);
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [openCardDetail, setOpenCardDetail] = useState<CardDetailRecord | null>(null);
+  const [pendingCardRename, setPendingCardRename] = useState<PendingCardRename | null>(null);
+  const [cardRenameCancelCount, setCardRenameCancelCount] = useState(0);
   const [moveDialogListId, setMoveDialogListId] = useState<string | null>(null);
   const [addressedCardId, setAddressedCardId] = useState<string | null>(null);
 
@@ -48,6 +51,10 @@ const useBoardStates = () => {
     setOpenCardId,
     openCardDetail,
     setOpenCardDetail,
+    pendingCardRename,
+    setPendingCardRename,
+    cardRenameCancelCount,
+    setCardRenameCancelCount,
     moveDialogListId,
     setMoveDialogListId,
     addressedCardId,

@@ -8,6 +8,7 @@ import {
   Square,
   Trash2,
 } from 'lucide-react';
+import { useState, type FormEvent } from 'react';
 import type { Category } from '@/core/category';
 import Badge from '@/core/components/atoms/badge';
 import Button from '@/core/components/atoms/button';
@@ -34,48 +35,75 @@ type EventDetailPanelProps = {
   calendarEvent: CalendarEvent;
   categories: readonly Category[];
   now: Date;
+  plannedFieldPrefix: string;
+  trackedFieldPrefix: string;
+  onSubmitPlannedEvent: (eventId: string, submitEvent: FormEvent<HTMLFormElement>) => void;
+  onSubmitTrackedTimes: (eventId: string, submitEvent: FormEvent<HTMLFormElement>) => void;
+  onSelectCategory: (eventId: string, categoryId: string | null) => void;
+  onDeleteEvent: (eventId: string) => void;
+  onFinishEvent: (eventId: string) => void;
 };
 
 const panelClassName = 'grid gap-4 rounded-2xl border border-border bg-background p-4 shadow-soft';
 
-const PlannedEventPanel = ({ calendarEvent, categories }: EventDetailPanelProps) => (
+const PlannedEventPanel = ({
+  calendarEvent,
+  categories,
+  plannedFieldPrefix,
+  onSubmitPlannedEvent,
+  onDeleteEvent,
+}: EventDetailPanelProps) => (
   <section aria-label="Planned event" className={panelClassName}>
-    <Badge className="justify-self-start">
-      <CalendarClock />
-      Planned
-    </Badge>
-    <Field label="Title" htmlFor="planned-event-title">
-      <Input id="planned-event-title" defaultValue={calendarEvent.title} maxLength={200} />
-    </Field>
-    <CategoryPicker
-      name="planned-event-category"
-      legend="Category"
-      categories={categories}
-      selectedCategoryId={calendarEvent.category?.id ?? null}
-    />
-    <DateTimeField
-      label="Starts"
-      idPrefix="planned-event-starts"
-      moment={calendarEvent.startsAt}
-      minuteStep={15}
-    />
-    <DateTimeField
-      label="Ends"
-      idPrefix="planned-event-ends"
-      moment={calendarEvent.endsAt}
-      minuteStep={15}
-    />
-    <div className="flex items-center justify-between gap-2 border-t border-border pt-4">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="text-danger hover:bg-danger-soft hover:text-danger"
-      >
-        <Trash2 />
-        Delete
-      </Button>
-      <Button size="sm">Save</Button>
-    </div>
+    <form
+      noValidate
+      className="grid gap-4"
+      onSubmit={(submitEvent) => onSubmitPlannedEvent(calendarEvent.id, submitEvent)}
+    >
+      <Badge className="justify-self-start">
+        <CalendarClock />
+        Planned
+      </Badge>
+      <Field label="Title" htmlFor={`${plannedFieldPrefix}-title`}>
+        <Input
+          id={`${plannedFieldPrefix}-title`}
+          name="title"
+          defaultValue={calendarEvent.title}
+          maxLength={200}
+        />
+      </Field>
+      <CategoryPicker
+        name={`${plannedFieldPrefix}-category`}
+        legend="Category"
+        categories={categories}
+        selectedCategoryId={calendarEvent.category?.id ?? null}
+      />
+      <DateTimeField
+        label="Starts"
+        idPrefix={`${plannedFieldPrefix}-starts`}
+        moment={calendarEvent.startsAt}
+        minuteStep={15}
+      />
+      <DateTimeField
+        label="Ends"
+        idPrefix={`${plannedFieldPrefix}-ends`}
+        moment={calendarEvent.endsAt}
+        minuteStep={15}
+      />
+      <div className="flex items-center justify-between gap-2 border-t border-border pt-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-danger hover:bg-danger-soft hover:text-danger"
+          onClick={() => onDeleteEvent(calendarEvent.id)}
+        >
+          <Trash2 />
+          Delete
+        </Button>
+        <Button type="submit" size="sm">
+          Save
+        </Button>
+      </div>
+    </form>
   </section>
 );
 
@@ -92,7 +120,13 @@ const SourceBadgeContent = ({ calendarEvent }: { calendarEvent: CalendarEvent })
     </>
   );
 
-const RunningEventPanel = ({ calendarEvent, categories, now }: EventDetailPanelProps) => (
+const RunningEventPanel = ({
+  calendarEvent,
+  categories,
+  now,
+  onSelectCategory,
+  onFinishEvent,
+}: EventDetailPanelProps) => (
   <section aria-label="Event being tracked" className={panelClassName}>
     <div className="flex flex-wrap gap-1.5">
       <Badge tone="primary">
@@ -120,17 +154,31 @@ const RunningEventPanel = ({ calendarEvent, categories, now }: EventDetailPanelP
       legend="Category"
       categories={categories}
       selectedCategoryId={calendarEvent.category?.id ?? null}
+      onSelectCategory={(categoryId) => onSelectCategory(calendarEvent.id, categoryId)}
     />
-    <Button size="sm" className="justify-self-start" popoverTarget="finish-task-dialog">
+    <Button
+      size="sm"
+      className="justify-self-start"
+      onClick={() => onFinishEvent(calendarEvent.id)}
+    >
       <Square className="fill-current" />
       Finish
     </Button>
   </section>
 );
 
-const TrackedEventPanel = ({ calendarEvent, categories, now }: EventDetailPanelProps) => {
+const TrackedEventPanel = ({
+  calendarEvent,
+  categories,
+  now,
+  trackedFieldPrefix,
+  onSubmitTrackedTimes,
+  onSelectCategory,
+  onDeleteEvent,
+}: EventDetailPanelProps) => {
   const trimmedMinutes = trimmedEventMinutes(calendarEvent);
   const finishedAt = calendarEvent.finishedAt;
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   return (
     <section aria-label="Tracked event" className={panelClassName}>
@@ -169,40 +217,66 @@ const TrackedEventPanel = ({ calendarEvent, categories, now }: EventDetailPanelP
         ) : null}
       </dl>
       <CategoryPicker
-        name="tracked-event-category"
+        name={`${trackedFieldPrefix}-category`}
         legend="Category"
         categories={categories}
         selectedCategoryId={calendarEvent.category?.id ?? null}
+        onSelectCategory={(categoryId) => onSelectCategory(calendarEvent.id, categoryId)}
       />
       <details className="group rounded-xl border border-border open:bg-surface/60">
         <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium text-foreground hover:bg-surface [&::-webkit-details-marker]:hidden">
           <PencilLine aria-hidden="true" className="size-4 text-muted-foreground" />
           Edit times
         </summary>
-        <div className="grid gap-3 px-3 pb-3">
+        <form
+          noValidate
+          className="grid gap-3 px-3 pb-3"
+          onSubmit={(submitEvent) => onSubmitTrackedTimes(calendarEvent.id, submitEvent)}
+        >
           <DateTimeField
             label="Started"
-            idPrefix="tracked-event-starts"
+            idPrefix={`${trackedFieldPrefix}-starts`}
             moment={calendarEvent.startsAt}
           />
           <DateTimeField
             label="Ended"
-            idPrefix="tracked-event-ends"
+            idPrefix={`${trackedFieldPrefix}-ends`}
             moment={calendarEvent.endsAt}
           />
-          <Button size="sm" className="justify-self-end">
+          <Button type="submit" size="sm" className="justify-self-end">
             Save times
           </Button>
-        </div>
+        </form>
       </details>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="justify-self-start text-danger hover:bg-danger-soft hover:text-danger"
-      >
-        <Trash2 />
-        Delete event
-      </Button>
+      {isConfirmingDelete ? (
+        <div
+          role="group"
+          aria-label="Delete this event?"
+          className="grid gap-2.5 rounded-xl border border-danger/30 bg-danger-soft/60 p-3"
+        >
+          <p className="text-[13px] text-foreground">
+            Delete this tracked event? The time it recorded goes with it.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setIsConfirmingDelete(false)}>
+              Keep it
+            </Button>
+            <Button variant="danger" size="sm" onClick={() => onDeleteEvent(calendarEvent.id)}>
+              Delete
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="justify-self-start text-danger hover:bg-danger-soft hover:text-danger"
+          onClick={() => setIsConfirmingDelete(true)}
+        >
+          <Trash2 />
+          Delete event
+        </Button>
+      )}
     </section>
   );
 };

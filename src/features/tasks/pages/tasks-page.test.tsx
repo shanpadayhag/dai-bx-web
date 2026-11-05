@@ -1,11 +1,14 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { GroupTasks } from '@/features/tasks/entities/group-tasks';
 import type TaskGroup from '@/features/tasks/entities/task-group';
 import type TaskRecord from '@/features/tasks/entities/task-record';
 import TasksPage from '@/features/tasks/pages/tasks-page';
+import TrackingPill from '@/features/tracking/components/tracking-pill';
+import TrackingProvider from '@/features/tracking/components/tracking-provider';
+import type RunningItemRecord from '@/features/tracking/entities/running-item-record';
 import startBackendServer from '@/test-support/backend-server';
 import renderWithToaster from '@/test-support/render-with-toaster';
 
@@ -29,6 +32,7 @@ const taskRecord = (
   isDone: false,
   estimateMinutes: null,
   card: null,
+  trackedEventCount: 0,
   ...overrides,
 });
 
@@ -248,7 +252,75 @@ test('editing a task saves its name and estimate', async () => {
   await user.click(screen.getByRole('button', { name: /Save/ }));
 
   expect(await screen.findByText('1h 30m')).toBeInTheDocument();
-  expect(receivedBody).toEqual({ name: 'Review it', estimateMinutes: 90 });
+  expect(receivedBody).toEqual({ name: 'Review it', estimateMinutes: 90, renameEvents: false });
+});
+
+describe('renaming a task with tracked time asks about its calendar events', () => {
+  let renameBodies: unknown[] = [];
+
+  beforeEach(() => {
+    renameBodies = [];
+    currentTasksByGroupId['group-today'] = todayTasks.map((task) =>
+      task.id === 'task-review' ? { ...task, trackedEventCount: 2 } : task,
+    );
+    backendServer.use(
+      http.patch('/backend/tasks/task-review', async ({ request }) => {
+        const renameBody = (await request.json()) as { name: string };
+        renameBodies.push(renameBody);
+        return answerWith(
+          (currentTasksByGroupId['group-today'] ?? []).map((task) =>
+            task.id === 'task-review' ? { ...task, name: renameBody.name } : task,
+          ),
+        );
+      }),
+    );
+  });
+
+  const renameReviewTask = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByRole('button', { name: 'Rename Review the check-in flow' }));
+    const nameInput = screen.getByRole('textbox', { name: 'Task name' });
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Review it');
+    await user.click(screen.getByRole('button', { name: /Save/ }));
+    return screen.getByRole('dialog', { name: 'Rename 2 calendar events too?' });
+  };
+
+  test('Rename all is focused and renames the events too', async () => {
+    const user = await openTasksPage();
+
+    const renameDialog = await renameReviewTask(user);
+    expect(within(renameDialog).getByText('“Review the check-in flow”')).toBeInTheDocument();
+    expect(within(renameDialog).getByRole('button', { name: 'Rename all' })).toHaveFocus();
+    await user.click(within(renameDialog).getByRole('button', { name: 'Rename all' }));
+
+    expect(await screen.findByText('Review it')).toBeInTheDocument();
+    expect(renameBodies).toEqual([
+      { name: 'Review it', estimateMinutes: null, renameEvents: true },
+    ]);
+  });
+
+  test('Keep old names renames only the task', async () => {
+    const user = await openTasksPage();
+
+    const renameDialog = await renameReviewTask(user);
+    await user.click(within(renameDialog).getByRole('button', { name: 'Keep old names' }));
+
+    expect(await screen.findByText('Review it')).toBeInTheDocument();
+    expect(renameBodies).toEqual([
+      { name: 'Review it', estimateMinutes: null, renameEvents: false },
+    ]);
+  });
+
+  test('Esc leaves the name as it was', async () => {
+    const user = await openTasksPage();
+
+    await renameReviewTask(user);
+    await user.keyboard('{Escape}');
+
+    expect(screen.getByText('Review the check-in flow')).toBeInTheDocument();
+    expect(screen.queryByText('Review it')).not.toBeInTheDocument();
+    expect(renameBodies).toEqual([]);
+  });
 });
 
 test('an estimate it cannot read is refused before anything is sent', async () => {
@@ -303,6 +375,81 @@ test('only top-level open tasks offer a start button', async () => {
   expect(
     screen.queryByRole('button', { name: 'Start Create the Supabase project' }),
   ).not.toBeInTheDocument();
+});
+
+test('Start runs a task, and finishing it with Mark it done completes it and its subtasks', async () => {
+  let runningRecords: RunningItemRecord[] = [];
+  let finishBody: unknown = null;
+  backendServer.use(
+    http.get('/backend/tracking/running', () => HttpResponse.json(runningRecords)),
+    http.get('/backend/account/time-tracking', () =>
+      HttpResponse.json({
+        checkInsEnabled: true,
+        checkInIntervalMinutes: 30,
+        firstCheckInMinutes: 30,
+        workingHoursStart: '16:00',
+        workingHoursEnd: '02:00',
+        trackedCategoryId: null,
+      }),
+    ),
+    http.post('/backend/tasks/:taskId/start', ({ params }) => {
+      const startedRecord: RunningItemRecord = {
+        id: 'event-plan',
+        kind: 'tracked',
+        title: 'Plan the backend',
+        categoryId: null,
+        startsAt: new Date().toISOString(),
+        endsAt: null,
+        finishedAt: null,
+        lastAnsweredAt: null,
+        source: { kind: 'task', id: String(params.taskId), groupId: 'group-today' },
+        estimateMinutes: null,
+        sourceName: 'Today',
+      };
+      runningRecords = [startedRecord];
+      return HttpResponse.json(startedRecord, { status: 201 });
+    }),
+    http.post('/backend/tracking/:eventId/finish', async ({ request }) => {
+      finishBody = await request.json();
+      const finishedTasks = todayTasks.map((task) =>
+        task.id === 'task-plan' || task.parentId === 'task-plan' ? { ...task, isDone: true } : task,
+      );
+      currentTasksByGroupId['group-today'] = finishedTasks;
+      runningRecords = [];
+      return HttpResponse.json({
+        event: { id: 'event-plan', endsAt: new Date().toISOString() },
+        groupTasks: groupTasksOf(todayGroup, finishedTasks),
+      });
+    }),
+  );
+  const user = userEvent.setup();
+  renderWithToaster(
+    <TrackingProvider>
+      <TrackingPill />
+      <TasksPage />
+    </TrackingProvider>,
+  );
+  await screen.findByText('Plan the backend');
+
+  await user.click(screen.getByRole('button', { name: 'Start Plan the backend' }));
+
+  expect(
+    await screen.findByRole('button', { name: 'Plan the backend is running: show what’s running' }),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Start Plan the backend' })).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: 'Finish Plan the backend' }));
+  await user.click(
+    within(screen.getByRole('dialog', { name: 'Finish Plan the backend' })).getByRole('button', {
+      name: 'Finish task',
+    }),
+  );
+
+  expect(await screen.findByText('1 open · 2 done')).toBeInTheDocument();
+  expect(finishBody).toMatchObject({ markDone: true });
+  expect(
+    within(taskRow('Plan the backend')).getByRole('checkbox', { name: /Plan the backend/ }),
+  ).toBeChecked();
 });
 
 test('creating a group sends its name and opens it', async () => {

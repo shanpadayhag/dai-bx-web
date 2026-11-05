@@ -39,6 +39,7 @@ import useBoardEvents, {
   NEW_PROPERTY_DIALOG_ID,
   PENDING_CARD_ID_PREFIX,
   PROPERTY_FORM_DIALOG_ID,
+  RENAME_CARD_EVENTS_DIALOG_ID,
   RENAME_LIST_DIALOG_ID,
 } from '@/features/board/events/use-board-events';
 import {
@@ -46,6 +47,8 @@ import {
   countCardsUsingProperty,
 } from '@/features/board/entities/property-use';
 import useBoardStates from '@/features/board/states/use-board-states';
+import { RUNNING_LIST_ID } from '@/features/tracking/events/use-tracking-events';
+import { useTracking } from '@/features/tracking/states/tracking-context';
 
 const isPendingCard = (cardId: string) => cardId.startsWith(PENDING_CARD_ID_PREFIX);
 
@@ -53,6 +56,7 @@ const BoardPage = () => {
   const states = useBoardStates();
   const events = useBoardEvents(states);
   const { handleLoadPage, handleOpenAddressedCard, shownBoard } = events;
+  const { runningSourceIds, handleStartCard } = useTracking();
 
   useEffect(() => {
     void handleLoadPage();
@@ -318,11 +322,20 @@ const BoardPage = () => {
         moveCardDialogId={MOVE_CARD_DIALOG_ID}
         deleteCardDialogId={DELETE_CARD_DIALOG_ID}
         now={now}
-        onRenameCard={events.handleRenameCard}
+        onRenameCard={(cardId, cardTitle) =>
+          events.handleRenameCard(cardId, cardTitle, runningSourceIds.has(cardId))
+        }
         onEnterValue={events.handleEnterCardValue}
         onChangeDue={events.handleChangeCardDue}
         onSaveNotes={events.handleSaveCardNotes}
         onOpenMoveCard={events.handleOpenMoveCard}
+        isCardRunning={openCardDetail !== null && runningSourceIds.has(openCardDetail.card.id)}
+        runningListId={RUNNING_LIST_ID}
+        onStartCard={handleStartCard}
+        renameEventsDialogId={RENAME_CARD_EVENTS_DIALOG_ID}
+        renameRequest={states.pendingCardRename?.renameRequest ?? null}
+        titleResetCount={states.cardRenameCancelCount}
+        onAnswerRename={events.handleAnswerCardRename}
       />
       <MoveCardDialog
         key={states.openCardId ?? 'none'}

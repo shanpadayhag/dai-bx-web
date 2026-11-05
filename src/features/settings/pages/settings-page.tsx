@@ -53,7 +53,7 @@ const SettingsPage = () => {
     />
   );
 
-  if (states.account === null) {
+  if (states.account === null || states.timeTrackingSettings === null) {
     return (
       <div className="mx-auto grid max-w-4xl gap-8">
         {header}
@@ -79,6 +79,8 @@ const SettingsPage = () => {
   }
 
   const account = states.account;
+  const timeTracking = states.timeTrackingSettings;
+  const { timeTrackingResetCount } = states;
   const hasFewRecoveryCodes = account.security.recoveryCodesRemaining <= LOW_RECOVERY_CODE_COUNT;
   const selectedThemeLabel =
     themeOptions.find((themeOption) => themeOption.theme === account.theme)?.label ?? 'System';
@@ -217,7 +219,13 @@ const SettingsPage = () => {
           <SettingRow
             title="Check in on running items"
             description="A card asks if you’re still on it once a task passes its estimate."
-            control={<Switch isOn label="Check in on running items" />}
+            control={
+              <Switch
+                isOn={timeTracking.checkInsEnabled}
+                label="Check in on running items"
+                onToggle={events.handleToggleCheckIns}
+              />
+            }
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
@@ -225,21 +233,37 @@ const SettingsPage = () => {
               htmlFor="check-in-interval"
               hint="After the first check-in, this repeats until you finish."
             >
-              <MinutesInput id="check-in-interval" defaultMinutes={30} />
+              <MinutesInput
+                key={`${timeTracking.checkInIntervalMinutes}-${timeTrackingResetCount}`}
+                id="check-in-interval"
+                defaultMinutes={timeTracking.checkInIntervalMinutes}
+                onCommitMinutes={(minutesText) =>
+                  events.handleCommitCheckInMinutes('checkInIntervalMinutes', minutesText)
+                }
+              />
             </Field>
             <Field
               label="First check-in with no estimate"
               htmlFor="first-check-in"
               hint="Used when a task has no estimate."
             >
-              <MinutesInput id="first-check-in" defaultMinutes={30} />
+              <MinutesInput
+                key={`${timeTracking.firstCheckInMinutes}-${timeTrackingResetCount}`}
+                id="first-check-in"
+                defaultMinutes={timeTracking.firstCheckInMinutes}
+                onCommitMinutes={(minutesText) =>
+                  events.handleCommitCheckInMinutes('firstCheckInMinutes', minutesText)
+                }
+              />
             </Field>
           </div>
           <CategoryPicker
+            key={`${timeTracking.trackedCategoryId ?? 'none'}-${timeTrackingResetCount}`}
             name="default-tracking-category"
             legend="Category for new tracked events"
             categories={states.categories}
-            selectedCategoryId={null}
+            selectedCategoryId={timeTracking.trackedCategoryId}
+            onSelectCategory={events.handleSelectTrackedCategory}
           />
         </SettingsSection>
         <SettingsSection
@@ -248,14 +272,35 @@ const SettingsPage = () => {
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Day starts" htmlFor="day-starts">
-              <Input id="day-starts" type="time" defaultValue="16:00" />
+              <Input
+                key={`${timeTracking.workingHoursStart}-${timeTrackingResetCount}`}
+                id="day-starts"
+                type="time"
+                defaultValue={timeTracking.workingHoursStart}
+                onBlur={(blurEvent) => {
+                  if (blurEvent.currentTarget.value === timeTracking.workingHoursStart) return;
+                  events.handleCommitWorkingHours(
+                    'workingHoursStart',
+                    blurEvent.currentTarget.value,
+                  );
+                }}
+              />
             </Field>
             <Field
               label="Day ends"
               htmlFor="day-ends"
               hint="Can end after midnight. The calendar opens at the start."
             >
-              <Input id="day-ends" type="time" defaultValue="02:00" />
+              <Input
+                key={`${timeTracking.workingHoursEnd}-${timeTrackingResetCount}`}
+                id="day-ends"
+                type="time"
+                defaultValue={timeTracking.workingHoursEnd}
+                onBlur={(blurEvent) => {
+                  if (blurEvent.currentTarget.value === timeTracking.workingHoursEnd) return;
+                  events.handleCommitWorkingHours('workingHoursEnd', blurEvent.currentTarget.value);
+                }}
+              />
             </Field>
           </div>
         </SettingsSection>

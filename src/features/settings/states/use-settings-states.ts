@@ -5,6 +5,7 @@ import type { AuthenticatorSetup } from '@/features/auth/entities/authenticator-
 import type { Account } from '@/features/settings/entities/account';
 import type { AccountSession } from '@/features/settings/entities/account-session';
 import { SUGGESTED_CATEGORY_COLORS } from '@/features/settings/components/category-list';
+import type TimeTrackingSettings from '@/features/tracking/entities/time-tracking-settings';
 
 const useSettingsStates = () => {
   const [account, setAccount] = useState<Account | null>(null);
@@ -21,6 +22,10 @@ const useSettingsStates = () => {
   const [newCategoryColor, setNewCategoryColor] = useState<string>(SUGGESTED_CATEGORY_COLORS[0]);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [deleteTargetCategoryId, setDeleteTargetCategoryId] = useState<Category['id'] | null>(null);
+  const [timeTrackingSettings, setTimeTrackingSettings] = useState<TimeTrackingSettings | null>(
+    null,
+  );
+  const [timeTrackingResetCount, setTimeTrackingResetCount] = useState(0);
 
   return {
     account,
@@ -47,6 +52,10 @@ const useSettingsStates = () => {
     setIsAddingCategory,
     deleteTargetCategoryId,
     setDeleteTargetCategoryId,
+    timeTrackingSettings,
+    setTimeTrackingSettings,
+    timeTrackingResetCount,
+    setTimeTrackingResetCount,
   };
 };
 
