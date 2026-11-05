@@ -15,6 +15,7 @@ const taskRecord = (
   isDone: false,
   estimateMinutes: null,
   card: null,
+  trackedEventCount: 0,
   ...overrides,
 });
 
@@ -65,4 +66,15 @@ test('carries done, estimate and the collapsed state onto each node', () => {
     isTracking: false,
   });
   expect(tree[0]?.tasks[0]).toMatchObject({ id: 'a1', isOpen: true });
+});
+
+test('marks a running top-level task as tracking', () => {
+  const tree = buildTaskTree(
+    [taskRecord('a', null, 0), taskRecord('a1', 'a', 0), taskRecord('b', null, 1)],
+    new Set(),
+    new Set(['a', 'a1']),
+  );
+
+  expect(tree.map((task) => task.isTracking)).toEqual([true, false]);
+  expect(tree[0]?.tasks[0]?.isTracking).toBe(false);
 });

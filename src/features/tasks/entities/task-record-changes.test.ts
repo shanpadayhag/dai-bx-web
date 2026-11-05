@@ -7,7 +7,16 @@ const taskRecord = (
   parentId: string | null,
   position: number,
   isDone = false,
-): TaskRecord => ({ id, parentId, position, name: id, isDone, estimateMinutes: null, card: null });
+): TaskRecord => ({
+  id,
+  parentId,
+  position,
+  name: id,
+  isDone,
+  estimateMinutes: null,
+  card: null,
+  trackedEventCount: 0,
+});
 
 const family: TaskRecord[] = [
   taskRecord('parent', null, 0),

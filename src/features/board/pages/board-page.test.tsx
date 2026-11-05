@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { toast } from 'sonner';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type Board from '@/features/board/entities/board';
 import type BoardRecord from '@/features/board/entities/board-record';
 import type { BoardCardRecord } from '@/features/board/entities/board-record';
@@ -14,6 +14,8 @@ import type CardDetailRecord from '@/features/board/entities/card-detail-record'
 import type CardPropertyValue from '@/features/board/entities/card-property-value';
 import BoardPropertyKind from '@/features/board/enums/board-property-kind';
 import BoardPage from '@/features/board/pages/board-page';
+import TrackingProvider from '@/features/tracking/components/tracking-provider';
+import type RunningItemRecord from '@/features/tracking/entities/running-item-record';
 import startBackendServer from '@/test-support/backend-server';
 import renderWithToaster from '@/test-support/render-with-toaster';
 
@@ -66,6 +68,8 @@ const studiesBoard: BoardRecord = {
 
 let serverBoards: BoardRecord[] = [];
 let serverNotes = new Map<string, string>();
+let serverTrackedEventCounts = new Map<string, number>();
+let cardPatches: CardPatch[] = [];
 
 const DEFAULT_NOTES = '## Outcome\nA calm week.\n';
 
@@ -146,6 +150,7 @@ type CardPatch = {
   notes?: string;
   dueDate?: string | null;
   dueTime?: string | null;
+  renameEvents?: boolean;
 };
 
 beforeEach(() => {
@@ -153,6 +158,8 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/board');
   serverBoards = [structuredClone(personalBoard), structuredClone(studiesBoard)];
   serverNotes = new Map();
+  serverTrackedEventCounts = new Map();
+  cardPatches = [];
   let createdCount = 0;
   backendServer.use(
     http.get('/backend/boards', () =>
@@ -239,11 +246,14 @@ beforeEach(() => {
         card: card as BoardCardRecord,
         notes: serverNotes.get(cardId) ?? DEFAULT_NOTES,
         linkedTasks: [],
+        trackedEventCount: serverTrackedEventCounts.get(cardId) ?? 0,
       };
       return HttpResponse.json(cardDetail);
     }),
     http.patch('/backend/cards/:cardId', async ({ params, request }) => {
-      const { notes, ...cardChanges } = (await request.json()) as CardPatch;
+      const cardPatch = (await request.json()) as CardPatch;
+      cardPatches.push(cardPatch);
+      const { notes, ...cardChanges } = cardPatch;
       const cardId = String(params.cardId);
       if (notes !== undefined) serverNotes.set(cardId, notes);
       return answerChange(boardHolding(holdsCard(cardId)), {
@@ -569,6 +579,110 @@ test('renaming a card from its title saves the new title', async () => {
       serverBoardOf('board-personal')?.cards.find((card) => card.id === 'card-plan')?.title,
     ).toBe('Plan next week'),
   );
+});
+
+describe('renaming a card with tracked time asks about its calendar events', () => {
+  beforeEach(() => {
+    serverTrackedEventCounts.set('card-plan', 1);
+  });
+
+  const renamePlanCard = async (user: ReturnType<typeof userEvent.setup>) => {
+    const cardDialog = await openCard(user, 'Plan the week');
+    const titleBox = within(cardDialog).getByRole('textbox', { name: 'Card title', hidden: true });
+    await user.clear(titleBox);
+    await user.type(titleBox, 'Plan next week{Enter}');
+    return {
+      cardDialog,
+      renameDialog: screen.getByRole('dialog', { name: 'Rename 1 calendar event too?' }),
+    };
+  };
+
+  test('Rename all renames its events too', async () => {
+    const user = await openBoardPage();
+    const { renameDialog } = await renamePlanCard(user);
+
+    expect(within(renameDialog).getByRole('button', { name: 'Rename all' })).toHaveFocus();
+    await user.click(within(renameDialog).getByRole('button', { name: 'Rename all' }));
+
+    expect(await within(column('Backlog')).findByText('Plan next week')).toBeInTheDocument();
+    expect(cardPatches).toEqual([{ title: 'Plan next week', renameEvents: true }]);
+  });
+
+  test('Keep old names renames only the card', async () => {
+    const user = await openBoardPage();
+    const { renameDialog } = await renamePlanCard(user);
+
+    await user.click(within(renameDialog).getByRole('button', { name: 'Keep old names' }));
+
+    expect(await within(column('Backlog')).findByText('Plan next week')).toBeInTheDocument();
+    expect(cardPatches).toEqual([{ title: 'Plan next week', renameEvents: false }]);
+  });
+
+  test('Esc puts the old title back', async () => {
+    const user = await openBoardPage();
+    const { cardDialog } = await renamePlanCard(user);
+
+    await user.keyboard('{Escape}');
+
+    expect(
+      within(cardDialog).getByRole('textbox', { name: 'Card title', hidden: true }),
+    ).toHaveValue('Plan the week');
+    expect(cardPatches).toEqual([]);
+  });
+});
+
+test('Start in the card detail runs the card and turns into Running', async () => {
+  let startedCardId: string | null = null;
+  backendServer.use(
+    http.get('/backend/tracking/running', () => HttpResponse.json([])),
+    http.get('/backend/account/time-tracking', () =>
+      HttpResponse.json({
+        checkInsEnabled: true,
+        checkInIntervalMinutes: 30,
+        firstCheckInMinutes: 30,
+        workingHoursStart: '16:00',
+        workingHoursEnd: '02:00',
+        trackedCategoryId: null,
+      }),
+    ),
+    http.post('/backend/cards/:cardId/start', ({ params }) => {
+      startedCardId = String(params.cardId);
+      const startedRecord: RunningItemRecord = {
+        id: 'event-plan',
+        kind: 'tracked',
+        title: 'Plan the week',
+        categoryId: null,
+        startsAt: new Date().toISOString(),
+        endsAt: null,
+        finishedAt: null,
+        lastAnsweredAt: null,
+        source: { kind: 'card', id: startedCardId, boardId: 'board-personal' },
+        estimateMinutes: null,
+        sourceName: 'Personal',
+      };
+      return HttpResponse.json(startedRecord, { status: 201 });
+    }),
+  );
+  const user = userEvent.setup();
+  renderWithToaster(
+    <TrackingProvider>
+      <BoardPage />
+    </TrackingProvider>,
+  );
+  await screen.findByText('Plan the week');
+  const cardDialog = await openCard(user, 'Plan the week');
+
+  await user.click(
+    within(cardDialog).getByRole('button', { name: 'Start Plan the week', hidden: true }),
+  );
+
+  expect(
+    await within(cardDialog).findByRole('button', {
+      name: 'Plan the week is running: show what’s running',
+      hidden: true,
+    }),
+  ).toBeInTheDocument();
+  expect(startedCardId).toBe('card-plan');
 });
 
 test('deleting a card says what goes with it and removes it', async () => {

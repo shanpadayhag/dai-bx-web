@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import AppError from '@/core/app-error';
 import readFormText from '@/core/form-text';
 import hidePopover from '@/core/popover';
+import { trackedEventCountOf, type RenameEventsAnswer } from '@/core/rename-events';
 import reportAppError from '@/core/report-app-error';
 import clearCardValue from '@/features/board/actions/clear-card-value';
 import createBoard, { readBoardName } from '@/features/board/actions/create-board';
@@ -65,6 +66,7 @@ export const CARD_DETAIL_DIALOG_ID = 'card-detail-dialog';
 export const MOVE_CARD_DIALOG_ID = 'move-card-dialog';
 export const DELETE_CARD_DIALOG_ID = 'delete-card-dialog';
 export const PENDING_CARD_ID_PREFIX = 'pending-card-';
+export const RENAME_CARD_EVENTS_DIALOG_ID = 'rename-card-events-dialog';
 const BOARD_PATH = '/board';
 const BOARD_QUERY_NAME = 'board';
 const CARD_QUERY_NAME = 'card';
@@ -138,6 +140,10 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     setOpenCardId,
     setOpenCardDetail,
     setMoveDialogListId,
+    openCardDetail,
+    pendingCardRename,
+    setPendingCardRename,
+    setCardRenameCancelCount,
   } = states;
   const router = useRouter();
   const lastWriteIdRef = useRef(0);
@@ -631,18 +637,57 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     }
   }, []);
 
+  const saveCardTitle = useCallback(
+    (cardId: string, cardTitle: string, renameEvents: boolean) =>
+      void runBoardWrite({ kind: 'updateCard', cardId, title: cardTitle }, () =>
+        renameCard({ cardId, cardTitle, renameEvents }),
+      ),
+    [runBoardWrite],
+  );
+
   const handleRenameCard = useCallback(
-    (cardId: string, enteredTitle: string) => {
+    (cardId: string, enteredTitle: string, isCardRunning: boolean) => {
       try {
         const cardTitle = readCardTitle(enteredTitle);
-        void runBoardWrite({ kind: 'updateCard', cardId, title: cardTitle }, () =>
-          renameCard({ cardId, cardTitle }),
-        );
+        const previousTitle = shownBoard?.cards.find(
+          (cardRecord) => cardRecord.id === cardId,
+        )?.title;
+        const eventCount =
+          openCardDetail?.card.id === cardId
+            ? trackedEventCountOf(openCardDetail.trackedEventCount, isCardRunning)
+            : 0;
+        if (previousTitle !== undefined && eventCount > 0) {
+          setPendingCardRename({
+            cardId,
+            cardTitle,
+            renameRequest: { eventCount, previousName: previousTitle, nextName: cardTitle },
+          });
+          showPopover(RENAME_CARD_EVENTS_DIALOG_ID);
+          return;
+        }
+        saveCardTitle(cardId, cardTitle, false);
       } catch (titleError) {
         reportAppError(titleError);
       }
     },
-    [runBoardWrite],
+    [openCardDetail, saveCardTitle, setPendingCardRename, shownBoard],
+  );
+
+  const handleAnswerCardRename = useCallback(
+    (renameAnswer: RenameEventsAnswer) => {
+      setPendingCardRename(null);
+      if (pendingCardRename === null) return;
+      if (renameAnswer === 'cancel') {
+        setCardRenameCancelCount((cancelCount) => cancelCount + 1);
+        return;
+      }
+      saveCardTitle(
+        pendingCardRename.cardId,
+        pendingCardRename.cardTitle,
+        renameAnswer === 'rename-all',
+      );
+    },
+    [pendingCardRename, saveCardTitle, setCardRenameCancelCount, setPendingCardRename],
   );
 
   const handleEnterCardValue = useCallback(
@@ -794,6 +839,7 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     handleOpenAddressedCard,
     handleCopyListForPlanning,
     handleRenameCard,
+    handleAnswerCardRename,
     handleEnterCardValue,
     handleChangeCardDue,
     handleSaveCardNotes,

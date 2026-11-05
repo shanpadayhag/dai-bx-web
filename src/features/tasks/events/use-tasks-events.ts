@@ -4,6 +4,7 @@ import { ApiError } from '@/core/api/api-error';
 import AppError from '@/core/app-error';
 import readFormText from '@/core/form-text';
 import hidePopover from '@/core/popover';
+import { trackedEventCountOf, type RenameEventsAnswer } from '@/core/rename-events';
 import reportAppError from '@/core/report-app-error';
 import addTask from '@/features/tasks/actions/add-task';
 import createTaskGroup from '@/features/tasks/actions/create-task-group';
@@ -48,6 +49,7 @@ export const DELETE_TASK_DIALOG_ID = 'delete-task-dialog';
 export const TASK_ACTIONS_MENU_ID = 'task-actions-menu';
 export const MOVE_TASK_DIALOG_ID = 'move-task-dialog';
 export const IMPORT_GROUP_DIALOG_ID = 'import-group-dialog';
+export const RENAME_TASK_EVENTS_DIALOG_ID = 'rename-task-events-dialog';
 const MAX_IMPORT_FILE_BYTES = 1024 * 1024;
 const TASKS_PATH = '/tasks';
 const GROUP_QUERY_NAME = 'group';
@@ -102,6 +104,8 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
     setTaskView,
     setCollapsedTaskIds,
     setEditingTaskId,
+    pendingTaskRename,
+    setPendingTaskRename,
     setAddingSubtaskToId,
     setDeleteTargetTaskId,
     setSubmittingDialogId,
@@ -249,6 +253,7 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
             isDone: false,
             estimateMinutes: null,
             card: null,
+            trackedEventCount: 0,
           },
         },
         () => addTask({ taskGroupId: selectedTaskGroupId, taskName: enteredName, parentTaskId }),
@@ -258,25 +263,72 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
     [runTaskWrite, selectedTaskGroupId, setAddingSubtaskToId, setCollapsedTaskIds],
   );
 
+  const saveTaskEdit = useCallback(
+    (taskId: string, enteredName: string, estimateText: string, renameEvents: boolean) => {
+      const taskEdit = readTaskEdit(enteredName, estimateText);
+      void runTaskWrite(
+        {
+          kind: 'update',
+          taskId,
+          taskName: taskEdit.taskName,
+          estimateMinutes: taskEdit.estimateMinutes,
+        },
+        () => updateTask({ taskId, taskName: enteredName, estimateText, renameEvents }),
+      );
+    },
+    [runTaskWrite],
+  );
+
   const handleSaveTaskEdit = useCallback(
-    (taskId: string, enteredName: string, estimateText: string) => {
+    (taskId: string, enteredName: string, estimateText: string, isTaskRunning: boolean) => {
       try {
         const taskEdit = readTaskEdit(enteredName, estimateText);
         setEditingTaskId(null);
-        void runTaskWrite(
-          {
-            kind: 'update',
-            taskId,
-            taskName: taskEdit.taskName,
-            estimateMinutes: taskEdit.estimateMinutes,
-          },
-          () => updateTask({ taskId, taskName: enteredName, estimateText }),
+        const editedRecord = optimisticGroupTasks?.confirmedGroupTasks.tasks.find(
+          (taskRecord) => taskRecord.id === taskId,
         );
+        const eventCount =
+          editedRecord === undefined
+            ? 0
+            : trackedEventCountOf(editedRecord.trackedEventCount, isTaskRunning);
+        if (
+          editedRecord !== undefined &&
+          eventCount > 0 &&
+          taskEdit.taskName !== editedRecord.name
+        ) {
+          setPendingTaskRename({
+            taskId,
+            enteredName,
+            estimateText,
+            renameRequest: {
+              eventCount,
+              previousName: editedRecord.name,
+              nextName: taskEdit.taskName,
+            },
+          });
+          showPopover(RENAME_TASK_EVENTS_DIALOG_ID);
+          return;
+        }
+        saveTaskEdit(taskId, enteredName, estimateText, false);
       } catch (editError) {
         reportAppError(editError);
       }
     },
-    [runTaskWrite, setEditingTaskId],
+    [optimisticGroupTasks, saveTaskEdit, setEditingTaskId, setPendingTaskRename],
+  );
+
+  const handleAnswerTaskRename = useCallback(
+    (renameAnswer: RenameEventsAnswer) => {
+      setPendingTaskRename(null);
+      if (pendingTaskRename === null || renameAnswer === 'cancel') return;
+      saveTaskEdit(
+        pendingTaskRename.taskId,
+        pendingTaskRename.enteredName,
+        pendingTaskRename.estimateText,
+        renameAnswer === 'rename-all',
+      );
+    },
+    [pendingTaskRename, saveTaskEdit, setPendingTaskRename],
   );
 
   const handleToggleTaskDone = useCallback(
@@ -630,7 +682,21 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
     ],
   );
 
+  const handleApplyFinishedGroupTasks = useCallback(
+    (finishedGroupTasks: GroupTasks) => {
+      refreshSidebarCounts(finishedGroupTasks);
+      setOptimisticGroupTasks((currentState) =>
+        currentState === null ||
+        currentState.confirmedGroupTasks.group.id !== finishedGroupTasks.group.id
+          ? currentState
+          : { ...currentState, confirmedGroupTasks: finishedGroupTasks },
+      );
+    },
+    [refreshSidebarCounts, setOptimisticGroupTasks],
+  );
+
   return {
+    handleApplyFinishedGroupTasks,
     handleOpenTaskActions,
     handleMoveTaskBy,
     handleDropTask,
@@ -643,6 +709,7 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
     handleSelectTaskGroup,
     handleAddTask,
     handleSaveTaskEdit,
+    handleAnswerTaskRename,
     handleToggleTaskDone,
     handleRequestDeleteTask,
     handleConfirmDeleteTask,

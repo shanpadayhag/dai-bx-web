@@ -8,6 +8,7 @@ import Input from '@/core/components/atoms/input';
 import EmptyState from '@/core/components/molecules/empty-state';
 import PageHeader from '@/core/components/molecules/page-header';
 import SegmentedControl from '@/core/components/molecules/segmented-control';
+import RenameEventsDialog from '@/core/components/organisms/rename-events-dialog';
 import DeleteGroupDialog from '@/features/tasks/components/delete-group-dialog';
 import DeleteTaskDialog from '@/features/tasks/components/delete-task-dialog';
 import EmptyGroupState from '@/features/tasks/components/empty-group-state';
@@ -28,9 +29,12 @@ import useTasksEvents, {
   IMPORT_GROUP_DIALOG_ID,
   MOVE_TASK_DIALOG_ID,
   NEW_GROUP_DIALOG_ID,
+  RENAME_TASK_EVENTS_DIALOG_ID,
   TASK_ACTIONS_MENU_ID,
 } from '@/features/tasks/events/use-tasks-events';
 import useTasksStates from '@/features/tasks/states/use-tasks-states';
+import { RUNNING_LIST_ID } from '@/features/tracking/events/use-tracking-events';
+import { useTracking } from '@/features/tracking/states/tracking-context';
 
 const TASK_VIEW_LABELS = { open: 'Open', all: 'All' } as const;
 const NEW_TASK_INPUT_ID = 'new-task-name';
@@ -40,9 +44,18 @@ const TasksPage = () => {
   const events = useTasksEvents(states);
   const { handleLoadPage } = events;
 
+  const { runningSourceIds, lastFinishedItem, handleStartTask } = useTracking();
+  const { handleApplyFinishedGroupTasks } = events;
+
   useEffect(() => {
     void handleLoadPage();
   }, [handleLoadPage]);
+
+  useEffect(() => {
+    if (lastFinishedItem?.groupTasks !== undefined) {
+      handleApplyFinishedGroupTasks(lastFinishedItem.groupTasks);
+    }
+  }, [handleApplyFinishedGroupTasks, lastFinishedItem]);
 
   const shownGroupTasks = useMemo(
     () =>
@@ -55,8 +68,8 @@ const TasksPage = () => {
       states.taskView === 'open'
         ? shownGroupTasks.tasks.filter((taskRecord) => !taskRecord.isDone)
         : shownGroupTasks.tasks;
-    return buildTaskTree(shownRecords, states.collapsedTaskIds);
-  }, [shownGroupTasks, states.collapsedTaskIds, states.taskView]);
+    return buildTaskTree(shownRecords, states.collapsedTaskIds, runningSourceIds);
+  }, [runningSourceIds, shownGroupTasks, states.collapsedTaskIds, states.taskView]);
 
   const selectedTaskGroup =
     states.taskGroups?.find((taskGroup) => taskGroup.id === states.selectedTaskGroupId) ?? null;
@@ -216,7 +229,14 @@ const TasksPage = () => {
               tasks={taskTree}
               editingTaskId={states.editingTaskId}
               addingSubtaskToId={states.addingSubtaskToId}
-              onSaveTaskEdit={events.handleSaveTaskEdit}
+              onSaveTaskEdit={(taskId, enteredName, estimateText) =>
+                events.handleSaveTaskEdit(
+                  taskId,
+                  enteredName,
+                  estimateText,
+                  runningSourceIds.has(taskId),
+                )
+              }
               onAddSubtask={(enteredName, parentTaskId) => {
                 events.handleAddTask(enteredName, parentTaskId);
               }}
@@ -228,10 +248,17 @@ const TasksPage = () => {
               onRequestDeleteTask={events.handleRequestDeleteTask}
               onOpenTaskActions={events.handleOpenTaskActions}
               onDropTask={events.handleDropTask}
+              onStartTask={handleStartTask}
+              runningListId={RUNNING_LIST_ID}
             />
           )}
         </section>
       </div>
+      <RenameEventsDialog
+        id={RENAME_TASK_EVENTS_DIALOG_ID}
+        renameRequest={states.pendingTaskRename?.renameRequest ?? null}
+        onAnswer={events.handleAnswerTaskRename}
+      />
       <DeleteTaskDialog
         dialogId={DELETE_TASK_DIALOG_ID}
         taskName={deleteTargetRecord?.name ?? null}

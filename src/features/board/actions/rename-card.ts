@@ -6,9 +6,13 @@ import type { BoardCardRecord } from '@/features/board/entities/board-record';
 type RenameCardParams = {
   cardId: BoardCardRecord['id'];
   cardTitle: string;
+  renameEvents: boolean;
 };
 
 const renameCard = (params: RenameCardParams): Promise<BoardRecord> =>
-  backendCardSource.update(params.cardId, { title: readCardTitle(params.cardTitle) });
+  backendCardSource.update(params.cardId, {
+    title: readCardTitle(params.cardTitle),
+    renameEvents: params.renameEvents,
+  });
 
 export default renameCard;

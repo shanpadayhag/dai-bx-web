@@ -3,16 +3,18 @@ import joinClassNames from '@/core/class-names';
 type SwitchProps = {
   isOn: boolean;
   label: string;
+  onToggle?: () => void;
 };
 
-const Switch = ({ isOn, label }: SwitchProps) => (
+const Switch = ({ isOn, label, onToggle }: SwitchProps) => (
   <button
     type="button"
     role="switch"
     aria-checked={isOn}
     aria-label={label}
+    onClick={onToggle}
     className={joinClassNames(
-      'relative inline-flex h-5.5 w-9.5 shrink-0 items-center rounded-full transition-colors duration-150',
+      'relative inline-flex h-5.5 w-9.5 shrink-0 items-center rounded-full transition-colors duration-150 focus-visible:ring-4 focus-visible:ring-primary/20 focus-visible:outline-none',
       isOn ? 'bg-primary' : 'bg-border-strong',
     )}
   >

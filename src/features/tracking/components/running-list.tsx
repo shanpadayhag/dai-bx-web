@@ -3,13 +3,15 @@ import type RunningItem from '@/features/tracking/entities/running-item';
 import { formatElapsed } from '@/features/tracking/entities/running-item';
 
 type RunningListProps = {
+  runningListId: string;
   runningItems: readonly RunningItem[];
   now: Date;
+  onFinish: (eventId: string) => void;
 };
 
-const RunningList = ({ runningItems, now }: RunningListProps) => (
+const RunningList = ({ runningListId, runningItems, now, onFinish }: RunningListProps) => (
   <div
-    id="running-list"
+    id={runningListId}
     popover="auto"
     role="dialog"
     aria-label="Running now"
@@ -38,7 +40,7 @@ const RunningList = ({ runningItems, now }: RunningListProps) => (
           </span>
           <button
             type="button"
-            popoverTarget="finish-task-dialog"
+            onClick={() => onFinish(runningItem.id)}
             aria-label={`Finish ${runningItem.title}`}
             className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-border-strong bg-background px-2.5 text-xs font-medium text-foreground shadow-soft transition-colors duration-150 hover:border-primary/40 hover:bg-surface"
           >

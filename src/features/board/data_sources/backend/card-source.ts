@@ -12,6 +12,7 @@ export type CardChanges = {
   notes?: string;
   dueDate?: string | null;
   dueTime?: string | null;
+  renameEvents?: boolean;
 };
 
 export type CardMoveTarget = {

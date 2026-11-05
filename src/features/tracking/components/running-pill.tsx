@@ -3,11 +3,13 @@ import type RunningItem from '@/features/tracking/entities/running-item';
 import { formatElapsed } from '@/features/tracking/entities/running-item';
 
 type RunningPillProps = {
+  runningListId: string;
   runningItems: readonly RunningItem[];
   now: Date;
+  onFinish: (eventId: string) => void;
 };
 
-const RunningPill = ({ runningItems, now }: RunningPillProps) => {
+const RunningPill = ({ runningListId, runningItems, now, onFinish }: RunningPillProps) => {
   const [newestItem] = runningItems;
   if (newestItem === undefined) return null;
   const otherItemCount = runningItems.length - 1;
@@ -16,7 +18,7 @@ const RunningPill = ({ runningItems, now }: RunningPillProps) => {
     <div className="flex h-9 items-center gap-1 rounded-[10px] border border-primary/25 bg-primary-soft pr-1 text-primary-soft-foreground">
       <button
         type="button"
-        popoverTarget="running-list"
+        popoverTarget={runningListId}
         aria-label={`${runningItems.length} running: show all`}
         className="flex h-full min-w-0 items-center gap-2 rounded-l-[10px] pr-1 pl-3 transition-colors duration-150 hover:bg-primary/8 focus-visible:outline-2 focus-visible:outline-primary"
       >
@@ -37,7 +39,7 @@ const RunningPill = ({ runningItems, now }: RunningPillProps) => {
       </button>
       <button
         type="button"
-        popoverTarget="finish-task-dialog"
+        onClick={() => onFinish(newestItem.id)}
         aria-label={`Finish ${newestItem.title}`}
         className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary-hover"
       >

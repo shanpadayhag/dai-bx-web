@@ -78,6 +78,7 @@ describe('arrangeCardDetail', () => {
     card: cardRecord('doing-card', 'doing', 0),
     notes: '## Outcome\n',
     linkedTasks: [],
+    trackedEventCount: 0,
   };
 
   test('names the list the card sits in', () => {

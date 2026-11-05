@@ -20,11 +20,13 @@ const DateTimeField = ({ label, idPrefix, moment, minuteStep }: DateTimeFieldPro
       <div className="grid gap-2 @[20rem]:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <Input
           id={`${idPrefix}-day`}
+          name={`${idPrefix}-day`}
           type="date"
           defaultValue={moment === null ? '' : dateInputValue(moment)}
         />
         <Input
           id={`${idPrefix}-time`}
+          name={`${idPrefix}-time`}
           type="time"
           step={minuteStep === undefined ? undefined : minuteStep * 60}
           aria-label={`${label} time`}

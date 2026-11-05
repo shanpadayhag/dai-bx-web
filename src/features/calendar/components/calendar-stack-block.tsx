@@ -1,5 +1,4 @@
 import { Layers } from 'lucide-react';
-import Link from 'next/link';
 import joinClassNames from '@/core/class-names';
 import EventKindDot from '@/features/calendar/components/event-kind-dot';
 import { isEventRunning } from '@/features/calendar/entities/calendar-event';
@@ -16,7 +15,7 @@ type CalendarStackBlockProps = {
   stackEntry: StackEntry;
   minuteHeight: number;
   selectedEventId: string | null;
-  hrefForEvent: (eventId: string) => string;
+  onSelectEvent: (eventId: string) => void;
 };
 
 const stackKindLabel = (eventKind: 'planned' | 'tracked', isRunning: boolean): string => {
@@ -28,7 +27,7 @@ const CalendarStackBlock = ({
   stackEntry,
   minuteHeight,
   selectedEventId,
-  hrefForEvent,
+  onSelectEvent,
 }: CalendarStackBlockProps) => {
   const popoverId = `${stackEntry.id}-popover`;
   const stackEvents = stackEntry.pieces.map((piece) => piece.event);
@@ -88,11 +87,13 @@ const CalendarStackBlock = ({
             const isRunning = isEventRunning(stackEvent);
             return (
               <li key={stackEvent.id}>
-                <Link
-                  href={hrefForEvent(stackEvent.id)}
-                  scroll={false}
+                <button
+                  type="button"
+                  popoverTarget={popoverId}
+                  popoverTargetAction="hide"
+                  onClick={() => onSelectEvent(stackEvent.id)}
                   aria-current={stackEvent.id === selectedEventId ? 'true' : undefined}
-                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2.5 rounded-lg px-2.5 py-2 transition-colors duration-150 hover:bg-surface focus-visible:outline-2 focus-visible:outline-primary aria-[current=true]:bg-primary-soft/60"
+                  className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2.5 rounded-lg px-2.5 py-2 text-left transition-colors duration-150 hover:bg-surface focus-visible:outline-2 focus-visible:outline-primary aria-[current=true]:bg-primary-soft/60"
                 >
                   <EventKindDot calendarEvent={stackEvent} />
                   <span className="grid min-w-0 gap-0.5">
@@ -107,7 +108,7 @@ const CalendarStackBlock = ({
                   <span className="font-mono text-xs text-muted-foreground tabular-nums">
                     {formatEventTimeRange(stackEvent)}
                   </span>
-                </Link>
+                </button>
               </li>
             );
           })}

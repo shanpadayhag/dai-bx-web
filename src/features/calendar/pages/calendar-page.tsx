@@ -1,106 +1,138 @@
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+'use client';
+
+import { ChevronLeft, ChevronRight, Plus, RotateCw, WifiOff } from 'lucide-react';
+import { useEffect, useMemo, useRef } from 'react';
 import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
+import EmptyState from '@/core/components/molecules/empty-state';
 import CalendarAside from '@/features/calendar/components/calendar-aside';
-import CalendarGrid, { type CalendarGridDay } from '@/features/calendar/components/calendar-grid';
+import CalendarGrid from '@/features/calendar/components/calendar-grid';
 import CalendarViewSwitch from '@/features/calendar/components/calendar-view-switch';
 import NewEventDialog from '@/features/calendar/components/new-event-dialog';
-import sampleCalendarSource from '@/features/calendar/data_sources/sample/calendar-source';
 import {
-  layoutDay,
-  splitAtMidnight,
-  startOfLocalDay,
-  type EventPiece,
-} from '@/features/calendar/entities/day-layout';
+  arrangeCalendarDays,
+  calendarTitle,
+  clockTextMinute,
+  visibleDayStarts,
+} from '@/features/calendar/entities/calendar-days';
+import { calendarEventFromRecord } from '@/features/calendar/entities/calendar-event-record';
+import useCalendarEvents, {
+  NEW_EVENT_DIALOG_ID,
+  NEW_EVENT_FIELD_PREFIX,
+  PLANNED_EVENT_FIELD_PREFIX,
+  TRACKED_EVENT_FIELD_PREFIX,
+} from '@/features/calendar/events/use-calendar-events';
+import useCalendarStates from '@/features/calendar/states/use-calendar-states';
+import { useTracking } from '@/features/tracking/states/tracking-context';
 
-type CalendarPageProps = {
-  view: 'day' | 'week';
-  selectedEventId: string | null;
-};
+const NOW_TICK_MILLIS = 30_000;
+const EVENT_PANEL_ID = 'calendar-event-panel';
+const SIDE_BY_SIDE_QUERY = '(min-width: 80rem)';
 
-const weekTitleFormat = new Intl.DateTimeFormat('en', { month: 'long', day: 'numeric' });
-const dayTitleFormat = new Intl.DateTimeFormat('en', {
-  weekday: 'long',
-  month: 'long',
-  day: 'numeric',
-});
+const CalendarPage = () => {
+  const states = useCalendarStates();
+  const events = useCalendarEvents(states);
+  const { handleLoadPage, handleTick, shownEventRecords, now } = events;
+  const { calendarView, anchorDay, categories, selectedEventId } = states;
 
-const dayKey = (dayStart: Date): string => dayStart.toDateString();
+  const { trackingRevision, handleOpenFinish } = useTracking();
+  const { handleReloadRange } = events;
+  const shownTrackingRevisionRef = useRef(trackingRevision);
 
-const visibleDayStarts = (view: 'day' | 'week', now: Date): Date[] => {
-  const todayStart = startOfLocalDay(now);
-  if (view === 'day') return [todayStart];
-  const mondayOffset = (todayStart.getDay() + 6) % 7;
-  return Array.from(
-    { length: 7 },
-    (_, dayIndex) =>
-      new Date(
-        todayStart.getFullYear(),
-        todayStart.getMonth(),
-        todayStart.getDate() - mondayOffset + dayIndex,
-      ),
-  );
-};
+  useEffect(() => {
+    void handleLoadPage();
+  }, [handleLoadPage]);
 
-const calendarTitle = (view: 'day' | 'week', dayStarts: readonly Date[]): string => {
-  const [firstDayStart] = dayStarts;
-  const lastDayStart = dayStarts.at(-1);
-  if (firstDayStart === undefined || lastDayStart === undefined) return '';
-  if (view === 'day') return dayTitleFormat.format(firstDayStart);
-  const lastDayLabel =
-    firstDayStart.getMonth() === lastDayStart.getMonth()
-      ? String(lastDayStart.getDate())
-      : weekTitleFormat.format(lastDayStart);
-  return `${weekTitleFormat.format(firstDayStart)} – ${lastDayLabel}`;
-};
+  useEffect(() => {
+    if (shownTrackingRevisionRef.current === trackingRevision) return;
+    shownTrackingRevisionRef.current = trackingRevision;
+    handleReloadRange();
+  }, [handleReloadRange, trackingRevision]);
 
-const CalendarPage = ({ view, selectedEventId }: CalendarPageProps) => {
-  const now = sampleCalendarSource.findNow();
-  const categories = sampleCalendarSource.findCategories();
-  const calendarEvents = sampleCalendarSource.findWeekEvents();
-  const dayStarts = visibleDayStarts(view, now);
-  const todayKey = dayKey(startOfLocalDay(now));
+  useEffect(() => {
+    const tickTimer = window.setInterval(handleTick, NOW_TICK_MILLIS);
+    return () => window.clearInterval(tickTimer);
+  }, [handleTick]);
 
-  const piecesByDayKey = new Map<string, EventPiece[]>();
-  for (const calendarEvent of calendarEvents) {
-    for (const eventPiece of splitAtMidnight(calendarEvent, now)) {
-      const pieceDayKey = dayKey(eventPiece.dayStart);
-      const dayPieces = piecesByDayKey.get(pieceDayKey) ?? [];
-      dayPieces.push(eventPiece);
-      piecesByDayKey.set(pieceDayKey, dayPieces);
+  useEffect(() => {
+    if (selectedEventId === null || window.matchMedia(SIDE_BY_SIDE_QUERY).matches) return;
+    const eventPanel = document.getElementById(EVENT_PANEL_ID);
+    if (eventPanel !== null && typeof eventPanel.scrollIntoView === 'function') {
+      eventPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  }, [selectedEventId]);
+
+  const calendarEvents = useMemo(() => {
+    const categoriesById = new Map(categories.map((category) => [category.id, category]));
+    return shownEventRecords.map((eventRecord) =>
+      calendarEventFromRecord(eventRecord, categoriesById),
+    );
+  }, [categories, shownEventRecords]);
+
+  const dayStarts = useMemo(
+    () => (anchorDay === null ? [] : visibleDayStarts(calendarView, anchorDay)),
+    [anchorDay, calendarView],
+  );
+
+  const calendarDays = useMemo(
+    () => arrangeCalendarDays(dayStarts, calendarEvents, now),
+    [calendarEvents, dayStarts, now],
+  );
+
+  if (states.optimisticCalendar === null || anchorDay === null) {
+    return (
+      <div className="grid gap-6">
+        {states.pageLoadError === null ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            Loading your calendar…
+          </p>
+        ) : (
+          <EmptyState
+            icon={<WifiOff />}
+            title={states.pageLoadError.title}
+            description={states.pageLoadError.description}
+            action={
+              <Button variant="secondary" onClick={() => void handleLoadPage()}>
+                <RotateCw />
+                Try again
+              </Button>
+            }
+          />
+        )}
+      </div>
+    );
   }
 
-  const gridDays: CalendarGridDay[] = dayStarts.map((dayStart) => ({
-    dayStart,
-    isToday: dayKey(dayStart) === todayKey,
-    layoutEntries: layoutDay(piecesByDayKey.get(dayKey(dayStart)) ?? []),
-  }));
+  const isDayView = calendarView === 'day';
   const selectedEvent =
     calendarEvents.find((calendarEvent) => calendarEvent.id === selectedEventId) ?? null;
-  const hrefForEvent = (eventId: string) => `/calendar?view=${view}&event=${eventId}`;
-  const isDayView = view === 'day';
 
   return (
     <div className="grid gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h1 className="mr-2 text-2xl font-semibold tracking-[-0.02em] text-foreground">
-            {calendarTitle(view, dayStarts)}
+            {calendarTitle(calendarView, dayStarts)}
           </h1>
-          <IconButton label={isDayView ? 'Previous day' : 'Previous week'}>
+          <IconButton
+            label={isDayView ? 'Previous day' : 'Previous week'}
+            onClick={() => events.handleStepRange(-1)}
+          >
             <ChevronLeft />
           </IconButton>
-          <IconButton label={isDayView ? 'Next day' : 'Next week'}>
+          <IconButton
+            label={isDayView ? 'Next day' : 'Next week'}
+            onClick={() => events.handleStepRange(1)}
+          >
             <ChevronRight />
           </IconButton>
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" onClick={events.handleShowToday}>
             Today
           </Button>
         </div>
         <div className="flex items-center gap-2">
-          <CalendarViewSwitch selectedView={view} />
-          <Button popoverTarget="new-event-dialog">
+          <CalendarViewSwitch selectedView={calendarView} onSelectView={events.handleSelectView} />
+          <Button onClick={() => events.handleOpenNewEvent(null)}>
             <Plus />
             New event
           </Button>
@@ -108,18 +140,43 @@ const CalendarPage = ({ view, selectedEventId }: CalendarPageProps) => {
       </header>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
         <CalendarGrid
-          gridDays={gridDays}
+          gridDays={calendarDays}
           now={now}
-          workingHoursStartMinute={sampleCalendarSource.findWorkingHoursStartMinute()}
+          workingHoursStartMinute={clockTextMinute(states.timeTrackingSettings?.workingHoursStart)}
           selectedEventId={selectedEventId}
-          hrefForEvent={hrefForEvent}
+          onSelectEvent={events.handleSelectEvent}
+          onDraftEvent={events.handleOpenNewEvent}
+          onRetimeEvent={(eventId, eventTimes) =>
+            void events.handleRetimePlannedEvent(eventId, eventTimes)
+          }
         />
-        <CalendarAside categories={categories} selectedEvent={selectedEvent} now={now} />
+        <CalendarAside
+          panelId={EVENT_PANEL_ID}
+          categories={categories}
+          selectedEvent={selectedEvent}
+          now={now}
+          plannedFieldPrefix={PLANNED_EVENT_FIELD_PREFIX}
+          trackedFieldPrefix={TRACKED_EVENT_FIELD_PREFIX}
+          onSubmitPlannedEvent={(eventId, submitEvent) =>
+            void events.handleSubmitPlannedEvent(eventId, submitEvent)
+          }
+          onSubmitTrackedTimes={(eventId, submitEvent) =>
+            void events.handleSubmitTrackedTimes(eventId, submitEvent)
+          }
+          onSelectCategory={(eventId, categoryId) =>
+            void events.handleSelectEventCategory(eventId, categoryId)
+          }
+          onDeleteEvent={(eventId) => void events.handleDeleteEvent(eventId)}
+          onFinishEvent={handleOpenFinish}
+        />
       </div>
       <NewEventDialog
+        dialogId={NEW_EVENT_DIALOG_ID}
+        fieldPrefix={NEW_EVENT_FIELD_PREFIX}
         categories={categories}
-        defaultStartsAt={new Date(now.getFullYear(), now.getMonth(), now.getDate(), 19)}
-        defaultEndsAt={new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20)}
+        draftTimes={states.newEventDraft}
+        isSaving={states.isSavingNewEvent}
+        onSubmit={(submitEvent) => void events.handleSubmitNewEvent(submitEvent)}
       />
     </div>
   );

@@ -16,11 +16,22 @@ window.matchMedia ??= vi.fn((mediaQuery: string) => ({
 }));
 
 if (typeof HTMLElement.prototype.showPopover !== 'function') {
+  const announceToggle = (popoverElement: HTMLElement, newState: 'open' | 'closed') =>
+    popoverElement.dispatchEvent(
+      Object.assign(new Event('toggle'), {
+        newState,
+        oldState: newState === 'open' ? 'closed' : 'open',
+      }),
+    );
   HTMLElement.prototype.showPopover = function showPopover(this: HTMLElement) {
+    if (this.style.display === 'block') return;
     this.style.display = 'block';
+    announceToggle(this, 'open');
   };
   HTMLElement.prototype.hidePopover = function hidePopover(this: HTMLElement) {
+    if (this.style.display !== 'block') return;
     this.style.display = '';
+    announceToggle(this, 'closed');
   };
   HTMLElement.prototype.togglePopover = function togglePopover(this: HTMLElement) {
     const isOpen = this.style.display === 'block';
@@ -39,5 +50,15 @@ if (typeof HTMLElement.prototype.showPopover !== 'function') {
     if (triggerAction === 'show') targetPopover.showPopover();
     else if (triggerAction === 'hide') targetPopover.hidePopover();
     else targetPopover.togglePopover();
+  });
+  document.addEventListener('keydown', (keyEvent) => {
+    if (keyEvent.key !== 'Escape') return;
+    if (keyEvent.target instanceof Element && keyEvent.target.matches('input, textarea, select')) {
+      return;
+    }
+    const openPopovers = [...document.querySelectorAll<HTMLElement>('[popover]')].filter(
+      (popoverElement) => popoverElement.style.display === 'block',
+    );
+    openPopovers.at(-1)?.hidePopover();
   });
 }

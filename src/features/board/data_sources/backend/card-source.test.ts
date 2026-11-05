@@ -65,6 +65,7 @@ test("reads a card's detail", async () => {
     },
     notes: '## Outcome\n',
     linkedTasks: [],
+    trackedEventCount: 0,
   };
   backendServer.use(http.get('/backend/cards/c1', () => HttpResponse.json(cardDetailRecord)));
 
