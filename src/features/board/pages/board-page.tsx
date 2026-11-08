@@ -6,7 +6,9 @@ import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
 import EmptyState from '@/core/components/molecules/empty-state';
 import PageHeader from '@/core/components/molecules/page-header';
+import { deviceTimeZone } from '@/core/time-zone';
 import BoardColumn from '@/features/board/components/board-column';
+import sampleCardScheduleSource from '@/features/board/data_sources/sample/card-schedule-source';
 import BoardNameDialog from '@/features/board/components/board-name-dialog';
 import BoardSettingsDialog from '@/features/board/components/board-settings-dialog';
 import BoardSwitcher from '@/features/board/components/board-switcher';
@@ -135,6 +137,8 @@ const BoardPage = () => {
 
   const { board, lists, properties } = boardContents;
   const now = new Date();
+  const calendarTimeZone = deviceTimeZone();
+  const nextMoves = sampleCardScheduleSource.findNextMoves(lists, now);
   const cardCount = shownBoard.cards.length;
   const renameTargetList = lists.find((boardList) => boardList.id === states.renameTargetListId);
   const deleteTargetList = lists.find((boardList) => boardList.id === states.deleteTargetListId);
@@ -210,6 +214,7 @@ const BoardPage = () => {
                 onMoveListBy={events.handleMoveListBy}
                 onDeleteList={events.handleStartDeleteList}
                 onCopyListForPlanning={(listId) => void events.handleCopyListForPlanning(listId)}
+                nextMoves={nextMoves}
               />
             ))}
             <button
@@ -336,6 +341,10 @@ const BoardPage = () => {
         renameRequest={states.pendingCardRename?.renameRequest ?? null}
         titleResetCount={states.cardRenameCancelCount}
         onAnswerRename={events.handleAnswerCardRename}
+        lists={lists}
+        cardSchedules={sampleCardScheduleSource.findSchedules(lists, now, calendarTimeZone)}
+        scheduleCategories={sampleCardScheduleSource.categories}
+        calendarTimeZone={calendarTimeZone}
       />
       <MoveCardDialog
         key={states.openCardId ?? 'none'}

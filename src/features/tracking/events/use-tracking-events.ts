@@ -1,6 +1,6 @@
 import { useCallback, useMemo, type FormEvent } from 'react';
 import readFormText from '@/core/form-text';
-import hidePopover from '@/core/popover';
+import hidePopover, { showPopover } from '@/core/popover';
 import reportAppError from '@/core/report-app-error';
 import { readFormMoment } from '@/features/calendar/entities/form-moment';
 import checkInRunningItem from '@/features/tracking/actions/check-in-running-item';
@@ -22,12 +22,6 @@ export const RUNNING_LIST_ID = 'running-list';
 export const FINISH_END_FIELD_PREFIX = 'finish-end';
 export const FINISH_END_CHOICE_FIELD = 'end-choice';
 export const FINISH_MARK_DONE_FIELD = 'mark-done';
-
-const showPopover = (popoverId: string) => {
-  const popoverElement = document.getElementById(popoverId);
-  if (popoverElement === null || typeof popoverElement.showPopover !== 'function') return;
-  if (!popoverElement.matches(':popover-open')) popoverElement.showPopover();
-};
 
 const withoutId = (sourceIds: ReadonlySet<string>, sourceId: string): ReadonlySet<string> => {
   const remainingIds = new Set(sourceIds);

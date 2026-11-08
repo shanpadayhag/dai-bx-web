@@ -1,8 +1,15 @@
 import type { Category } from '@/core/category';
+import type { RepeatRule } from '@/core/repeat-rule';
 
 type CalendarEventKind = 'planned' | 'tracked';
 
 type CalendarEventSource = { kind: 'task' | 'card' };
+
+type CalendarEventSeries = {
+  id: string;
+  originalStart: Date;
+  repeatRule: RepeatRule;
+};
 
 type CalendarEvent = {
   id: string;
@@ -13,6 +20,8 @@ type CalendarEvent = {
   endsAt: Date | null;
   finishedAt: Date | null;
   source: CalendarEventSource | null;
+  series?: CalendarEventSeries;
+  timeZone?: string;
 };
 
 const isEventRunning = (calendarEvent: CalendarEvent): boolean =>
@@ -26,6 +35,6 @@ const trimmedEventMinutes = (calendarEvent: CalendarEvent): number =>
         Math.round((calendarEvent.finishedAt.getTime() - calendarEvent.endsAt.getTime()) / 60_000),
       );
 
-export type { CalendarEventKind };
+export type { CalendarEventKind, CalendarEventSeries };
 export { isEventRunning, trimmedEventMinutes };
 export default CalendarEvent;

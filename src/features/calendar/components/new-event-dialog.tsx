@@ -1,10 +1,14 @@
 import type { FormEvent } from 'react';
 import type { Category } from '@/core/category';
+import localCalendarDate from '@/core/local-date';
 import Button from '@/core/components/atoms/button';
 import Input from '@/core/components/atoms/input';
 import CategoryPicker from '@/core/components/molecules/category-picker';
 import Field from '@/core/components/molecules/field';
+import MoreOptions from '@/core/components/molecules/more-options';
 import PopoverPanel from '@/core/components/molecules/popover-panel';
+import TimeZoneField from '@/core/components/molecules/time-zone-field';
+import RepeatPicker from '@/core/components/organisms/repeat-picker';
 import DateTimeField from '@/features/calendar/components/date-time-field';
 import type { EventTimes } from '@/features/calendar/entities/calendar-drag';
 
@@ -14,6 +18,8 @@ type NewEventDialogProps = {
   categories: readonly Category[];
   draftTimes: EventTimes | null;
   isSaving: boolean;
+  calendarTimeZone: string;
+  now: Date;
   onSubmit: (submitEvent: FormEvent<HTMLFormElement>) => void;
 };
 
@@ -23,6 +29,8 @@ const NewEventDialog = ({
   categories,
   draftTimes,
   isSaving,
+  calendarTimeZone,
+  now,
   onSubmit,
 }: NewEventDialogProps) => (
   <PopoverPanel id={dialogId} label="New event">
@@ -56,6 +64,22 @@ const NewEventDialog = ({
           minuteStep={15}
         />
       </div>
+      <RepeatPicker
+        idPrefix={`${fieldPrefix}-repeat`}
+        name="repeat"
+        firstDate={localCalendarDate(draftTimes?.startsAt ?? now)}
+        initialRule={null}
+      />
+      <MoreOptions>
+        <TimeZoneField
+          id={`${fieldPrefix}-time-zone`}
+          name="timeZone"
+          label="Time zone"
+          hint="The event keeps its time in this zone, even across daylight saving."
+          selectedTimeZone={calendarTimeZone}
+          now={now}
+        />
+      </MoreOptions>
       <div className="flex justify-end gap-2">
         <Button variant="ghost" popoverTarget={dialogId} popoverTargetAction="hide">
           Cancel

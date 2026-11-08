@@ -21,7 +21,7 @@ const shapeLegendItems = [
 
 type PanelHandlers = Omit<
   ComponentProps<typeof EventDetailPanel>,
-  'calendarEvent' | 'categories' | 'now'
+  'calendarEvent' | 'categories' | 'now' | 'calendarTimeZone'
 >;
 
 type CalendarAsideProps = PanelHandlers & {
@@ -29,6 +29,7 @@ type CalendarAsideProps = PanelHandlers & {
   categories: readonly Category[];
   selectedEvent: CalendarEvent | null;
   now: Date;
+  calendarTimeZone: string;
 };
 
 const CalendarAside = ({
@@ -36,6 +37,7 @@ const CalendarAside = ({
   categories,
   selectedEvent,
   now,
+  calendarTimeZone,
   ...panelHandlers
 }: CalendarAsideProps) => (
   <aside className="grid content-start gap-4">
@@ -50,6 +52,7 @@ const CalendarAside = ({
           calendarEvent={selectedEvent}
           categories={categories}
           now={now}
+          calendarTimeZone={calendarTimeZone}
           {...panelHandlers}
         />
       )}

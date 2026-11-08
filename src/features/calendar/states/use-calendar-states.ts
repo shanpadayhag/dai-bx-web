@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type AppError from '@/core/app-error';
 import type { Category } from '@/core/category';
+import type { OccurrenceScopeRequest } from '@/core/occurrence-scope';
 import type { CalendarView } from '@/features/calendar/entities/calendar-address';
 import type { EventTimes } from '@/features/calendar/entities/calendar-drag';
 import type { OptimisticCalendar } from '@/features/calendar/entities/optimistic-calendar';
@@ -18,6 +19,8 @@ const useCalendarStates = () => {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [newEventDraft, setNewEventDraft] = useState<EventTimes | null>(null);
   const [isSavingNewEvent, setIsSavingNewEvent] = useState(false);
+  const [occurrenceScopeRequest, setOccurrenceScopeRequest] =
+    useState<OccurrenceScopeRequest | null>(null);
   const [now, setNow] = useState(() => new Date());
 
   return {
@@ -39,6 +42,8 @@ const useCalendarStates = () => {
     setNewEventDraft,
     isSavingNewEvent,
     setIsSavingNewEvent,
+    occurrenceScopeRequest,
+    setOccurrenceScopeRequest,
     now,
     setNow,
   };

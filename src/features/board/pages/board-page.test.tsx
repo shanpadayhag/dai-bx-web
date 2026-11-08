@@ -409,7 +409,9 @@ const column = (listName: string) => screen.getByRole('region', { name: listName
 const cardTitlesIn = (listName: string) =>
   within(column(listName))
     .queryAllByRole('listitem')
-    .map((cardItem) => cardItem.textContent?.replace(/Tasks done: \d+\/\d+$/, ''));
+    .map((cardItem) =>
+      cardItem.textContent?.replace(/Moves to .*$/, '').replace(/Tasks done: \d+\/\d+$/, ''),
+    );
 
 const listNames = () =>
   screen.getAllByRole('heading', { level: 2 }).map((listHeading) => listHeading.textContent);
@@ -683,6 +685,19 @@ test('Start in the card detail runs the card and turns into Running', async () =
     }),
   ).toBeInTheDocument();
   expect(startedCardId).toBe('card-plan');
+});
+
+test('Add schedule fills in the schedule form only once it is opened', async () => {
+  const user = await openBoardPage();
+  const cardDialog = await openCard(user, 'Plan the week');
+  expect(screen.queryByLabelText('Move to')).not.toBeInTheDocument();
+
+  await user.click(within(cardDialog).getByRole('button', { name: 'Add schedule', hidden: true }));
+
+  const scheduleDialog = screen.getByRole('dialog', { name: 'Add schedule', hidden: true });
+  expect(within(scheduleDialog).getByText('Plan the week')).toBeInTheDocument();
+  expect(within(scheduleDialog).getByLabelText('Move to')).toBeInTheDocument();
+  expect(within(scheduleDialog).getByLabelText('Time zone')).toBeInTheDocument();
 });
 
 test('deleting a card says what goes with it and removes it', async () => {

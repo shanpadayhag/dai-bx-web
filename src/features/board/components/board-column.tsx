@@ -13,6 +13,7 @@ import CardComposer from '@/features/board/components/card-composer';
 import ListActionsMenu from '@/features/board/components/list-actions-menu';
 import type BoardList from '@/features/board/entities/board-list';
 import type BoardProperty from '@/features/board/entities/board-property';
+import type { ScheduledCardMove } from '@/features/board/entities/card-schedule';
 
 type BoardColumnProps = {
   boardList: BoardList;
@@ -34,6 +35,7 @@ type BoardColumnProps = {
   onMoveListBy: (listId: string, positionStep: number) => void;
   onDeleteList: (listId: string) => void;
   onCopyListForPlanning: (listId: string) => void;
+  nextMoves: readonly ScheduledCardMove[];
 };
 
 const BoardColumn = ({
@@ -56,6 +58,7 @@ const BoardColumn = ({
   onMoveListBy,
   onDeleteList,
   onCopyListForPlanning,
+  nextMoves,
 }: BoardColumnProps) => {
   const [dropKind, setDropKind] = useState<'card' | 'list' | null>(null);
   const listMenuId = `list-actions-menu-${boardList.id}`;
@@ -142,6 +145,7 @@ const BoardColumn = ({
                 properties={properties}
                 isPending={isPendingCard(card.id)}
                 now={now}
+                nextMove={nextMoves.find((nextMove) => nextMove.cardId === card.id) ?? null}
                 onOpenCard={onOpenCard}
                 onDropCard={(draggedCardId) => onDropCard(draggedCardId, boardList.id, cardIndex)}
               />

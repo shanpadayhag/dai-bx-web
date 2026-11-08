@@ -3,7 +3,7 @@ import { useCallback, useMemo, useRef, type FormEvent } from 'react';
 import { ApiError } from '@/core/api/api-error';
 import AppError from '@/core/app-error';
 import readFormText from '@/core/form-text';
-import hidePopover from '@/core/popover';
+import hidePopover, { showPopover } from '@/core/popover';
 import { trackedEventCountOf, type RenameEventsAnswer } from '@/core/rename-events';
 import reportAppError from '@/core/report-app-error';
 import addTask from '@/features/tasks/actions/add-task';
@@ -70,12 +70,6 @@ const countSiblings = (
   taskRecords.filter(
     (taskRecord) => taskRecord.parentId === parentTaskId && taskRecord.id !== excludedTaskId,
   ).length;
-
-const showPopover = (popoverId: string) => {
-  const popoverElement = document.getElementById(popoverId);
-  if (popoverElement === null || typeof popoverElement.showPopover !== 'function') return;
-  if (!popoverElement.matches(':popover-open')) popoverElement.showPopover();
-};
 
 const pickStartingGroupId = (taskGroups: readonly TaskGroup[]) => {
   const isKnownGroup = (taskGroupId: string | null) =>

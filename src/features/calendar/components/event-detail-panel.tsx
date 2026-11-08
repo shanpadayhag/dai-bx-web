@@ -1,6 +1,7 @@
 import {
   CalendarClock,
   Clock3,
+  Globe2,
   History,
   KanbanSquare,
   ListChecks,
@@ -15,6 +16,11 @@ import Button from '@/core/components/atoms/button';
 import Input from '@/core/components/atoms/input';
 import Field from '@/core/components/molecules/field';
 import CategoryPicker from '@/core/components/molecules/category-picker';
+import MoreOptions from '@/core/components/molecules/more-options';
+import TimeZoneField from '@/core/components/molecules/time-zone-field';
+import RepeatPicker from '@/core/components/organisms/repeat-picker';
+import localCalendarDate from '@/core/local-date';
+import { formatClockInZone, timeZonePlaceName } from '@/core/time-zone';
 import DateTimeField from '@/features/calendar/components/date-time-field';
 import type CalendarEvent from '@/features/calendar/entities/calendar-event';
 import { isEventRunning, trimmedEventMinutes } from '@/features/calendar/entities/calendar-event';
@@ -35,6 +41,7 @@ type EventDetailPanelProps = {
   calendarEvent: CalendarEvent;
   categories: readonly Category[];
   now: Date;
+  calendarTimeZone: string;
   plannedFieldPrefix: string;
   trackedFieldPrefix: string;
   onSubmitPlannedEvent: (eventId: string, submitEvent: FormEvent<HTMLFormElement>) => void;
@@ -46,66 +53,118 @@ type EventDetailPanelProps = {
 
 const panelClassName = 'grid gap-4 rounded-2xl border border-border bg-background p-4 shadow-soft';
 
+const OtherZoneTimes = ({
+  calendarEvent,
+  eventTimeZone,
+}: {
+  calendarEvent: CalendarEvent;
+  eventTimeZone: string;
+}) => (
+  <p className="flex items-start gap-2 rounded-xl bg-surface px-3 py-2.5 text-[13px] text-muted-foreground">
+    <Globe2 aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+    <span>
+      <span className="font-mono text-foreground tabular-nums">
+        {formatClockInZone(calendarEvent.startsAt, eventTimeZone)} –{' '}
+        {calendarEvent.endsAt === null
+          ? 'now'
+          : formatClockInZone(calendarEvent.endsAt, eventTimeZone)}
+      </span>{' '}
+      in {timeZonePlaceName(eventTimeZone)}, which is{' '}
+      <span className="font-mono text-foreground tabular-nums">
+        {formatEventTimeRange(calendarEvent)}
+      </span>{' '}
+      on your calendar.
+    </span>
+  </p>
+);
+
 const PlannedEventPanel = ({
   calendarEvent,
   categories,
+  now,
+  calendarTimeZone,
   plannedFieldPrefix,
   onSubmitPlannedEvent,
   onDeleteEvent,
-}: EventDetailPanelProps) => (
-  <section aria-label="Planned event" className={panelClassName}>
-    <form
-      noValidate
-      className="grid gap-4"
-      onSubmit={(submitEvent) => onSubmitPlannedEvent(calendarEvent.id, submitEvent)}
-    >
-      <Badge className="justify-self-start">
-        <CalendarClock />
-        Planned
-      </Badge>
-      <Field label="Title" htmlFor={`${plannedFieldPrefix}-title`}>
-        <Input
-          id={`${plannedFieldPrefix}-title`}
-          name="title"
-          defaultValue={calendarEvent.title}
-          maxLength={200}
+}: EventDetailPanelProps) => {
+  const eventTimeZone = calendarEvent.timeZone ?? calendarTimeZone;
+
+  return (
+    <section aria-label="Planned event" className={panelClassName}>
+      <form
+        noValidate
+        className="grid gap-4"
+        onSubmit={(submitEvent) => onSubmitPlannedEvent(calendarEvent.id, submitEvent)}
+      >
+        <Badge className="justify-self-start">
+          <CalendarClock />
+          {calendarEvent.series === undefined ? 'Planned' : 'Planned, repeats'}
+        </Badge>
+        {eventTimeZone === calendarTimeZone ? null : (
+          <OtherZoneTimes calendarEvent={calendarEvent} eventTimeZone={eventTimeZone} />
+        )}
+        <Field label="Title" htmlFor={`${plannedFieldPrefix}-title`}>
+          <Input
+            id={`${plannedFieldPrefix}-title`}
+            name="title"
+            defaultValue={calendarEvent.title}
+            maxLength={200}
+          />
+        </Field>
+        <CategoryPicker
+          name={`${plannedFieldPrefix}-category`}
+          legend="Category"
+          categories={categories}
+          selectedCategoryId={calendarEvent.category?.id ?? null}
         />
-      </Field>
-      <CategoryPicker
-        name={`${plannedFieldPrefix}-category`}
-        legend="Category"
-        categories={categories}
-        selectedCategoryId={calendarEvent.category?.id ?? null}
-      />
-      <DateTimeField
-        label="Starts"
-        idPrefix={`${plannedFieldPrefix}-starts`}
-        moment={calendarEvent.startsAt}
-        minuteStep={15}
-      />
-      <DateTimeField
-        label="Ends"
-        idPrefix={`${plannedFieldPrefix}-ends`}
-        moment={calendarEvent.endsAt}
-        minuteStep={15}
-      />
-      <div className="flex items-center justify-between gap-2 border-t border-border pt-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-danger hover:bg-danger-soft hover:text-danger"
-          onClick={() => onDeleteEvent(calendarEvent.id)}
-        >
-          <Trash2 />
-          Delete
-        </Button>
-        <Button type="submit" size="sm">
-          Save
-        </Button>
-      </div>
-    </form>
-  </section>
-);
+        <DateTimeField
+          label="Starts"
+          idPrefix={`${plannedFieldPrefix}-starts`}
+          moment={calendarEvent.startsAt}
+          minuteStep={15}
+        />
+        <DateTimeField
+          label="Ends"
+          idPrefix={`${plannedFieldPrefix}-ends`}
+          moment={calendarEvent.endsAt}
+          minuteStep={15}
+        />
+        <RepeatPicker
+          idPrefix={`${plannedFieldPrefix}-repeat`}
+          name="repeat"
+          firstDate={localCalendarDate(
+            calendarEvent.series?.originalStart ?? calendarEvent.startsAt,
+          )}
+          initialRule={calendarEvent.series?.repeatRule ?? null}
+        />
+        <MoreOptions>
+          <TimeZoneField
+            id={`${plannedFieldPrefix}-time-zone`}
+            name="timeZone"
+            label="Time zone"
+            hint="The event keeps its time in this zone, even across daylight saving."
+            selectedTimeZone={eventTimeZone}
+            now={now}
+          />
+        </MoreOptions>
+        <div className="flex items-center justify-between gap-2 border-t border-border pt-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-danger hover:bg-danger-soft hover:text-danger"
+            onClick={() => onDeleteEvent(calendarEvent.id)}
+          >
+            <Trash2 />
+            Delete
+          </Button>
+          <Button type="submit" size="sm">
+            Save
+          </Button>
+        </div>
+      </form>
+    </section>
+  );
+};
 
 const SourceBadgeContent = ({ calendarEvent }: { calendarEvent: CalendarEvent }) =>
   calendarEvent.source?.kind === 'card' ? (

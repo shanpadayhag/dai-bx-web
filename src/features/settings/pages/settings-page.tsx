@@ -13,6 +13,7 @@ import Field from '@/core/components/molecules/field';
 import PageHeader from '@/core/components/molecules/page-header';
 import SegmentedControl from '@/core/components/molecules/segmented-control';
 import AccentPicker from '@/features/settings/components/accent-picker';
+import CalendarTimeZoneSetting from '@/features/settings/components/calendar-time-zone-setting';
 import CategoryList from '@/features/settings/components/category-list';
 import ChangeEmailDialog from '@/features/settings/components/change-email-dialog';
 import ChangePasswordDialog from '@/features/settings/components/change-password-dialog';
@@ -303,6 +304,12 @@ const SettingsPage = () => {
               />
             </Field>
           </div>
+        </SettingsSection>
+        <SettingsSection
+          title="Time zone"
+          description="The calendar shows every event, flag and day in this zone, so days run midnight to midnight there."
+        >
+          <CalendarTimeZoneSetting />
         </SettingsSection>
         <SettingsSection
           title="Account"

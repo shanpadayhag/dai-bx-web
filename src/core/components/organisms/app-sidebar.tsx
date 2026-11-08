@@ -1,4 +1,4 @@
-import { CalendarDays, KanbanSquare, ListTree, Plus, Repeat2, Settings, Sun } from 'lucide-react';
+import { CalendarDays, KanbanSquare, ListTree, Plus, Settings, Sun } from 'lucide-react';
 import Kbd from '@/core/components/atoms/kbd';
 import Logo from '@/core/components/atoms/logo';
 import type { ReactNode } from 'react';
@@ -9,7 +9,6 @@ const primaryLinks = [
   { href: '/tasks', label: 'Tasks', icon: <ListTree />, count: 24 },
   { href: '/board', label: 'Board', icon: <KanbanSquare /> },
   { href: '/calendar', label: 'Calendar', icon: <CalendarDays /> },
-  { href: '/workflows', label: 'Workflows', icon: <Repeat2 />, count: 4 },
 ];
 
 type AppSidebarProps = {

@@ -5,10 +5,13 @@ import { useEffect, useMemo, useRef } from 'react';
 import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
 import EmptyState from '@/core/components/molecules/empty-state';
+import OccurrenceScopeDialog from '@/core/components/organisms/occurrence-scope-dialog';
+import { deviceTimeZone } from '@/core/time-zone';
 import CalendarAside from '@/features/calendar/components/calendar-aside';
 import CalendarGrid from '@/features/calendar/components/calendar-grid';
 import CalendarViewSwitch from '@/features/calendar/components/calendar-view-switch';
 import NewEventDialog from '@/features/calendar/components/new-event-dialog';
+import sampleRepeatingEventSource from '@/features/calendar/data_sources/sample/repeating-event-source';
 import {
   arrangeCalendarDays,
   calendarTitle,
@@ -19,6 +22,7 @@ import { calendarEventFromRecord } from '@/features/calendar/entities/calendar-e
 import useCalendarEvents, {
   NEW_EVENT_DIALOG_ID,
   NEW_EVENT_FIELD_PREFIX,
+  OCCURRENCE_SCOPE_DIALOG_ID,
   PLANNED_EVENT_FIELD_PREFIX,
   TRACKED_EVENT_FIELD_PREFIX,
 } from '@/features/calendar/events/use-calendar-events';
@@ -62,17 +66,27 @@ const CalendarPage = () => {
     }
   }, [selectedEventId]);
 
-  const calendarEvents = useMemo(() => {
-    const categoriesById = new Map(categories.map((category) => [category.id, category]));
-    return shownEventRecords.map((eventRecord) =>
-      calendarEventFromRecord(eventRecord, categoriesById),
-    );
-  }, [categories, shownEventRecords]);
-
   const dayStarts = useMemo(
     () => (anchorDay === null ? [] : visibleDayStarts(calendarView, anchorDay)),
     [anchorDay, calendarView],
   );
+
+  const calendarEvents = useMemo(() => {
+    const categoriesById = new Map(categories.map((category) => [category.id, category]));
+    return [
+      ...shownEventRecords.map((eventRecord) =>
+        calendarEventFromRecord(eventRecord, categoriesById),
+      ),
+      ...sampleRepeatingEventSource.findOccurrences(dayStarts),
+    ];
+  }, [categories, dayStarts, shownEventRecords]);
+
+  const scheduledMoves = useMemo(
+    () => sampleRepeatingEventSource.findScheduledMoves(dayStarts),
+    [dayStarts],
+  );
+
+  const calendarTimeZone = useMemo(() => deviceTimeZone(), []);
 
   const calendarDays = useMemo(
     () => arrangeCalendarDays(dayStarts, calendarEvents, now),
@@ -106,6 +120,18 @@ const CalendarPage = () => {
   const isDayView = calendarView === 'day';
   const selectedEvent =
     calendarEvents.find((calendarEvent) => calendarEvent.id === selectedEventId) ?? null;
+  const repeatingEventOf = (eventId: string) =>
+    calendarEvents.find(
+      (calendarEvent) => calendarEvent.id === eventId && calendarEvent.series !== undefined,
+    );
+  const askScopeOrRun = (eventId: string, action: 'change' | 'delete', runWrite: () => void) => {
+    const repeatingEvent = repeatingEventOf(eventId);
+    if (repeatingEvent === undefined) {
+      runWrite();
+      return;
+    }
+    events.handleAskOccurrenceScope({ action, eventTitle: repeatingEvent.title });
+  };
 
   return (
     <div className="grid gap-6">
@@ -146,8 +172,13 @@ const CalendarPage = () => {
           selectedEventId={selectedEventId}
           onSelectEvent={events.handleSelectEvent}
           onDraftEvent={events.handleOpenNewEvent}
+          scheduledMoves={scheduledMoves}
           onRetimeEvent={(eventId, eventTimes) =>
-            void events.handleRetimePlannedEvent(eventId, eventTimes)
+            askScopeOrRun(
+              eventId,
+              'change',
+              () => void events.handleRetimePlannedEvent(eventId, eventTimes),
+            )
           }
         />
         <CalendarAside
@@ -155,18 +186,30 @@ const CalendarPage = () => {
           categories={categories}
           selectedEvent={selectedEvent}
           now={now}
+          calendarTimeZone={calendarTimeZone}
           plannedFieldPrefix={PLANNED_EVENT_FIELD_PREFIX}
           trackedFieldPrefix={TRACKED_EVENT_FIELD_PREFIX}
-          onSubmitPlannedEvent={(eventId, submitEvent) =>
-            void events.handleSubmitPlannedEvent(eventId, submitEvent)
-          }
+          onSubmitPlannedEvent={(eventId, submitEvent) => {
+            submitEvent.preventDefault();
+            askScopeOrRun(
+              eventId,
+              'change',
+              () => void events.handleSubmitPlannedEvent(eventId, submitEvent),
+            );
+          }}
           onSubmitTrackedTimes={(eventId, submitEvent) =>
             void events.handleSubmitTrackedTimes(eventId, submitEvent)
           }
           onSelectCategory={(eventId, categoryId) =>
-            void events.handleSelectEventCategory(eventId, categoryId)
+            askScopeOrRun(
+              eventId,
+              'change',
+              () => void events.handleSelectEventCategory(eventId, categoryId),
+            )
           }
-          onDeleteEvent={(eventId) => void events.handleDeleteEvent(eventId)}
+          onDeleteEvent={(eventId) =>
+            askScopeOrRun(eventId, 'delete', () => void events.handleDeleteEvent(eventId))
+          }
           onFinishEvent={handleOpenFinish}
         />
       </div>
@@ -176,7 +219,14 @@ const CalendarPage = () => {
         categories={categories}
         draftTimes={states.newEventDraft}
         isSaving={states.isSavingNewEvent}
+        calendarTimeZone={calendarTimeZone}
+        now={now}
         onSubmit={(submitEvent) => void events.handleSubmitNewEvent(submitEvent)}
+      />
+      <OccurrenceScopeDialog
+        id={OCCURRENCE_SCOPE_DIALOG_ID}
+        scopeRequest={states.occurrenceScopeRequest}
+        onAnswer={events.handleAnswerOccurrenceScope}
       />
     </div>
   );

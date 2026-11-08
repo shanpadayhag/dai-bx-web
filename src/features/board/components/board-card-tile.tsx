@@ -1,4 +1,4 @@
-import { CalendarClock, ListChecks } from 'lucide-react';
+import { AlarmClock, CalendarClock, ListChecks } from 'lucide-react';
 import { useState } from 'react';
 import joinClassNames from '@/core/class-names';
 import {
@@ -10,6 +10,10 @@ import OptionChip from '@/features/board/components/option-chip';
 import type BoardCard from '@/features/board/entities/board-card';
 import type BoardProperty from '@/features/board/entities/board-property';
 import { formatCardDue, isCardDueOverdue } from '@/features/board/entities/card-due';
+import {
+  formatScheduleMoment,
+  type ScheduledCardMove,
+} from '@/features/board/entities/card-schedule';
 import { findChosenOptions } from '@/features/board/entities/chosen-options';
 
 type BoardCardTileProps = {
@@ -17,6 +21,7 @@ type BoardCardTileProps = {
   properties: readonly BoardProperty[];
   isPending: boolean;
   now: Date;
+  nextMove: ScheduledCardMove | null;
   onOpenCard: (cardId: string) => void;
   onDropCard: (draggedCardId: string) => void;
 };
@@ -26,6 +31,7 @@ const BoardCardTile = ({
   properties,
   isPending,
   now,
+  nextMove,
   onOpenCard,
   onDropCard,
 }: BoardCardTileProps) => {
@@ -65,7 +71,7 @@ const BoardCardTile = ({
         onDropCard(draggedCardId);
       }}
       className={joinClassNames(
-        'relative grid w-full cursor-pointer gap-2 rounded-xl border border-border bg-background p-3 text-left shadow-soft transition-[border-color,box-shadow,opacity] duration-150 hover:border-border-strong hover:shadow-lift focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/15 focus-visible:outline-none active:cursor-grabbing',
+        'group/tile relative grid w-full cursor-pointer gap-2 rounded-xl border border-border bg-background p-3 text-left shadow-soft transition-[border-color,box-shadow,opacity] duration-150 hover:border-border-strong hover:shadow-lift focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/15 focus-visible:outline-none active:cursor-grabbing',
         isPending && 'cursor-default opacity-60',
         isDropTarget &&
           'before:absolute before:inset-x-1 before:-top-[5px] before:h-0.5 before:rounded-full before:bg-primary',
@@ -85,7 +91,7 @@ const BoardCardTile = ({
       <span className="text-sm leading-snug font-medium text-pretty text-foreground">
         {card.title}
       </span>
-      {cardDue !== null || hasLinkedTasks ? (
+      {cardDue !== null || hasLinkedTasks || nextMove !== null ? (
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground [&_svg]:size-3.5">
           {cardDue !== null ? (
             <span
@@ -111,6 +117,20 @@ const BoardCardTile = ({
               {card.doneLinkedTaskCount}/{card.linkedTaskCount}
             </span>
           ) : null}
+          {nextMove === null ? null : (
+            <span className="inline-flex items-center gap-1 tabular-nums">
+              <AlarmClock aria-hidden="true" />
+              <span className="sr-only">
+                Moves to {nextMove.targetListName} {formatScheduleMoment(nextMove.at, now)}
+              </span>
+              <span
+                aria-hidden="true"
+                className="hidden group-hover/tile:inline group-focus-visible/tile:inline [@media(hover:none)]:inline"
+              >
+                {formatScheduleMoment(nextMove.at, now)} → {nextMove.targetListName}
+              </span>
+            </span>
+          )}
         </span>
       ) : null}
     </button>

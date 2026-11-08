@@ -2,7 +2,8 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useRef, type FormEvent } from 'react';
 import AppError from '@/core/app-error';
 import readFormText from '@/core/form-text';
-import hidePopover from '@/core/popover';
+import type { OccurrenceScopeAnswer, OccurrenceScopeRequest } from '@/core/occurrence-scope';
+import hidePopover, { showPopover } from '@/core/popover';
 import reportAppError from '@/core/report-app-error';
 import changeEventCategory from '@/features/calendar/actions/change-event-category';
 import changeTrackedTimes from '@/features/calendar/actions/change-tracked-times';
@@ -39,15 +40,10 @@ export const NEW_EVENT_DIALOG_ID = 'new-event-dialog';
 export const NEW_EVENT_FIELD_PREFIX = 'new-event';
 export const PLANNED_EVENT_FIELD_PREFIX = 'planned-event';
 export const TRACKED_EVENT_FIELD_PREFIX = 'tracked-event';
+export const OCCURRENCE_SCOPE_DIALOG_ID = 'occurrence-scope-dialog';
 
 const rangeOf = (calendarView: CalendarView, anchorDay: Date) =>
   calendarView === 'week' ? weekRange(anchorDay) : dayRange(anchorDay);
-
-const showPopover = (popoverId: string) => {
-  const popoverElement = document.getElementById(popoverId);
-  if (popoverElement === null || typeof popoverElement.showPopover !== 'function') return;
-  if (!popoverElement.matches(':popover-open')) popoverElement.showPopover();
-};
 
 const replaceWith = (answeredRecord: CalendarEventRecord): LocalEventChange => ({
   kind: 'replace',
@@ -75,6 +71,7 @@ const useCalendarEvents = (states: ReturnType<typeof useCalendarStates>) => {
     setSelectedEventId,
     setNewEventDraft,
     setIsSavingNewEvent,
+    setOccurrenceScopeRequest,
   } = states;
   const router = useRouter();
   const lastWriteIdRef = useRef(0);
@@ -336,6 +333,22 @@ const useCalendarEvents = (states: ReturnType<typeof useCalendarStates>) => {
     [runEventWrite, setSelectedEventId],
   );
 
+  const handleAskOccurrenceScope = useCallback(
+    (scopeRequest: OccurrenceScopeRequest) => {
+      setOccurrenceScopeRequest(scopeRequest);
+      showPopover(OCCURRENCE_SCOPE_DIALOG_ID);
+    },
+    [setOccurrenceScopeRequest],
+  );
+
+  const handleAnswerOccurrenceScope = useCallback(
+    (scopeAnswer: OccurrenceScopeAnswer) => {
+      if (scopeAnswer === 'cancel') return;
+      setOccurrenceScopeRequest(null);
+    },
+    [setOccurrenceScopeRequest],
+  );
+
   const handleTick = useCallback(() => setNow(new Date()), [setNow]);
 
   return {
@@ -354,6 +367,8 @@ const useCalendarEvents = (states: ReturnType<typeof useCalendarStates>) => {
     handleSubmitTrackedTimes,
     handleSelectEventCategory,
     handleDeleteEvent,
+    handleAskOccurrenceScope,
+    handleAnswerOccurrenceScope,
     handleTick,
   };
 };

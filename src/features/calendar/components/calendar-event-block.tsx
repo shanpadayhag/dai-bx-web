@@ -1,3 +1,4 @@
+import { Repeat } from 'lucide-react';
 import type { CSSProperties, PointerEvent } from 'react';
 import { categoryColorStyle } from '@/core/category';
 import joinClassNames from '@/core/class-names';
@@ -53,11 +54,11 @@ const CalendarEventBlock = ({
       <button
         type="button"
         title={`${calendarEvent.title} · ${timeRangeLabel}`}
-        aria-label={
-          trimmedMinutes > 0
-            ? `${calendarEvent.title} ${timeRangeLabel}, ${trimmedMinutes} minutes trimmed off`
-            : `${calendarEvent.title} ${timeRangeLabel}`
-        }
+        aria-label={[
+          `${calendarEvent.title} ${timeRangeLabel}`,
+          ...(calendarEvent.series === undefined ? [] : ['repeats']),
+          ...(trimmedMinutes > 0 ? [`${trimmedMinutes} minutes trimmed off`] : []),
+        ].join(', ')}
         aria-current={isSelected ? 'true' : undefined}
         onClick={() => onSelect(calendarEvent.id)}
         onPointerDown={
@@ -85,13 +86,18 @@ const CalendarEventBlock = ({
             isShort ? 'justify-center' : 'gap-0.5 py-1.5',
           )}
         >
-          <span
-            className={joinClassNames(
-              'text-xs leading-tight font-medium',
-              isRoomy ? 'line-clamp-2' : 'truncate',
+          <span className="flex min-w-0 items-start gap-1">
+            {calendarEvent.series === undefined ? null : (
+              <Repeat aria-hidden="true" className="mt-px size-3 shrink-0 opacity-70" />
             )}
-          >
-            {calendarEvent.title}
+            <span
+              className={joinClassNames(
+                'min-w-0 text-xs leading-tight font-medium',
+                isRoomy ? 'line-clamp-2' : 'truncate',
+              )}
+            >
+              {calendarEvent.title}
+            </span>
           </span>
           {isShort ? null : (
             <span className="truncate font-mono text-[11px] leading-tight tabular-nums opacity-80">

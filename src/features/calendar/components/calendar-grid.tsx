@@ -1,5 +1,7 @@
 'use client';
 
+import { MoveRight } from 'lucide-react';
+import Link from 'next/link';
 import { useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import joinClassNames from '@/core/class-names';
 import CalendarEventBlock from '@/features/calendar/components/calendar-event-block';
@@ -18,6 +20,7 @@ import {
   type EventPiece,
 } from '@/features/calendar/entities/day-layout';
 import { formatClock, formatMinuteOfDay } from '@/features/calendar/entities/event-time';
+import type ScheduledMove from '@/features/calendar/entities/scheduled-move';
 
 const HOUR_HEIGHT = 56;
 const MINUTE_HEIGHT = HOUR_HEIGHT / 60;
@@ -46,6 +49,7 @@ type DragGhost = {
 
 type CalendarGridProps = {
   gridDays: CalendarDay[];
+  scheduledMoves: readonly ScheduledMove[];
   now: Date;
   workingHoursStartMinute: number;
   selectedEventId: string | null;
@@ -70,6 +74,7 @@ const capturePointer = (pointerEvent: PointerEvent<HTMLElement>) => {
 
 const CalendarGrid = ({
   gridDays,
+  scheduledMoves,
   now,
   workingHoursStartMinute,
   selectedEventId,
@@ -371,6 +376,42 @@ const CalendarGrid = ({
                   {formatClock(dragGhost.eventTimes.endsAt)}
                 </div>
               ) : null}
+              {scheduledMoves
+                .filter(
+                  (scheduledMove) =>
+                    startOfLocalDay(scheduledMove.at).getTime() === gridDay.dayStart.getTime(),
+                )
+                .map((scheduledMove) => (
+                  <div
+                    key={`${scheduledMove.scheduleId}-${scheduledMove.at.toISOString()}`}
+                    className="@container pointer-events-none absolute inset-x-0 z-[3] flex items-center"
+                    style={{ top: wallClockMinute(scheduledMove.at) * MINUTE_HEIGHT }}
+                  >
+                    <Link
+                      href={`/board?board=${scheduledMove.boardId}&card=${scheduledMove.cardId}`}
+                      title={`${formatClock(scheduledMove.at)} · ${scheduledMove.cardTitle} moves to ${scheduledMove.listName}`}
+                      className="pointer-events-auto ml-1 inline-flex h-5 max-w-[calc(100%-0.5rem)] -translate-y-1/2 items-center gap-1 rounded-full border border-border-strong bg-background pr-2 pl-1.5 text-[11px] leading-none font-medium text-foreground shadow-soft transition-colors duration-150 hover:border-primary/50 hover:text-primary focus-visible:ring-4 focus-visible:ring-primary/20 focus-visible:outline-none"
+                    >
+                      <MoveRight aria-hidden="true" className="size-3 shrink-0" />
+                      <span className="sr-only">
+                        {formatClock(scheduledMove.at)}: {scheduledMove.cardTitle} moves to{' '}
+                      </span>
+                      <span className="max-w-[7rem] shrink-0 truncate">
+                        {scheduledMove.listName}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="hidden min-w-0 truncate font-normal text-muted-foreground @min-[10rem]:inline"
+                      >
+                        {scheduledMove.cardTitle}
+                      </span>
+                    </Link>
+                    <span
+                      aria-hidden="true"
+                      className="h-0 flex-1 -translate-y-1/2 border-t border-dashed border-foreground/35"
+                    />
+                  </div>
+                ))}
               {gridDay.isToday ? (
                 <div
                   aria-label={`Now, ${formatClock(now)}`}

@@ -7,12 +7,16 @@ import IconButton from '@/core/components/atoms/icon-button';
 import Input from '@/core/components/atoms/input';
 import PopoverPanel from '@/core/components/molecules/popover-panel';
 import RenameEventsDialog from '@/core/components/organisms/rename-events-dialog';
+import type { Category } from '@/core/category';
 import type { RenameEventsAnswer, RenameEventsRequest } from '@/core/rename-events';
+import CardScheduleSection from '@/features/board/components/card-schedule-section';
 import CardNotes from '@/features/board/components/card-notes';
 import CardPropertyField from '@/features/board/components/card-property-field';
 import { CARD_NOTES_MAX_CHARACTERS } from '@/features/board/actions/update-card-notes';
 import type Board from '@/features/board/entities/board';
+import type BoardList from '@/features/board/entities/board-list';
 import type BoardProperty from '@/features/board/entities/board-property';
+import type CardSchedule from '@/features/board/entities/card-schedule';
 import type CardDetail from '@/features/board/entities/card-detail';
 import { isCardDueOverdue } from '@/features/board/entities/card-due';
 
@@ -37,6 +41,10 @@ type CardDetailDialogProps = {
   renameRequest: RenameEventsRequest | null;
   titleResetCount: number;
   onAnswerRename: (renameAnswer: RenameEventsAnswer) => void;
+  lists: readonly BoardList[];
+  cardSchedules: readonly CardSchedule[];
+  scheduleCategories: readonly Category[];
+  calendarTimeZone: string;
 };
 
 const COMPLETE_DATE_PATTERN = /^[1-9]\d{3}-\d{2}-\d{2}$/;
@@ -89,6 +97,10 @@ const CardDetailContent = ({
   runningListId,
   onStartCard,
   titleResetCount,
+  lists,
+  cardSchedules,
+  scheduleCategories,
+  calendarTimeZone,
 }: CardDetailContentProps) => {
   const { card, listName, notes, linkedTasks } = cardDetail;
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -375,6 +387,14 @@ const CardDetailContent = ({
             </>
           )}
         </section>
+        <CardScheduleSection
+          cardTitle={card.title}
+          schedules={cardSchedules}
+          lists={lists}
+          categories={scheduleCategories}
+          calendarTimeZone={calendarTimeZone}
+          now={now}
+        />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-5 py-4 sm:px-6">
         <Button
