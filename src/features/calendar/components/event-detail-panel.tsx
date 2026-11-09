@@ -19,8 +19,8 @@ import CategoryPicker from '@/core/components/molecules/category-picker';
 import MoreOptions from '@/core/components/molecules/more-options';
 import TimeZoneField from '@/core/components/molecules/time-zone-field';
 import RepeatPicker from '@/core/components/organisms/repeat-picker';
-import localCalendarDate from '@/core/local-date';
 import { formatClockInZone, timeZonePlaceName } from '@/core/time-zone';
+import { formatInZone, partsInZone } from '@/core/zoned-time';
 import DateTimeField from '@/features/calendar/components/date-time-field';
 import type CalendarEvent from '@/features/calendar/entities/calendar-event';
 import { isEventRunning, trimmedEventMinutes } from '@/features/calendar/entities/calendar-event';
@@ -30,12 +30,6 @@ import {
   formatDurationMinutes,
   formatEventTimeRange,
 } from '@/features/calendar/entities/event-time';
-
-const eventDayFormat = new Intl.DateTimeFormat('en', {
-  weekday: 'short',
-  month: 'short',
-  day: 'numeric',
-});
 
 type EventDetailPanelProps = {
   calendarEvent: CalendarEvent;
@@ -56,9 +50,11 @@ const panelClassName = 'grid gap-4 rounded-2xl border border-border bg-backgroun
 const OtherZoneTimes = ({
   calendarEvent,
   eventTimeZone,
+  calendarTimeZone,
 }: {
   calendarEvent: CalendarEvent;
   eventTimeZone: string;
+  calendarTimeZone: string;
 }) => (
   <p className="flex items-start gap-2 rounded-xl bg-surface px-3 py-2.5 text-[13px] text-muted-foreground">
     <Globe2 aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
@@ -71,7 +67,7 @@ const OtherZoneTimes = ({
       </span>{' '}
       in {timeZonePlaceName(eventTimeZone)}, which is{' '}
       <span className="font-mono text-foreground tabular-nums">
-        {formatEventTimeRange(calendarEvent)}
+        {formatEventTimeRange(calendarEvent, calendarTimeZone)}
       </span>{' '}
       on your calendar.
     </span>
@@ -88,6 +84,12 @@ const PlannedEventPanel = ({
   onDeleteEvent,
 }: EventDetailPanelProps) => {
   const eventTimeZone = calendarEvent.timeZone ?? calendarTimeZone;
+  const [typedStartDate, setTypedStartDate] = useState('');
+  const repeatFirstDate =
+    calendarEvent.series === undefined && typedStartDate !== ''
+      ? typedStartDate
+      : partsInZone(calendarEvent.series?.originalStart ?? calendarEvent.startsAt, eventTimeZone)
+          .calendarDate;
 
   return (
     <section aria-label="Planned event" className={panelClassName}>
@@ -101,7 +103,11 @@ const PlannedEventPanel = ({
           {calendarEvent.series === undefined ? 'Planned' : 'Planned, repeats'}
         </Badge>
         {eventTimeZone === calendarTimeZone ? null : (
-          <OtherZoneTimes calendarEvent={calendarEvent} eventTimeZone={eventTimeZone} />
+          <OtherZoneTimes
+            calendarEvent={calendarEvent}
+            eventTimeZone={eventTimeZone}
+            calendarTimeZone={calendarTimeZone}
+          />
         )}
         <Field label="Title" htmlFor={`${plannedFieldPrefix}-title`}>
           <Input
@@ -121,20 +127,21 @@ const PlannedEventPanel = ({
           label="Starts"
           idPrefix={`${plannedFieldPrefix}-starts`}
           moment={calendarEvent.startsAt}
+          timeZone={calendarTimeZone}
           minuteStep={15}
+          onChangeDate={setTypedStartDate}
         />
         <DateTimeField
           label="Ends"
           idPrefix={`${plannedFieldPrefix}-ends`}
           moment={calendarEvent.endsAt}
+          timeZone={calendarTimeZone}
           minuteStep={15}
         />
         <RepeatPicker
           idPrefix={`${plannedFieldPrefix}-repeat`}
           name="repeat"
-          firstDate={localCalendarDate(
-            calendarEvent.series?.originalStart ?? calendarEvent.startsAt,
-          )}
+          firstDate={repeatFirstDate}
           initialRule={calendarEvent.series?.repeatRule ?? null}
         />
         <MoreOptions>
@@ -183,6 +190,7 @@ const RunningEventPanel = ({
   calendarEvent,
   categories,
   now,
+  calendarTimeZone,
   onSelectCategory,
   onFinishEvent,
 }: EventDetailPanelProps) => (
@@ -201,7 +209,7 @@ const RunningEventPanel = ({
         {calendarEvent.title}
       </h2>
       <p className="text-[13px] text-muted-foreground">
-        Started {formatClock(calendarEvent.startsAt)} ·{' '}
+        Started {formatClock(calendarEvent.startsAt, calendarTimeZone)} ·{' '}
         <span className="font-mono tabular-nums">
           {formatDurationMinutes(eventDurationMinutes(calendarEvent, now))}
         </span>{' '}
@@ -230,6 +238,7 @@ const TrackedEventPanel = ({
   calendarEvent,
   categories,
   now,
+  calendarTimeZone,
   trackedFieldPrefix,
   onSubmitTrackedTimes,
   onSelectCategory,
@@ -252,7 +261,11 @@ const TrackedEventPanel = ({
           {calendarEvent.title}
         </h2>
         <p className="text-[13px] text-muted-foreground">
-          {eventDayFormat.format(calendarEvent.startsAt)}
+          {formatInZone(calendarEvent.startsAt, calendarTimeZone, {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+          })}
         </p>
       </div>
       <dl className="grid gap-2.5 text-[13px]">
@@ -260,7 +273,7 @@ const TrackedEventPanel = ({
           <dt className="sr-only">Time</dt>
           <Clock3 aria-hidden="true" className="size-4 text-muted-foreground" />
           <dd className="font-mono text-foreground tabular-nums">
-            {formatEventTimeRange(calendarEvent)} ·{' '}
+            {formatEventTimeRange(calendarEvent, calendarTimeZone)} ·{' '}
             {formatDurationMinutes(eventDurationMinutes(calendarEvent, now))}
           </dd>
         </div>
@@ -270,7 +283,7 @@ const TrackedEventPanel = ({
             <History aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <dd className="text-muted-foreground">
               Ends at your last check-in, {trimmedMinutes} minutes before you finished at{' '}
-              {formatClock(finishedAt)}.
+              {formatClock(finishedAt, calendarTimeZone)}.
             </dd>
           </div>
         ) : null}
@@ -296,11 +309,13 @@ const TrackedEventPanel = ({
             label="Started"
             idPrefix={`${trackedFieldPrefix}-starts`}
             moment={calendarEvent.startsAt}
+            timeZone={calendarTimeZone}
           />
           <DateTimeField
             label="Ended"
             idPrefix={`${trackedFieldPrefix}-ends`}
             moment={calendarEvent.endsAt}
+            timeZone={calendarTimeZone}
           />
           <Button type="submit" size="sm" className="justify-self-end">
             Save times

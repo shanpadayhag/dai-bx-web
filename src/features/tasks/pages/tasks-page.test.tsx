@@ -390,6 +390,7 @@ test('Start runs a task, and finishing it with Mark it done completes it and its
         workingHoursStart: '16:00',
         workingHoursEnd: '02:00',
         trackedCategoryId: null,
+        calendarTimeZone: null,
       }),
     ),
     http.post('/backend/tasks/:taskId/start', ({ params }) => {
@@ -402,6 +403,8 @@ test('Start runs a task, and finishing it with Mark it done completes it and its
         endsAt: null,
         finishedAt: null,
         lastAnsweredAt: null,
+        timeZone: null,
+        series: null,
         source: { kind: 'task', id: String(params.taskId), groupId: 'group-today' },
         estimateMinutes: null,
         sourceName: 'Today',

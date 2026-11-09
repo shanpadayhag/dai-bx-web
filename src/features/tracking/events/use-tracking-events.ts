@@ -2,6 +2,7 @@ import { useCallback, useMemo, type FormEvent } from 'react';
 import readFormText from '@/core/form-text';
 import hidePopover, { showPopover } from '@/core/popover';
 import reportAppError from '@/core/report-app-error';
+import { deviceTimeZone } from '@/core/time-zone';
 import { readFormMoment } from '@/features/calendar/entities/form-moment';
 import checkInRunningItem from '@/features/tracking/actions/check-in-running-item';
 import findRunningItems from '@/features/tracking/actions/find-running-items';
@@ -192,7 +193,7 @@ const useTrackingEvents = (states: ReturnType<typeof useTrackingStates>) => {
         const finishedItem = await finishRunningItem({
           runningItem: finishingItem,
           endChoice: isEndChoice(endChoiceText) ? endChoiceText : 'now',
-          customEndsAt: readFormMoment(finishForm, FINISH_END_FIELD_PREFIX),
+          customEndsAt: readFormMoment(finishForm, FINISH_END_FIELD_PREFIX, deviceTimeZone()),
           markDone: finishForm.has(FINISH_MARK_DONE_FIELD),
           now: new Date(),
         });

@@ -62,10 +62,12 @@ test("reads a card's detail", async () => {
       values: [],
       linkedTaskCount: 0,
       doneLinkedTaskCount: 0,
+      nextMove: null,
     },
     notes: '## Outcome\n',
     linkedTasks: [],
     trackedEventCount: 0,
+    schedules: [],
   };
   backendServer.use(http.get('/backend/cards/c1', () => HttpResponse.json(cardDetailRecord)));
 

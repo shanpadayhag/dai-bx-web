@@ -1,14 +1,16 @@
 import { describe, expect, test } from 'vitest';
 import type CalendarEventRecord from '@/features/calendar/entities/calendar-event-record';
+import type CalendarRange from '@/features/calendar/entities/calendar-range';
 import {
   confirmEventWrite,
+  confirmEventWriteWithRecords,
   failEventWrite,
   startEventWrite,
   startOptimisticCalendar,
   visibleEventRecords,
 } from '@/features/calendar/entities/optimistic-calendar';
 
-const weekRange = { from: new Date(2026, 10, 2), to: new Date(2026, 10, 9) };
+const weekRange: CalendarRange = { start: '2026-11-02', days: 7, timeZone: 'America/Los_Angeles' };
 
 const plannedRecord: CalendarEventRecord = {
   id: 'event-1',
@@ -19,6 +21,8 @@ const plannedRecord: CalendarEventRecord = {
   endsAt: '2026-11-05T17:00:00.000Z',
   finishedAt: null,
   lastAnsweredAt: null,
+  timeZone: null,
+  series: null,
   source: null,
 };
 
@@ -78,5 +82,24 @@ describe('optimistic calendar', () => {
 
     expect(visibleEventRecords(pendingCalendar)).toEqual([]);
     expect(visibleEventRecords(failEventWrite(pendingCalendar, 1))).toEqual([plannedRecord]);
+  });
+
+  test('a series write is confirmed by the reloaded range, unless another range is shown now', () => {
+    const pendingCalendar = startEventWrite(loadedCalendar, 3, {
+      kind: 'delete',
+      eventId: plannedRecord.id,
+    });
+    const reloadedRecord = { ...plannedRecord, id: 'reloaded' };
+
+    expect(confirmEventWriteWithRecords(pendingCalendar, 3, weekRange, [reloadedRecord])).toEqual({
+      range: weekRange,
+      confirmedRecords: [reloadedRecord],
+      pendingWrites: [],
+    });
+    expect(
+      confirmEventWriteWithRecords(pendingCalendar, 3, { ...weekRange, start: '2026-11-09' }, [
+        reloadedRecord,
+      ]),
+    ).toEqual({ range: weekRange, confirmedRecords: [plannedRecord], pendingWrites: [] });
   });
 });

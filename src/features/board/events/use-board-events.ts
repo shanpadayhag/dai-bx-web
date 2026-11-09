@@ -20,11 +20,15 @@ import deleteBoard from '@/features/board/actions/delete-board';
 import deleteBoardList from '@/features/board/actions/delete-board-list';
 import deleteBoardProperty from '@/features/board/actions/delete-board-property';
 import deleteCard from '@/features/board/actions/delete-card';
+import deleteCardSchedule from '@/features/board/actions/delete-card-schedule';
 import deletePropertyOption from '@/features/board/actions/delete-property-option';
 import findBoard from '@/features/board/actions/find-board';
 import findBoards from '@/features/board/actions/find-boards';
 import findCardDetail from '@/features/board/actions/find-card-detail';
 import findListForPlanning from '@/features/board/actions/find-list-for-planning';
+import findScheduleRuns, {
+  SCHEDULE_RUNS_PAGE_SIZE,
+} from '@/features/board/actions/find-schedule-runs';
 import moveBoardList from '@/features/board/actions/move-board-list';
 import moveBoardProperty from '@/features/board/actions/move-board-property';
 import moveCard from '@/features/board/actions/move-card';
@@ -33,6 +37,9 @@ import renameBoard from '@/features/board/actions/rename-board';
 import renameBoardList from '@/features/board/actions/rename-board-list';
 import renameBoardProperty from '@/features/board/actions/rename-board-property';
 import renameCard from '@/features/board/actions/rename-card';
+import runCardScheduleNow from '@/features/board/actions/run-card-schedule-now';
+import saveCardSchedule, { readScheduleForm } from '@/features/board/actions/save-card-schedule';
+import setCardSchedulePaused from '@/features/board/actions/set-card-schedule-paused';
 import setCardValue, { readCardValueInput } from '@/features/board/actions/set-card-value';
 import updateCardDue from '@/features/board/actions/update-card-due';
 import updateCardNotes from '@/features/board/actions/update-card-notes';
@@ -42,6 +49,8 @@ import type Board from '@/features/board/entities/board';
 import type BoardRecord from '@/features/board/entities/board-record';
 import type { LocalBoardChange } from '@/features/board/entities/board-record-changes';
 import type CardPropertyValue from '@/features/board/entities/card-property-value';
+import type CardSchedule from '@/features/board/entities/card-schedule';
+import { cardScheduleFromRecord } from '@/features/board/entities/card-schedule';
 import {
   confirmBoardWrite,
   failBoardWrite,
@@ -50,6 +59,7 @@ import {
   visibleBoard,
 } from '@/features/board/entities/optimistic-board';
 import type useBoardStates from '@/features/board/states/use-board-states';
+import findCategories from '@/features/categories/actions/find-categories';
 
 export const BOARD_SWITCHER_MENU_ID = 'board-switcher-menu';
 export const NEW_BOARD_DIALOG_ID = 'new-board-dialog';
@@ -67,6 +77,8 @@ export const MOVE_CARD_DIALOG_ID = 'move-card-dialog';
 export const DELETE_CARD_DIALOG_ID = 'delete-card-dialog';
 export const PENDING_CARD_ID_PREFIX = 'pending-card-';
 export const RENAME_CARD_EVENTS_DIALOG_ID = 'rename-card-events-dialog';
+export const SCHEDULE_FORM_DIALOG_ID = 'card-schedule-form-dialog';
+export const SCHEDULE_BLOCK_CATEGORY_FIELD = `${SCHEDULE_FORM_DIALOG_ID}-field-block-category`;
 const BOARD_PATH = '/board';
 const BOARD_QUERY_NAME = 'board';
 const CARD_QUERY_NAME = 'card';
@@ -138,6 +150,11 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     pendingCardRename,
     setPendingCardRename,
     setCardRenameCancelCount,
+    scheduleCategories,
+    scheduleRunsPages,
+    setOpenCardSchedules,
+    setScheduleRunsPages,
+    setScheduleCategories,
   } = states;
   const router = useRouter();
   const lastWriteIdRef = useRef(0);
@@ -573,6 +590,7 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
               values: [],
               linkedTaskCount: 0,
               doneLinkedTaskCount: 0,
+              nextMove: null,
             },
           },
           () => createCard({ listId, cardTitle }),
@@ -591,14 +609,149 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
       if (cardId.startsWith(PENDING_CARD_ID_PREFIX)) return;
       setOpenCardId(cardId);
       setOpenCardDetail(null);
+      setOpenCardSchedules(null);
+      setScheduleRunsPages({});
       showPopover(CARD_DETAIL_DIALOG_ID);
+      if (scheduleCategories === null) {
+        findCategories().then(setScheduleCategories, reportAppError);
+      }
       try {
-        setOpenCardDetail(await findCardDetail(cardId));
+        const loadedDetail = await findCardDetail(cardId);
+        setOpenCardDetail(loadedDetail);
+        setOpenCardSchedules(loadedDetail.schedules.map(cardScheduleFromRecord));
       } catch (loadError) {
         reportAppError(loadError);
       }
     },
-    [setOpenCardDetail, setOpenCardId],
+    [
+      scheduleCategories,
+      setOpenCardDetail,
+      setOpenCardId,
+      setOpenCardSchedules,
+      setScheduleCategories,
+      setScheduleRunsPages,
+    ],
+  );
+
+  const reloadShownBoard = useCallback(async () => {
+    if (selectedBoardId === null) return;
+    try {
+      takeAnsweredBoard(await findBoard(selectedBoardId));
+    } catch (loadError) {
+      reportAppError(loadError);
+    }
+  }, [selectedBoardId, takeAnsweredBoard]);
+
+  const replaceOpenSchedule = useCallback(
+    (changedSchedule: CardSchedule) =>
+      setOpenCardSchedules((currentSchedules) =>
+        currentSchedules === null
+          ? currentSchedules
+          : currentSchedules.map((schedule) =>
+              schedule.id === changedSchedule.id ? changedSchedule : schedule,
+            ),
+      ),
+    [setOpenCardSchedules],
+  );
+
+  const handleLoadScheduleRuns = useCallback(
+    async (scheduleId: string, olderThan: Date | null) => {
+      setScheduleRunsPages((currentPages) => ({
+        ...currentPages,
+        [scheduleId]: {
+          runs: olderThan === null ? [] : (currentPages[scheduleId]?.runs ?? []),
+          hasOlderRuns: false,
+          isLoading: true,
+        },
+      }));
+      try {
+        const loadedRuns = await findScheduleRuns(scheduleId, olderThan);
+        setScheduleRunsPages((currentPages) => ({
+          ...currentPages,
+          [scheduleId]: {
+            runs: [
+              ...(olderThan === null ? [] : (currentPages[scheduleId]?.runs ?? [])),
+              ...loadedRuns,
+            ],
+            hasOlderRuns: loadedRuns.length === SCHEDULE_RUNS_PAGE_SIZE,
+            isLoading: false,
+          },
+        }));
+      } catch (loadError) {
+        setScheduleRunsPages((currentPages) => {
+          const { [scheduleId]: failedPage, ...otherPages } = currentPages;
+          return failedPage === undefined ? currentPages : otherPages;
+        });
+        reportAppError(loadError);
+      }
+    },
+    [setScheduleRunsPages],
+  );
+
+  const handleSubmitSchedule = useCallback(
+    async (scheduleId: string | null, submitEvent: FormEvent<HTMLFormElement>) => {
+      submitEvent.preventDefault();
+      if (openCardId === null) return;
+      const scheduleInput = readScheduleForm(
+        new FormData(submitEvent.currentTarget),
+        SCHEDULE_BLOCK_CATEGORY_FIELD,
+      );
+      const isSaved = await submitDialog(SCHEDULE_FORM_DIALOG_ID, async () => {
+        setOpenCardSchedules(
+          await saveCardSchedule({
+            cardId: openCardId,
+            scheduleId,
+            scheduleInput,
+            now: new Date(),
+          }),
+        );
+      });
+      if (isSaved) await reloadShownBoard();
+    },
+    [openCardId, reloadShownBoard, setOpenCardSchedules, submitDialog],
+  );
+
+  const handleSetSchedulePaused = useCallback(
+    async (scheduleId: string, isPaused: boolean) => {
+      try {
+        replaceOpenSchedule(await setCardSchedulePaused(scheduleId, isPaused));
+        await reloadShownBoard();
+      } catch (pauseError) {
+        reportAppError(pauseError);
+      }
+    },
+    [reloadShownBoard, replaceOpenSchedule],
+  );
+
+  const handleRunScheduleNow = useCallback(
+    async (scheduleId: string) => {
+      try {
+        const ranSchedule = await runCardScheduleNow(scheduleId);
+        replaceOpenSchedule(ranSchedule);
+        toast.success(`Moved to ${ranSchedule.targetListName ?? 'its column'}`, {
+          description: 'It’s at the top of the column.',
+        });
+        await reloadShownBoard();
+        if (scheduleRunsPages[scheduleId] !== undefined) {
+          await handleLoadScheduleRuns(scheduleId, null);
+        }
+      } catch (runError) {
+        reportAppError(runError);
+      }
+    },
+    [handleLoadScheduleRuns, reloadShownBoard, replaceOpenSchedule, scheduleRunsPages],
+  );
+
+  const handleDeleteSchedule = useCallback(
+    async (scheduleId: string) => {
+      try {
+        setOpenCardSchedules(await deleteCardSchedule(scheduleId));
+        await reloadShownBoard();
+      } catch (deleteError) {
+        reportAppError(deleteError);
+      }
+    },
+    [reloadShownBoard, setOpenCardSchedules],
   );
 
   const handleOpenAddressedCard = useCallback(() => {
@@ -842,6 +995,11 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     handleChooseMoveList,
     handleSubmitMoveCard,
     handleConfirmDeleteCard,
+    handleSubmitSchedule,
+    handleSetSchedulePaused,
+    handleRunScheduleNow,
+    handleDeleteSchedule,
+    handleLoadScheduleRuns,
   };
 };
 

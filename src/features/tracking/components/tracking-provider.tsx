@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, type ReactNode } from 'react';
+import { deviceTimeZone } from '@/core/time-zone';
 import CheckInCard from '@/features/tracking/components/check-in-card';
 import FinishTaskDialog from '@/features/tracking/components/finish-task-dialog';
 import useTrackingEvents, {
@@ -32,7 +33,14 @@ const TrackingProvider = ({ children }: TrackingProviderProps) => {
     handleOpenFinish,
     handleApplyTimeTrackingSettings,
   } = events;
-  const { runningItems, startingSourceIds, trackingRevision, lastFinishedItem } = states;
+  const {
+    runningItems,
+    startingSourceIds,
+    trackingRevision,
+    lastFinishedItem,
+    timeTrackingSettings,
+  } = states;
+  const calendarTimeZone = timeTrackingSettings?.calendarTimeZone ?? deviceTimeZone();
 
   useEffect(() => {
     void handleLoadTracking();
@@ -55,12 +63,14 @@ const TrackingProvider = ({ children }: TrackingProviderProps) => {
       ]),
       trackingRevision,
       lastFinishedItem,
+      calendarTimeZone,
       handleStartTask,
       handleStartCard,
       handleOpenFinish,
       handleApplyTimeTrackingSettings,
     }),
     [
+      calendarTimeZone,
       handleApplyTimeTrackingSettings,
       handleOpenFinish,
       handleStartCard,

@@ -5,16 +5,18 @@ import type { OccurrenceScopeRequest } from '@/core/occurrence-scope';
 import type { CalendarView } from '@/features/calendar/entities/calendar-address';
 import type { EventTimes } from '@/features/calendar/entities/calendar-drag';
 import type { OptimisticCalendar } from '@/features/calendar/entities/optimistic-calendar';
+import type ScheduledMove from '@/features/calendar/entities/scheduled-move';
 import type TimeTrackingSettings from '@/features/tracking/entities/time-tracking-settings';
 
 const useCalendarStates = () => {
   const [calendarView, setCalendarView] = useState<CalendarView>('week');
-  const [anchorDay, setAnchorDay] = useState<Date | null>(null);
+  const [anchorDate, setAnchorDate] = useState<string | null>(null);
   const [categories, setCategories] = useState<readonly Category[]>([]);
   const [timeTrackingSettings, setTimeTrackingSettings] = useState<TimeTrackingSettings | null>(
     null,
   );
   const [optimisticCalendar, setOptimisticCalendar] = useState<OptimisticCalendar | null>(null);
+  const [scheduledMoves, setScheduledMoves] = useState<readonly ScheduledMove[]>([]);
   const [pageLoadError, setPageLoadError] = useState<AppError | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [newEventDraft, setNewEventDraft] = useState<EventTimes | null>(null);
@@ -26,14 +28,16 @@ const useCalendarStates = () => {
   return {
     calendarView,
     setCalendarView,
-    anchorDay,
-    setAnchorDay,
+    anchorDate,
+    setAnchorDate,
     categories,
     setCategories,
     timeTrackingSettings,
     setTimeTrackingSettings,
     optimisticCalendar,
     setOptimisticCalendar,
+    scheduledMoves,
+    setScheduledMoves,
     pageLoadError,
     setPageLoadError,
     selectedEventId,

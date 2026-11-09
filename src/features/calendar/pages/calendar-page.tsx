@@ -6,19 +6,18 @@ import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
 import EmptyState from '@/core/components/molecules/empty-state';
 import OccurrenceScopeDialog from '@/core/components/organisms/occurrence-scope-dialog';
-import { deviceTimeZone } from '@/core/time-zone';
 import CalendarAside from '@/features/calendar/components/calendar-aside';
 import CalendarGrid from '@/features/calendar/components/calendar-grid';
 import CalendarViewSwitch from '@/features/calendar/components/calendar-view-switch';
 import NewEventDialog from '@/features/calendar/components/new-event-dialog';
-import sampleRepeatingEventSource from '@/features/calendar/data_sources/sample/repeating-event-source';
 import {
   arrangeCalendarDays,
   calendarTitle,
   clockTextMinute,
-  visibleDayStarts,
+  shownRangeOf,
 } from '@/features/calendar/entities/calendar-days';
 import { calendarEventFromRecord } from '@/features/calendar/entities/calendar-event-record';
+import { calendarDatesOf } from '@/features/calendar/entities/calendar-range';
 import useCalendarEvents, {
   NEW_EVENT_DIALOG_ID,
   NEW_EVENT_FIELD_PREFIX,
@@ -36,8 +35,8 @@ const SIDE_BY_SIDE_QUERY = '(min-width: 80rem)';
 const CalendarPage = () => {
   const states = useCalendarStates();
   const events = useCalendarEvents(states);
-  const { handleLoadPage, handleTick, shownEventRecords, now } = events;
-  const { calendarView, anchorDay, categories, selectedEventId } = states;
+  const { handleLoadPage, handleTick, shownEventRecords, calendarTimeZone, now } = events;
+  const { calendarView, anchorDate, categories, selectedEventId } = states;
 
   const { trackingRevision, handleOpenFinish } = useTracking();
   const { handleReloadRange } = events;
@@ -66,34 +65,27 @@ const CalendarPage = () => {
     }
   }, [selectedEventId]);
 
-  const dayStarts = useMemo(
-    () => (anchorDay === null ? [] : visibleDayStarts(calendarView, anchorDay)),
-    [anchorDay, calendarView],
+  const calendarDates = useMemo(
+    () =>
+      anchorDate === null
+        ? []
+        : calendarDatesOf(shownRangeOf(calendarView, anchorDate, calendarTimeZone)),
+    [anchorDate, calendarTimeZone, calendarView],
   );
 
   const calendarEvents = useMemo(() => {
     const categoriesById = new Map(categories.map((category) => [category.id, category]));
-    return [
-      ...shownEventRecords.map((eventRecord) =>
-        calendarEventFromRecord(eventRecord, categoriesById),
-      ),
-      ...sampleRepeatingEventSource.findOccurrences(dayStarts),
-    ];
-  }, [categories, dayStarts, shownEventRecords]);
-
-  const scheduledMoves = useMemo(
-    () => sampleRepeatingEventSource.findScheduledMoves(dayStarts),
-    [dayStarts],
-  );
-
-  const calendarTimeZone = useMemo(() => deviceTimeZone(), []);
+    return shownEventRecords.map((eventRecord) =>
+      calendarEventFromRecord(eventRecord, categoriesById),
+    );
+  }, [categories, shownEventRecords]);
 
   const calendarDays = useMemo(
-    () => arrangeCalendarDays(dayStarts, calendarEvents, now),
-    [calendarEvents, dayStarts, now],
+    () => arrangeCalendarDays(calendarDates, calendarEvents, now, calendarTimeZone),
+    [calendarEvents, calendarTimeZone, calendarDates, now],
   );
 
-  if (states.optimisticCalendar === null || anchorDay === null) {
+  if (states.optimisticCalendar === null || anchorDate === null) {
     return (
       <div className="grid gap-6">
         {states.pageLoadError === null ? (
@@ -120,25 +112,13 @@ const CalendarPage = () => {
   const isDayView = calendarView === 'day';
   const selectedEvent =
     calendarEvents.find((calendarEvent) => calendarEvent.id === selectedEventId) ?? null;
-  const repeatingEventOf = (eventId: string) =>
-    calendarEvents.find(
-      (calendarEvent) => calendarEvent.id === eventId && calendarEvent.series !== undefined,
-    );
-  const askScopeOrRun = (eventId: string, action: 'change' | 'delete', runWrite: () => void) => {
-    const repeatingEvent = repeatingEventOf(eventId);
-    if (repeatingEvent === undefined) {
-      runWrite();
-      return;
-    }
-    events.handleAskOccurrenceScope({ action, eventTitle: repeatingEvent.title });
-  };
 
   return (
     <div className="grid gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h1 className="mr-2 text-2xl font-semibold tracking-[-0.02em] text-foreground">
-            {calendarTitle(calendarView, dayStarts)}
+            {calendarTitle(calendarView, calendarDates)}
           </h1>
           <IconButton
             label={isDayView ? 'Previous day' : 'Previous week'}
@@ -172,13 +152,10 @@ const CalendarPage = () => {
           selectedEventId={selectedEventId}
           onSelectEvent={events.handleSelectEvent}
           onDraftEvent={events.handleOpenNewEvent}
-          scheduledMoves={scheduledMoves}
+          scheduledMoves={states.scheduledMoves}
+          timeZone={calendarTimeZone}
           onRetimeEvent={(eventId, eventTimes) =>
-            askScopeOrRun(
-              eventId,
-              'change',
-              () => void events.handleRetimePlannedEvent(eventId, eventTimes),
-            )
+            void events.handleRetimePlannedEvent(eventId, eventTimes)
           }
         />
         <CalendarAside
@@ -189,27 +166,16 @@ const CalendarPage = () => {
           calendarTimeZone={calendarTimeZone}
           plannedFieldPrefix={PLANNED_EVENT_FIELD_PREFIX}
           trackedFieldPrefix={TRACKED_EVENT_FIELD_PREFIX}
-          onSubmitPlannedEvent={(eventId, submitEvent) => {
-            submitEvent.preventDefault();
-            askScopeOrRun(
-              eventId,
-              'change',
-              () => void events.handleSubmitPlannedEvent(eventId, submitEvent),
-            );
-          }}
+          onSubmitPlannedEvent={(eventId, submitEvent) =>
+            void events.handleSubmitPlannedEvent(eventId, submitEvent)
+          }
           onSubmitTrackedTimes={(eventId, submitEvent) =>
             void events.handleSubmitTrackedTimes(eventId, submitEvent)
           }
           onSelectCategory={(eventId, categoryId) =>
-            askScopeOrRun(
-              eventId,
-              'change',
-              () => void events.handleSelectEventCategory(eventId, categoryId),
-            )
+            void events.handleSelectEventCategory(eventId, categoryId)
           }
-          onDeleteEvent={(eventId) =>
-            askScopeOrRun(eventId, 'delete', () => void events.handleDeleteEvent(eventId))
-          }
+          onDeleteEvent={(eventId) => void events.handleDeleteEvent(eventId)}
           onFinishEvent={handleOpenFinish}
         />
       </div>

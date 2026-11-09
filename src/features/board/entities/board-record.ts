@@ -1,4 +1,5 @@
 import type Board from '@/features/board/entities/board';
+import type { NextMoveRecord } from '@/features/board/entities/card-schedule-record';
 import type CardPropertyValue from '@/features/board/entities/card-property-value';
 import type BoardPropertyKind from '@/features/board/enums/board-property-kind';
 
@@ -18,6 +19,7 @@ export type BoardCardRecord = {
   values: CardPropertyValue[];
   linkedTaskCount: number;
   doneLinkedTaskCount: number;
+  nextMove: NextMoveRecord | null;
 };
 
 export type PropertyOptionRecord = {

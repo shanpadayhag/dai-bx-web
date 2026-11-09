@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { readFormCategoryId, readFormMoment } from '@/features/calendar/entities/form-moment';
+import { readFormMoment } from '@/features/calendar/entities/form-moment';
 
 const formWith = (fieldValues: Record<string, string>) => {
   const submittedForm = new FormData();
@@ -10,10 +10,15 @@ const formWith = (fieldValues: Record<string, string>) => {
 };
 
 describe('readFormMoment', () => {
-  test('joins the day and the time as a local moment', () => {
-    expect(
-      readFormMoment(formWith({ 'starts-day': '2026-11-06', 'starts-time': '07:30' }), 'starts'),
-    ).toEqual(new Date(2026, 10, 6, 7, 30));
+  test('joins the day and the time as a moment in the calendar zone', () => {
+    const startsForm = formWith({ 'starts-day': '2026-11-06', 'starts-time': '07:30' });
+
+    expect(readFormMoment(startsForm, 'starts', 'America/Los_Angeles')).toEqual(
+      new Date(2026, 10, 6, 7, 30),
+    );
+    expect(readFormMoment(startsForm, 'starts', 'Asia/Manila')).toEqual(
+      new Date('2026-11-05T23:30:00Z'),
+    );
   });
 
   test('an empty day or time gives an invalid moment', () => {
@@ -21,14 +26,9 @@ describe('readFormMoment', () => {
       { 'starts-day': '', 'starts-time': '07:30' },
       { 'starts-day': '2026-11-06', 'starts-time': '' },
     ]) {
-      expect(Number.isNaN(readFormMoment(formWith(fieldValues), 'starts').getTime())).toBe(true);
+      expect(
+        Number.isNaN(readFormMoment(formWith(fieldValues), 'starts', 'Asia/Manila').getTime()),
+      ).toBe(true);
     }
-  });
-});
-
-describe('readFormCategoryId', () => {
-  test('None reads as no category', () => {
-    expect(readFormCategoryId(formWith({ category: '' }), 'category')).toBeNull();
-    expect(readFormCategoryId(formWith({ category: 'focus' }), 'category')).toBe('focus');
   });
 });

@@ -58,6 +58,24 @@ const failEventWrite = (
   pendingWrites: withoutWrite(optimisticCalendar.pendingWrites, writeId),
 });
 
+const isSameRange = (firstRange: CalendarRange, secondRange: CalendarRange): boolean =>
+  firstRange.start === secondRange.start &&
+  firstRange.days === secondRange.days &&
+  firstRange.timeZone === secondRange.timeZone;
+
+const confirmEventWriteWithRecords = (
+  optimisticCalendar: OptimisticCalendar,
+  writeId: number,
+  reloadedRange: CalendarRange,
+  reloadedRecords: readonly CalendarEventRecord[],
+): OptimisticCalendar => ({
+  ...optimisticCalendar,
+  confirmedRecords: isSameRange(optimisticCalendar.range, reloadedRange)
+    ? reloadedRecords
+    : optimisticCalendar.confirmedRecords,
+  pendingWrites: withoutWrite(optimisticCalendar.pendingWrites, writeId),
+});
+
 const visibleEventRecords = (
   optimisticCalendar: OptimisticCalendar,
 ): readonly CalendarEventRecord[] =>
@@ -69,6 +87,7 @@ const visibleEventRecords = (
 export type { OptimisticCalendar };
 export {
   confirmEventWrite,
+  confirmEventWriteWithRecords,
   failEventWrite,
   startEventWrite,
   startOptimisticCalendar,

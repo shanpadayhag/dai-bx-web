@@ -4,6 +4,7 @@ import type { BoardCardRecord } from '@/features/board/entities/board-record';
 import type BoardCard from '@/features/board/entities/board-card';
 import type CardDetail from '@/features/board/entities/card-detail';
 import type CardDetailRecord from '@/features/board/entities/card-detail-record';
+import { nextMoveFromRecord } from '@/features/board/entities/next-move';
 
 type Positioned = { position: number };
 
@@ -18,6 +19,7 @@ const toBoardCard = (cardRecord: BoardCardRecord): BoardCard => ({
   values: cardRecord.values,
   linkedTaskCount: cardRecord.linkedTaskCount,
   doneLinkedTaskCount: cardRecord.doneLinkedTaskCount,
+  nextMove: cardRecord.nextMove === null ? null : nextMoveFromRecord(cardRecord.nextMove),
 });
 
 export const arrangeBoard = (boardRecord: BoardRecord): BoardContents => {
@@ -46,7 +48,7 @@ export const arrangeBoard = (boardRecord: BoardRecord): BoardContents => {
 };
 
 export const arrangeCardDetail = (
-  cardDetailRecord: Omit<CardDetailRecord, 'trackedEventCount'>,
+  cardDetailRecord: Omit<CardDetailRecord, 'trackedEventCount' | 'schedules'>,
   boardRecord: BoardRecord,
 ): CardDetail | null => {
   const cardList = boardRecord.lists.find(

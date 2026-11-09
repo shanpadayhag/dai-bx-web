@@ -10,10 +10,8 @@ import OptionChip from '@/features/board/components/option-chip';
 import type BoardCard from '@/features/board/entities/board-card';
 import type BoardProperty from '@/features/board/entities/board-property';
 import { formatCardDue, isCardDueOverdue } from '@/features/board/entities/card-due';
-import {
-  formatScheduleMoment,
-  type ScheduledCardMove,
-} from '@/features/board/entities/card-schedule';
+import { formatScheduleMoment } from '@/features/board/entities/card-schedule';
+import { nextMoveLabel } from '@/features/board/entities/next-move';
 import { findChosenOptions } from '@/features/board/entities/chosen-options';
 
 type BoardCardTileProps = {
@@ -21,7 +19,7 @@ type BoardCardTileProps = {
   properties: readonly BoardProperty[];
   isPending: boolean;
   now: Date;
-  nextMove: ScheduledCardMove | null;
+  calendarTimeZone: string;
   onOpenCard: (cardId: string) => void;
   onDropCard: (draggedCardId: string) => void;
 };
@@ -31,7 +29,7 @@ const BoardCardTile = ({
   properties,
   isPending,
   now,
-  nextMove,
+  calendarTimeZone,
   onOpenCard,
   onDropCard,
 }: BoardCardTileProps) => {
@@ -40,6 +38,9 @@ const BoardCardTile = ({
   const cardDue = card.dueDate === null ? null : { dueDate: card.dueDate, dueTime: card.dueTime };
   const isOverdue = cardDue !== null && isCardDueOverdue(cardDue, now);
   const hasLinkedTasks = card.linkedTaskCount > 0;
+  const { nextMove } = card;
+  const nextMoveMoment =
+    nextMove === null ? '' : formatScheduleMoment(nextMove.at, now, calendarTimeZone);
   const areLinkedTasksDone = hasLinkedTasks && card.doneLinkedTaskCount === card.linkedTaskCount;
 
   return (
@@ -121,13 +122,13 @@ const BoardCardTile = ({
             <span className="inline-flex items-center gap-1 tabular-nums">
               <AlarmClock aria-hidden="true" />
               <span className="sr-only">
-                Moves to {nextMove.targetListName} {formatScheduleMoment(nextMove.at, now)}
+                Moves to {nextMove.listName} {nextMoveMoment}
               </span>
               <span
                 aria-hidden="true"
                 className="hidden group-hover/tile:inline group-focus-visible/tile:inline [@media(hover:none)]:inline"
               >
-                {formatScheduleMoment(nextMove.at, now)} → {nextMove.targetListName}
+                {nextMoveLabel(nextMove, now, calendarTimeZone)}
               </span>
             </span>
           )}

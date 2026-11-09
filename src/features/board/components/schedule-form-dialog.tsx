@@ -13,12 +13,11 @@ import PopoverPanel from '@/core/components/molecules/popover-panel';
 import SegmentedControl from '@/core/components/molecules/segmented-control';
 import TimeZoneField from '@/core/components/molecules/time-zone-field';
 import RepeatPicker from '@/core/components/organisms/repeat-picker';
-import localCalendarDate from '@/core/local-date';
-import hidePopover from '@/core/popover';
 import { repeatPresetsFor } from '@/core/repeat-rule';
+import { instantInZone, partsInZone, wallClockInZone } from '@/core/zoned-time';
 import type BoardList from '@/features/board/entities/board-list';
 import type CardSchedule from '@/features/board/entities/card-schedule';
-import { formatClock, type CardScheduleKind } from '@/features/board/entities/card-schedule';
+import type { CardScheduleKind } from '@/features/board/entities/card-schedule';
 
 const KIND_LABELS: Record<CardScheduleKind, string> = { once: 'Once', repeating: 'Repeating' };
 const BLOCK_LENGTH_MINUTES = [15, 30, 45, 60, 90, 120, 180] as const;
@@ -39,6 +38,16 @@ type ScheduleFormDialogProps = {
   categories: readonly Category[];
   calendarTimeZone: string;
   now: Date;
+  isSubmitting: boolean;
+  onSubmit: (scheduleId: string | null, submitEvent: FormEvent<HTMLFormElement>) => void;
+};
+
+const nextHourStart = (now: Date, timeZone: string): string => {
+  const nowParts = partsInZone(now, timeZone);
+  return wallClockInZone(
+    instantInZone(nowParts.calendarDate, (nowParts.hour + 1) * 60, timeZone),
+    timeZone,
+  );
 };
 
 const ScheduleFormDialog = ({
@@ -75,13 +84,14 @@ const ScheduleForm = ({
   categories,
   calendarTimeZone,
   now,
+  isSubmitting,
+  onSubmit,
 }: ScheduleFormProps) => {
-  const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1);
-  const startsAt = editedSchedule?.firstAt ?? nextHour;
+  const localStart = editedSchedule?.localStart ?? nextHourStart(now, calendarTimeZone);
   const [scheduleKind, setScheduleKind] = useState<CardScheduleKind>(
     editedSchedule?.kind ?? 'once',
   );
-  const [pickedDate, setPickedDate] = useState(localCalendarDate(startsAt));
+  const [pickedDate, setPickedDate] = useState(localStart.slice(0, 10));
   const [isBlockingTime, setIsBlockingTime] = useState(editedSchedule?.calendarBlock != null);
   const isRepeating = scheduleKind === 'repeating';
   const fieldPrefix = `${dialogId}-field`;
@@ -89,17 +99,13 @@ const ScheduleForm = ({
     repeatPresetsFor(pickedDate).find((repeatPreset) => repeatPreset.key === 'weekly')?.rule ??
     null;
 
-  const submitSchedule = (submitEvent: FormEvent<HTMLFormElement>) => {
-    submitEvent.preventDefault();
-    hidePopover(dialogId);
-  };
-
   return (
     <form
       noValidate
       className="grid max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-5"
-      onSubmit={submitSchedule}
+      onSubmit={(submitEvent) => onSubmit(editedSchedule?.id ?? null, submitEvent)}
     >
+      <input type="hidden" name="kind" value={scheduleKind} />
       <div className="grid gap-1">
         <h2 className="text-lg font-semibold tracking-[-0.01em] text-foreground">
           {editedSchedule === null ? 'Add schedule' : 'Edit schedule'}
@@ -155,7 +161,7 @@ const ScheduleForm = ({
             name="time"
             type="time"
             step={300}
-            defaultValue={formatClock(startsAt)}
+            defaultValue={localStart.slice(11, 16)}
             className="tabular-nums"
           />
         </Field>
@@ -225,7 +231,9 @@ const ScheduleForm = ({
         <Button variant="ghost" popoverTarget={dialogId} popoverTargetAction="hide">
           Cancel
         </Button>
-        <Button type="submit">{editedSchedule === null ? 'Add schedule' : 'Save'}</Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Saving…' : editedSchedule === null ? 'Add schedule' : 'Save'}
+        </Button>
       </div>
     </form>
   );

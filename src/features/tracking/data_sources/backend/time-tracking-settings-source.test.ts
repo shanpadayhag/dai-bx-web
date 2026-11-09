@@ -13,6 +13,7 @@ const timeTrackingSettings: TimeTrackingSettings = {
   workingHoursStart: '16:00',
   workingHoursEnd: '02:00',
   trackedCategoryId: null,
+  calendarTimeZone: null,
 };
 
 test('reads and changes the time-tracking settings', async () => {
@@ -30,4 +31,26 @@ test('reads and changes the time-tracking settings', async () => {
     await backendTimeTrackingSettingsSource.update({ trackedCategoryId: 'focus' }),
   ).toMatchObject({ trackedCategoryId: 'focus' });
   expect(receivedChanges).toEqual({ trackedCategoryId: 'focus' });
+});
+
+test('sets the calendar time zone, or clears it back to the device zone', async () => {
+  const receivedChanges: unknown[] = [];
+  backendServer.use(
+    http.patch('/backend/account/time-tracking', async ({ request }) => {
+      const timeTrackingChanges = (await request.json()) as Partial<TimeTrackingSettings>;
+      receivedChanges.push(timeTrackingChanges);
+      return HttpResponse.json({ ...timeTrackingSettings, ...timeTrackingChanges });
+    }),
+  );
+
+  expect(
+    await backendTimeTrackingSettingsSource.update({ calendarTimeZone: 'Europe/London' }),
+  ).toMatchObject({ calendarTimeZone: 'Europe/London' });
+  expect(await backendTimeTrackingSettingsSource.update({ calendarTimeZone: null })).toMatchObject({
+    calendarTimeZone: null,
+  });
+  expect(receivedChanges).toEqual([
+    { calendarTimeZone: 'Europe/London' },
+    { calendarTimeZone: null },
+  ]);
 });

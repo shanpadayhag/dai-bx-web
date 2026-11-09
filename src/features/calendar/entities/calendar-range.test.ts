@@ -1,47 +1,46 @@
 import { describe, expect, test } from 'vitest';
-import { dayRange, weekRange } from '@/features/calendar/entities/calendar-range';
-
-const HOUR_MILLIS = 60 * 60 * 1000;
-
-const spanHours = (calendarRange: { from: Date; to: Date }) =>
-  (calendarRange.to.getTime() - calendarRange.from.getTime()) / HOUR_MILLIS;
+import { calendarDatesOf, dayRange, weekRange } from '@/features/calendar/entities/calendar-range';
 
 describe('weekRange', () => {
-  test('runs from the Monday at midnight to the next Monday at midnight', () => {
-    expect(weekRange(new Date(2026, 10, 4, 15, 30))).toEqual({
-      from: new Date(2026, 10, 2),
-      to: new Date(2026, 10, 9),
+  test('starts on the Monday and lasts seven days in the given zone', () => {
+    expect(weekRange('2026-11-04', 'Asia/Manila')).toEqual({
+      start: '2026-11-02',
+      days: 7,
+      timeZone: 'Asia/Manila',
     });
   });
 
   test('a Sunday belongs to the week that started the Monday before', () => {
-    expect(weekRange(new Date(2026, 10, 8, 23, 59)).from).toEqual(new Date(2026, 10, 2));
+    expect(weekRange('2026-11-08', 'Asia/Manila').start).toBe('2026-11-02');
   });
 
-  test('Monday at midnight starts its own week', () => {
-    expect(weekRange(new Date(2026, 10, 9)).from).toEqual(new Date(2026, 10, 9));
+  test('a Monday starts its own week', () => {
+    expect(weekRange('2026-11-09', 'Asia/Manila').start).toBe('2026-11-09');
   });
 
-  test('a week with a clock change keeps local midnights and is an hour longer', () => {
-    const clockChangeWeek = weekRange(new Date(2026, 9, 29, 12));
+  test('a week with a clock change is still seven calendar days', () => {
+    const clockChangeWeek = weekRange('2026-10-29', 'Europe/London');
 
-    expect(clockChangeWeek).toEqual({
-      from: new Date(2026, 9, 26),
-      to: new Date(2026, 10, 2),
-    });
-    expect(spanHours(clockChangeWeek)).toBe(7 * 24 + 1);
+    expect(clockChangeWeek.start).toBe('2026-10-26');
+    expect(calendarDatesOf(clockChangeWeek)).toEqual([
+      '2026-10-26',
+      '2026-10-27',
+      '2026-10-28',
+      '2026-10-29',
+      '2026-10-30',
+      '2026-10-31',
+      '2026-11-01',
+    ]);
   });
 });
 
 describe('dayRange', () => {
-  test('runs from midnight to the next midnight', () => {
-    expect(dayRange(new Date(2026, 10, 5, 18, 2))).toEqual({
-      from: new Date(2026, 10, 5),
-      to: new Date(2026, 10, 6),
+  test('is the one day in the given zone', () => {
+    expect(dayRange('2026-11-05', 'Europe/London')).toEqual({
+      start: '2026-11-05',
+      days: 1,
+      timeZone: 'Europe/London',
     });
-  });
-
-  test('the day the clocks go back lasts 25 hours', () => {
-    expect(spanHours(dayRange(new Date(2026, 10, 1, 9)))).toBe(25);
+    expect(calendarDatesOf(dayRange('2026-11-05', 'Europe/London'))).toEqual(['2026-11-05']);
   });
 });

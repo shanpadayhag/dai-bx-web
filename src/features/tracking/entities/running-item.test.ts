@@ -51,6 +51,8 @@ describe('runningItemFromRecord', () => {
     endsAt: null,
     finishedAt: null,
     lastAnsweredAt: '2026-11-06T01:20:00.000Z',
+    timeZone: null,
+    series: null,
     source: { kind: 'card', id: 'card-1', boardId: 'board-1' },
     estimateMinutes: null,
     sourceName: 'Projects',

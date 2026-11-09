@@ -12,6 +12,7 @@ type CalendarEventBlockProps = {
   minuteHeight: number;
   isSelected: boolean;
   isDragged: boolean;
+  timeZone: string;
   onSelect: (eventId: string) => void;
   onStartDrag: (
     dragKind: 'move' | 'resize',
@@ -26,6 +27,7 @@ const CalendarEventBlock = ({
   minuteHeight,
   isSelected,
   isDragged,
+  timeZone,
   onSelect,
   onStartDrag,
 }: CalendarEventBlockProps) => {
@@ -35,7 +37,7 @@ const CalendarEventBlock = ({
   const trimmedMinutes = piece.continuesAfter ? 0 : trimmedEventMinutes(calendarEvent);
   const isShort = durationMinutes < 40;
   const isRoomy = durationMinutes >= 75;
-  const timeRangeLabel = formatEventTimeRange(calendarEvent);
+  const timeRangeLabel = formatEventTimeRange(calendarEvent, timeZone);
   const isPlanned = calendarEvent.kind === 'planned';
   const canResize = isPlanned && !piece.continuesAfter;
   const blockStyle: CSSProperties = {

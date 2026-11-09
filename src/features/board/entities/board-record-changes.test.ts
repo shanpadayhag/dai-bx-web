@@ -14,6 +14,7 @@ const cardRecord = (id: string, listId: string, position: number): BoardCardReco
   values: [],
   linkedTaskCount: 0,
   doneLinkedTaskCount: 0,
+  nextMove: null,
 });
 
 const boardRecord: BoardRecord = {

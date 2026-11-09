@@ -6,6 +6,8 @@ import {
   type EventPiece,
 } from '@/features/calendar/entities/day-layout';
 
+const DEVICE_ZONE = 'America/Los_Angeles';
+
 const localMoment = (day: number, hour: number, minute = 0) =>
   new Date(2026, 10, day, hour, minute);
 
@@ -27,7 +29,7 @@ const buildEvent = (
 
 const buildPiece = (eventId: string, startMinute: number, endMinute: number): EventPiece => ({
   event: buildEvent(eventId, localMoment(4, 0), localMoment(4, 1)),
-  dayStart: localMoment(4, 0),
+  calendarDate: '2026-11-04',
   startMinute,
   endMinute,
   continuesBefore: false,
@@ -41,11 +43,12 @@ describe('splitAtMidnight', () => {
     const pieces = splitAtMidnight(
       buildEvent('gym', localMoment(4, 16), localMoment(4, 17, 30)),
       now,
+      DEVICE_ZONE,
     );
 
     expect(pieces).toHaveLength(1);
     expect(pieces[0]).toMatchObject({
-      dayStart: localMoment(4, 0),
+      calendarDate: '2026-11-04',
       startMinute: 16 * 60,
       endMinute: 17 * 60 + 30,
       continuesBefore: false,
@@ -57,6 +60,7 @@ describe('splitAtMidnight', () => {
     const pieces = splitAtMidnight(
       buildEvent('trip', localMoment(4, 9), localMoment(6, 15), 'planned'),
       now,
+      DEVICE_ZONE,
     );
 
     expect(pieces.map(({ startMinute, endMinute }) => [startMinute, endMinute])).toEqual([
@@ -65,7 +69,7 @@ describe('splitAtMidnight', () => {
       [0, 15 * 60],
     ]);
     expect(pieces[1]).toMatchObject({
-      dayStart: localMoment(5, 0),
+      calendarDate: '2026-11-05',
       continuesBefore: true,
       continuesAfter: true,
     });
@@ -75,17 +79,18 @@ describe('splitAtMidnight', () => {
     const pieces = splitAtMidnight(
       buildEvent('late', localMoment(4, 23, 30), localMoment(5, 0, 45)),
       now,
+      DEVICE_ZONE,
     );
 
     expect(pieces).toHaveLength(2);
     expect(pieces[0]).toMatchObject({
-      dayStart: localMoment(4, 0),
+      calendarDate: '2026-11-04',
       startMinute: 23 * 60 + 30,
       endMinute: 24 * 60,
       continuesAfter: true,
     });
     expect(pieces[1]).toMatchObject({
-      dayStart: localMoment(5, 0),
+      calendarDate: '2026-11-05',
       startMinute: 0,
       endMinute: 45,
       continuesBefore: true,
@@ -96,16 +101,17 @@ describe('splitAtMidnight', () => {
     const pieces = splitAtMidnight(
       buildEvent('clock change', new Date(2026, 9, 31, 22), new Date(2026, 10, 1, 3)),
       now,
+      DEVICE_ZONE,
     );
 
     expect(pieces).toHaveLength(2);
     expect(pieces[0]).toMatchObject({
-      dayStart: new Date(2026, 9, 31),
+      calendarDate: '2026-10-31',
       startMinute: 22 * 60,
       endMinute: 24 * 60,
     });
     expect(pieces[1]).toMatchObject({
-      dayStart: new Date(2026, 10, 1),
+      calendarDate: '2026-11-01',
       startMinute: 0,
       endMinute: 3 * 60,
     });
@@ -115,14 +121,43 @@ describe('splitAtMidnight', () => {
     const pieces = splitAtMidnight(
       buildEvent('evening', localMoment(4, 22), localMoment(5, 0)),
       now,
+      DEVICE_ZONE,
     );
 
     expect(pieces).toHaveLength(1);
     expect(pieces[0]).toMatchObject({ endMinute: 24 * 60, continuesAfter: false });
   });
 
+  test('reads the wall clock of the given zone, not the device', () => {
+    const pieces = splitAtMidnight(
+      buildEvent(
+        'manila call',
+        new Date('2026-11-04T15:00:00Z'),
+        new Date('2026-11-04T17:30:00Z'),
+        'planned',
+      ),
+      now,
+      'Asia/Manila',
+    );
+
+    expect(
+      pieces.map(({ calendarDate, startMinute, endMinute }) => [
+        calendarDate,
+        startMinute,
+        endMinute,
+      ]),
+    ).toEqual([
+      ['2026-11-04', 23 * 60, 24 * 60],
+      ['2026-11-05', 0, 90],
+    ]);
+  });
+
   test('a running event ends at now', () => {
-    const pieces = splitAtMidnight(buildEvent('running', localMoment(4, 16, 20), null), now);
+    const pieces = splitAtMidnight(
+      buildEvent('running', localMoment(4, 16, 20), null),
+      now,
+      DEVICE_ZONE,
+    );
 
     expect(pieces[0]).toMatchObject({ startMinute: 16 * 60 + 20, endMinute: 18 * 60 + 2 });
   });

@@ -1,10 +1,11 @@
+import { addCalendarDays, partsInZone } from '@/core/zoned-time';
 import type CalendarEvent from '@/features/calendar/entities/calendar-event';
 
 const MINUTES_PER_DAY = 24 * 60;
 
 type EventPiece = {
   event: CalendarEvent;
-  dayStart: Date;
+  calendarDate: string;
   startMinute: number;
   endMinute: number;
   continuesBefore: boolean;
@@ -18,28 +19,36 @@ type DayLayoutEntry =
 const startOfLocalDay = (moment: Date): Date =>
   new Date(moment.getFullYear(), moment.getMonth(), moment.getDate());
 
-const nextLocalDay = (dayStart: Date): Date =>
-  new Date(dayStart.getFullYear(), dayStart.getMonth(), dayStart.getDate() + 1);
-
-const wallClockMinute = (moment: Date): number => moment.getHours() * 60 + moment.getMinutes();
-
-const splitAtMidnight = (calendarEvent: CalendarEvent, now: Date): EventPiece[] => {
-  const eventEnd = calendarEvent.endsAt ?? now;
+const splitAtMidnight = (
+  calendarEvent: CalendarEvent,
+  now: Date,
+  timeZone: string,
+): EventPiece[] => {
+  const startParts = partsInZone(calendarEvent.startsAt, timeZone);
+  const endParts = partsInZone(calendarEvent.endsAt ?? now, timeZone);
+  const lastDate =
+    endParts.minuteOfDay === 0 && endParts.calendarDate > startParts.calendarDate
+      ? addCalendarDays(endParts.calendarDate, -1)
+      : endParts.calendarDate;
   const eventPieces: EventPiece[] = [];
-  let dayStart = startOfLocalDay(calendarEvent.startsAt);
-  while (dayStart < eventEnd) {
-    const dayEnd = nextLocalDay(dayStart);
-    const pieceStart = calendarEvent.startsAt > dayStart ? calendarEvent.startsAt : dayStart;
-    const reachesDayEnd = eventEnd >= dayEnd;
+  for (
+    let calendarDate = startParts.calendarDate;
+    calendarDate <= lastDate;
+    calendarDate = addCalendarDays(calendarDate, 1)
+  ) {
+    const isFirstDay = calendarDate === startParts.calendarDate;
+    const isLastDay = calendarDate === lastDate;
+    const startMinute = isFirstDay ? startParts.minuteOfDay : 0;
+    const endMinute =
+      isLastDay && calendarDate === endParts.calendarDate ? endParts.minuteOfDay : MINUTES_PER_DAY;
     eventPieces.push({
       event: calendarEvent,
-      dayStart,
-      startMinute: pieceStart === dayStart ? 0 : wallClockMinute(pieceStart),
-      endMinute: reachesDayEnd ? MINUTES_PER_DAY : wallClockMinute(eventEnd),
-      continuesBefore: pieceStart === dayStart && calendarEvent.startsAt < dayStart,
-      continuesAfter: eventEnd > dayEnd,
+      calendarDate,
+      startMinute,
+      endMinute: Math.max(startMinute, endMinute),
+      continuesBefore: !isFirstDay,
+      continuesAfter: !isLastDay,
     });
-    dayStart = dayEnd;
   }
   return eventPieces;
 };

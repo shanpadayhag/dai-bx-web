@@ -23,6 +23,7 @@ const timeTrackingSettings: TimeTrackingSettings = {
   workingHoursStart: '16:00',
   workingHoursEnd: '02:00',
   trackedCategoryId: null,
+  calendarTimeZone: null,
 };
 
 describe('checkInDueAt', () => {

@@ -309,7 +309,11 @@ const SettingsPage = () => {
           title="Time zone"
           description="The calendar shows every event, flag and day in this zone, so days run midnight to midnight there."
         >
-          <CalendarTimeZoneSetting />
+          <CalendarTimeZoneSetting
+            calendarTimeZone={timeTracking.calendarTimeZone}
+            resetCount={timeTrackingResetCount}
+            onChooseTimeZone={events.handleChooseCalendarTimeZone}
+          />
         </SettingsSection>
         <SettingsSection
           title="Account"

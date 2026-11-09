@@ -16,6 +16,7 @@ const cardWithValues = (cardId: string, values: CardPropertyValue[]): BoardCardR
   values,
   linkedTaskCount: 0,
   doneLinkedTaskCount: 0,
+  nextMove: null,
 });
 
 const cardRecords = [

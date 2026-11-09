@@ -15,6 +15,7 @@ const cardRecord = (id: string, listId: string, position: number): BoardCardReco
   values: [],
   linkedTaskCount: 0,
   doneLinkedTaskCount: 0,
+  nextMove: null,
 });
 
 const boardRecord: BoardRecord = {
@@ -79,6 +80,7 @@ describe('arrangeCardDetail', () => {
     notes: '## Outcome\n',
     linkedTasks: [],
     trackedEventCount: 0,
+    schedules: [],
   };
 
   test('names the list the card sits in', () => {
@@ -91,6 +93,7 @@ describe('arrangeCardDetail', () => {
         values: [],
         linkedTaskCount: 0,
         doneLinkedTaskCount: 0,
+        nextMove: null,
       },
       listName: 'Doing',
       notes: '## Outcome\n',
@@ -105,5 +108,24 @@ describe('arrangeCardDetail', () => {
         boardRecord,
       ),
     ).toBeNull();
+  });
+});
+
+describe('a card with a scheduled move', () => {
+  test('carries its next move with the time as a date', () => {
+    const scheduledBoard: BoardRecord = {
+      ...boardRecord,
+      cards: [
+        {
+          ...cardRecord('doing-card', 'doing', 0),
+          nextMove: { at: '2026-11-09T10:00:00.000Z', listName: 'Backlog' },
+        },
+      ],
+    };
+
+    expect(arrangeBoard(scheduledBoard).lists[1]?.cards[0]?.nextMove).toEqual({
+      at: new Date('2026-11-09T10:00:00.000Z'),
+      listName: 'Backlog',
+    });
   });
 });

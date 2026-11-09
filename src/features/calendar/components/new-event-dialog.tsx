@@ -1,6 +1,5 @@
-import type { FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import type { Category } from '@/core/category';
-import localCalendarDate from '@/core/local-date';
 import Button from '@/core/components/atoms/button';
 import Input from '@/core/components/atoms/input';
 import CategoryPicker from '@/core/components/molecules/category-picker';
@@ -9,6 +8,7 @@ import MoreOptions from '@/core/components/molecules/more-options';
 import PopoverPanel from '@/core/components/molecules/popover-panel';
 import TimeZoneField from '@/core/components/molecules/time-zone-field';
 import RepeatPicker from '@/core/components/organisms/repeat-picker';
+import { partsInZone } from '@/core/zoned-time';
 import DateTimeField from '@/features/calendar/components/date-time-field';
 import type { EventTimes } from '@/features/calendar/entities/calendar-drag';
 
@@ -23,7 +23,7 @@ type NewEventDialogProps = {
   onSubmit: (submitEvent: FormEvent<HTMLFormElement>) => void;
 };
 
-const NewEventDialog = ({
+const NewEventForm = ({
   dialogId,
   fieldPrefix,
   categories,
@@ -32,14 +32,12 @@ const NewEventDialog = ({
   calendarTimeZone,
   now,
   onSubmit,
-}: NewEventDialogProps) => (
-  <PopoverPanel id={dialogId} label="New event">
-    <form
-      noValidate
-      key={draftTimes === null ? 'empty' : draftTimes.startsAt.toISOString()}
-      className="grid gap-5 p-5"
-      onSubmit={onSubmit}
-    >
+}: NewEventDialogProps) => {
+  const draftDate = partsInZone(draftTimes?.startsAt ?? now, calendarTimeZone).calendarDate;
+  const [typedStartDate, setTypedStartDate] = useState('');
+
+  return (
+    <form noValidate className="grid gap-5 p-5" onSubmit={onSubmit}>
       <h2 className="text-lg font-semibold tracking-[-0.01em] text-foreground">New event</h2>
       <Field label="Title" htmlFor={`${fieldPrefix}-title`}>
         <Input id={`${fieldPrefix}-title`} name="title" maxLength={200} placeholder="Gym" />
@@ -55,19 +53,22 @@ const NewEventDialog = ({
           label="Starts"
           idPrefix={`${fieldPrefix}-starts`}
           moment={draftTimes?.startsAt ?? null}
+          timeZone={calendarTimeZone}
           minuteStep={15}
+          onChangeDate={setTypedStartDate}
         />
         <DateTimeField
           label="Ends"
           idPrefix={`${fieldPrefix}-ends`}
           moment={draftTimes?.endsAt ?? null}
+          timeZone={calendarTimeZone}
           minuteStep={15}
         />
       </div>
       <RepeatPicker
         idPrefix={`${fieldPrefix}-repeat`}
         name="repeat"
-        firstDate={localCalendarDate(draftTimes?.startsAt ?? now)}
+        firstDate={typedStartDate === '' ? draftDate : typedStartDate}
         initialRule={null}
       />
       <MoreOptions>
@@ -89,6 +90,17 @@ const NewEventDialog = ({
         </Button>
       </div>
     </form>
+  );
+};
+
+const NewEventDialog = (dialogProps: NewEventDialogProps) => (
+  <PopoverPanel id={dialogProps.dialogId} label="New event">
+    <NewEventForm
+      key={
+        dialogProps.draftTimes === null ? 'empty' : dialogProps.draftTimes.startsAt.toISOString()
+      }
+      {...dialogProps}
+    />
   </PopoverPanel>
 );
 

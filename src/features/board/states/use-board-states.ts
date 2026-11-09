@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import type AppError from '@/core/app-error';
+import type { Category } from '@/core/category';
 import type Board from '@/features/board/entities/board';
 import type CardDetailRecord from '@/features/board/entities/card-detail-record';
+import type CardSchedule from '@/features/board/entities/card-schedule';
 import type { OptimisticBoard } from '@/features/board/entities/optimistic-board';
 import type PendingCardRename from '@/features/board/entities/pending-card-rename';
+import type ScheduleRunsPage from '@/features/board/entities/schedule-runs-page';
 
 const useBoardStates = () => {
   const [boards, setBoards] = useState<readonly Board[] | null>(null);
@@ -23,6 +26,11 @@ const useBoardStates = () => {
   const [cardRenameCancelCount, setCardRenameCancelCount] = useState(0);
   const [moveDialogListId, setMoveDialogListId] = useState<string | null>(null);
   const [addressedCardId, setAddressedCardId] = useState<string | null>(null);
+  const [openCardSchedules, setOpenCardSchedules] = useState<readonly CardSchedule[] | null>(null);
+  const [scheduleRunsPages, setScheduleRunsPages] = useState<
+    Readonly<Record<string, ScheduleRunsPage>>
+  >({});
+  const [scheduleCategories, setScheduleCategories] = useState<readonly Category[] | null>(null);
 
   return {
     boards,
@@ -59,6 +67,12 @@ const useBoardStates = () => {
     setMoveDialogListId,
     addressedCardId,
     setAddressedCardId,
+    openCardSchedules,
+    setOpenCardSchedules,
+    scheduleRunsPages,
+    setScheduleRunsPages,
+    scheduleCategories,
+    setScheduleCategories,
   };
 };
 

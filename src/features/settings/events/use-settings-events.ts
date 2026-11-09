@@ -172,6 +172,14 @@ const useSettingsEvents = (states: ReturnType<typeof useSettingsStates>) => {
     [refuseTimeTrackingInput, saveTimeTrackingChanges],
   );
 
+  const handleChooseCalendarTimeZone = useCallback(
+    (chosenTimeZone: string | null) => {
+      if (timeTrackingSettings?.calendarTimeZone === chosenTimeZone) return;
+      void saveTimeTrackingChanges({ calendarTimeZone: chosenTimeZone });
+    },
+    [saveTimeTrackingChanges, timeTrackingSettings],
+  );
+
   const handleCommitWorkingHours = useCallback(
     (hoursField: WorkingHoursField, clockText: string) => {
       try {
@@ -533,6 +541,7 @@ const useSettingsEvents = (states: ReturnType<typeof useSettingsStates>) => {
   return {
     handleToggleCheckIns,
     handleCommitCheckInMinutes,
+    handleChooseCalendarTimeZone,
     handleCommitWorkingHours,
     handleSelectTrackedCategory,
     handleRenameCategory,

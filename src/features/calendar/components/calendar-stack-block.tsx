@@ -15,6 +15,7 @@ type CalendarStackBlockProps = {
   stackEntry: StackEntry;
   minuteHeight: number;
   selectedEventId: string | null;
+  timeZone: string;
   onSelectEvent: (eventId: string) => void;
 };
 
@@ -27,6 +28,7 @@ const CalendarStackBlock = ({
   stackEntry,
   minuteHeight,
   selectedEventId,
+  timeZone,
   onSelectEvent,
 }: CalendarStackBlockProps) => {
   const popoverId = `${stackEntry.id}-popover`;
@@ -36,7 +38,7 @@ const CalendarStackBlock = ({
   const endsNow = stackEntry.pieces.some(
     (piece) => isEventRunning(piece.event) && piece.endMinute === stackEntry.endMinute,
   );
-  const stackStartLabel = formatClock(stackEntry.pieces[0]?.event.startsAt ?? new Date());
+  const stackStartLabel = formatClock(stackEntry.pieces[0]?.event.startsAt ?? new Date(), timeZone);
   const stackRangeLabel = `${stackStartLabel} – ${endsNow ? 'now' : formatMinuteOfDay(stackEntry.endMinute)}`;
 
   return (
@@ -106,7 +108,7 @@ const CalendarStackBlock = ({
                     </span>
                   </span>
                   <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                    {formatEventTimeRange(stackEvent)}
+                    {formatEventTimeRange(stackEvent, timeZone)}
                   </span>
                 </button>
               </li>

@@ -1,16 +1,17 @@
+import { calendarDateTitle, partsInZone } from '@/core/zoned-time';
 import type { CalendarView } from '@/features/calendar/entities/calendar-address';
 import type CalendarEvent from '@/features/calendar/entities/calendar-event';
+import type CalendarRange from '@/features/calendar/entities/calendar-range';
 import { dayRange, weekRange } from '@/features/calendar/entities/calendar-range';
 import {
   layoutDay,
   splitAtMidnight,
-  startOfLocalDay,
   type DayLayoutEntry,
   type EventPiece,
 } from '@/features/calendar/entities/day-layout';
 
 type CalendarDay = {
-  dayStart: Date;
+  calendarDate: string;
   isToday: boolean;
   layoutEntries: DayLayoutEntry[];
 };
@@ -18,57 +19,48 @@ type CalendarDay = {
 const CLOCK_TEXT_PATTERN = /^(\d{2}):(\d{2})$/;
 const FALLBACK_START_MINUTE = 8 * 60;
 
-const weekTitleFormat = new Intl.DateTimeFormat('en', { month: 'long', day: 'numeric' });
-const dayTitleFormat = new Intl.DateTimeFormat('en', {
-  weekday: 'long',
-  month: 'long',
-  day: 'numeric',
-});
+const shownRangeOf = (
+  calendarView: CalendarView,
+  anchorDate: string,
+  timeZone: string,
+): CalendarRange =>
+  calendarView === 'week' ? weekRange(anchorDate, timeZone) : dayRange(anchorDate, timeZone);
 
-const visibleDayStarts = (calendarView: CalendarView, anchorDay: Date): Date[] => {
-  const shownRange = calendarView === 'week' ? weekRange(anchorDay) : dayRange(anchorDay);
-  const dayStarts: Date[] = [];
-  for (
-    let dayStart = shownRange.from;
-    dayStart < shownRange.to;
-    dayStart = new Date(dayStart.getFullYear(), dayStart.getMonth(), dayStart.getDate() + 1)
-  ) {
-    dayStarts.push(dayStart);
+const calendarTitle = (calendarView: CalendarView, calendarDates: readonly string[]): string => {
+  const [firstDate] = calendarDates;
+  const lastDate = calendarDates.at(-1);
+  if (firstDate === undefined || lastDate === undefined) return '';
+  if (calendarView === 'day') {
+    return calendarDateTitle(firstDate, { weekday: 'long', month: 'long', day: 'numeric' }, 'en');
   }
-  return dayStarts;
-};
-
-const calendarTitle = (calendarView: CalendarView, dayStarts: readonly Date[]): string => {
-  const [firstDayStart] = dayStarts;
-  const lastDayStart = dayStarts.at(-1);
-  if (firstDayStart === undefined || lastDayStart === undefined) return '';
-  if (calendarView === 'day') return dayTitleFormat.format(firstDayStart);
+  const monthDayTitle = (calendarDate: string) =>
+    calendarDateTitle(calendarDate, { month: 'long', day: 'numeric' }, 'en');
   const lastDayLabel =
-    firstDayStart.getMonth() === lastDayStart.getMonth()
-      ? String(lastDayStart.getDate())
-      : weekTitleFormat.format(lastDayStart);
-  return `${weekTitleFormat.format(firstDayStart)} – ${lastDayLabel}`;
+    firstDate.slice(0, 7) === lastDate.slice(0, 7)
+      ? String(Number(lastDate.slice(8)))
+      : monthDayTitle(lastDate);
+  return `${monthDayTitle(firstDate)} – ${lastDayLabel}`;
 };
 
 const arrangeCalendarDays = (
-  dayStarts: readonly Date[],
+  calendarDates: readonly string[],
   calendarEvents: readonly CalendarEvent[],
   now: Date,
+  timeZone: string,
 ): CalendarDay[] => {
-  const piecesByDayTime = new Map<number, EventPiece[]>();
+  const piecesByDate = new Map<string, EventPiece[]>();
   for (const calendarEvent of calendarEvents) {
-    for (const eventPiece of splitAtMidnight(calendarEvent, now)) {
-      const pieceDayTime = eventPiece.dayStart.getTime();
-      const dayPieces = piecesByDayTime.get(pieceDayTime) ?? [];
+    for (const eventPiece of splitAtMidnight(calendarEvent, now, timeZone)) {
+      const dayPieces = piecesByDate.get(eventPiece.calendarDate) ?? [];
       dayPieces.push(eventPiece);
-      piecesByDayTime.set(pieceDayTime, dayPieces);
+      piecesByDate.set(eventPiece.calendarDate, dayPieces);
     }
   }
-  const todayTime = startOfLocalDay(now).getTime();
-  return dayStarts.map((dayStart) => ({
-    dayStart,
-    isToday: dayStart.getTime() === todayTime,
-    layoutEntries: layoutDay(piecesByDayTime.get(dayStart.getTime()) ?? []),
+  const todayDate = partsInZone(now, timeZone).calendarDate;
+  return calendarDates.map((calendarDate) => ({
+    calendarDate,
+    isToday: calendarDate === todayDate,
+    layoutEntries: layoutDay(piecesByDate.get(calendarDate) ?? []),
   }));
 };
 
@@ -83,4 +75,4 @@ const clockTextMinute = (clockText: string | undefined): number => {
 };
 
 export type { CalendarDay };
-export { arrangeCalendarDays, calendarTitle, clockTextMinute, visibleDayStarts };
+export { arrangeCalendarDays, calendarTitle, clockTextMinute, shownRangeOf };

@@ -18,7 +18,6 @@ type RepeatPickerProps = {
   firstDate: string;
   initialRule: RepeatRule | null;
   isRepeatRequired?: boolean;
-  onChangeRule?: (chosenRule: RepeatRule | null) => void;
 };
 
 const CHOSEN_CUSTOM_VALUE = 'chosen-custom';
@@ -29,9 +28,18 @@ const RepeatPicker = ({
   firstDate,
   initialRule,
   isRepeatRequired = false,
-  onChangeRule,
 }: RepeatPickerProps) => {
   const [chosenRule, setChosenRule] = useState<RepeatRule | null>(initialRule);
+  const [shownFirstDate, setShownFirstDate] = useState(firstDate);
+  if (shownFirstDate !== firstDate) {
+    setShownFirstDate(firstDate);
+    const shownPresetKey = repeatPresetKeyOf(chosenRule, shownFirstDate);
+    if (shownPresetKey !== 'custom' && shownPresetKey !== 'none') {
+      const followingRule =
+        repeatPresetsFor(firstDate).find((preset) => preset.key === shownPresetKey)?.rule ?? null;
+      setChosenRule(followingRule);
+    }
+  }
   const customDialogId = `${idPrefix}-custom-repeat`;
   const repeatPresets = repeatPresetsFor(firstDate).filter(
     (repeatPreset) => !isRepeatRequired || repeatPreset.key !== 'none',
@@ -41,7 +49,6 @@ const RepeatPicker = ({
 
   const chooseRule = (nextRule: RepeatRule | null) => {
     setChosenRule(nextRule);
-    onChangeRule?.(nextRule);
   };
 
   return (

@@ -9,7 +9,7 @@ const backendServer = startBackendServer();
 
 const at = (hour: number, minute = 0) => new Date(2026, 10, 5, hour, minute);
 
-test('a title is trimmed and the times are sent as UTC', async () => {
+test('a title is trimmed and the times are sent as wall-clock times in the input zone', async () => {
   let receivedBody: unknown;
   backendServer.use(
     http.post('/backend/calendar/events', async ({ request }) => {
@@ -23,13 +23,15 @@ test('a title is trimmed and the times are sent as UTC', async () => {
     categoryId: null,
     startsAt: at(19),
     endsAt: at(20),
+    inputZone: 'Asia/Manila',
   });
 
   expect(receivedBody).toEqual({
     title: 'Gym',
     categoryId: null,
-    startsAt: at(19).toISOString(),
-    endsAt: at(20).toISOString(),
+    start: '2026-11-06T11:00',
+    end: '2026-11-06T12:00',
+    inputZone: 'Asia/Manila',
   });
 });
 
@@ -40,8 +42,8 @@ test('refuses an empty title, a long title and a too-short event without a reque
     { title: 'Gym', startsAt: at(19), endsAt: at(19, 10) },
     { title: 'Gym', startsAt: at(19), endsAt: new Date(Number.NaN) },
   ]) {
-    await expect(createPlannedEvent({ ...refusedParams, categoryId: null })).rejects.toBeInstanceOf(
-      AppError,
-    );
+    await expect(
+      createPlannedEvent({ ...refusedParams, categoryId: null, inputZone: 'Asia/Manila' }),
+    ).rejects.toBeInstanceOf(AppError);
   }
 });

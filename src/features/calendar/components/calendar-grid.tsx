@@ -14,11 +14,8 @@ import {
   type EventTimes,
 } from '@/features/calendar/entities/calendar-drag';
 import type { CalendarDay } from '@/features/calendar/entities/calendar-days';
-import {
-  MINUTES_PER_DAY,
-  startOfLocalDay,
-  type EventPiece,
-} from '@/features/calendar/entities/day-layout';
+import { calendarDateTitle, partsInZone } from '@/core/zoned-time';
+import { MINUTES_PER_DAY, type EventPiece } from '@/features/calendar/entities/day-layout';
 import { formatClock, formatMinuteOfDay } from '@/features/calendar/entities/event-time';
 import type ScheduledMove from '@/features/calendar/entities/scheduled-move';
 
@@ -50,6 +47,7 @@ type DragGhost = {
 type CalendarGridProps = {
   gridDays: CalendarDay[];
   scheduledMoves: readonly ScheduledMove[];
+  timeZone: string;
   now: Date;
   workingHoursStartMinute: number;
   selectedEventId: string | null;
@@ -57,10 +55,6 @@ type CalendarGridProps = {
   onDraftEvent: (eventTimes: EventTimes) => void;
   onRetimeEvent: (eventId: string, eventTimes: EventTimes) => void;
 };
-
-const weekdayFormat = new Intl.DateTimeFormat('en', { weekday: 'short' });
-
-const wallClockMinute = (moment: Date): number => moment.getHours() * 60 + moment.getMinutes();
 
 const isDraggingPointer = (pointerEvent: PointerEvent) =>
   pointerEvent.button === 0 &&
@@ -75,6 +69,7 @@ const capturePointer = (pointerEvent: PointerEvent<HTMLElement>) => {
 const CalendarGrid = ({
   gridDays,
   scheduledMoves,
+  timeZone,
   now,
   workingHoursStartMinute,
   selectedEventId,
@@ -88,6 +83,9 @@ const CalendarGrid = ({
   const [dragGhost, setDragGhost] = useState<DragGhost | null>(null);
   const [draggedEventId, setDraggedEventId] = useState<string | null>(null);
   const isDayView = gridDays.length === 1;
+  const wallClockMinute = (moment: Date): number => partsInZone(moment, timeZone).minuteOfDay;
+  const calendarDateOf = (moment: Date): string => partsInZone(moment, timeZone).calendarDate;
+  const clockText = (moment: Date): string => formatClock(moment, timeZone);
   const nowMinute = wallClockMinute(now);
   const gridColumnsStyle: CSSProperties = {
     gridTemplateColumns: `56px repeat(${gridDays.length}, minmax(0, 1fr))`,
@@ -113,8 +111,8 @@ const CalendarGrid = ({
   };
 
   const dayIndexOf = (moment: Date) => {
-    const momentDayTime = startOfLocalDay(moment).getTime();
-    return gridDays.findIndex((gridDay) => gridDay.dayStart.getTime() === momentDayTime);
+    const momentDate = calendarDateOf(moment);
+    return gridDays.findIndex((gridDay) => gridDay.calendarDate === momentDate);
   };
 
   const ghostFor = (
@@ -127,7 +125,12 @@ const CalendarGrid = ({
     const pointedDay = gridDays[dayIndex];
     if (anchorDay === undefined || pointedDay === undefined) return null;
     if (dragGesture.kind === 'create') {
-      const eventTimes = draftTimes(anchorDay.dayStart, dragGesture.anchorMinute, minute);
+      const eventTimes = draftTimes(
+        anchorDay.calendarDate,
+        dragGesture.anchorMinute,
+        minute,
+        timeZone,
+      );
       return {
         dayIndex: dragGesture.dayIndex,
         startMinute: wallClockMinute(eventTimes.startsAt),
@@ -145,6 +148,7 @@ const CalendarGrid = ({
         dragGesture.eventTimes,
         minute - dragGesture.anchorMinute,
         dayIndex - dragGesture.dayIndex,
+        timeZone,
       );
       const startMinute = wallClockMinute(eventTimes.startsAt);
       const durationMinutes =
@@ -157,13 +161,18 @@ const CalendarGrid = ({
         eventTimes,
       };
     }
-    const endsAt = resizedEnd(dragGesture.eventTimes.startsAt, pointedDay.dayStart, minute);
+    const endsAt = resizedEnd(
+      dragGesture.eventTimes.startsAt,
+      pointedDay.calendarDate,
+      minute,
+      timeZone,
+    );
     const endDayIndex = dayIndexOf(endsAt);
     const ghostDayIndex = endDayIndex >= 0 ? endDayIndex : dayIndex;
     const ghostDay = gridDays[ghostDayIndex];
     const startsOnGhostDay =
       ghostDay !== undefined &&
-      startOfLocalDay(dragGesture.eventTimes.startsAt).getTime() === ghostDay.dayStart.getTime();
+      calendarDateOf(dragGesture.eventTimes.startsAt) === ghostDay.calendarDate;
     const endMinute = wallClockMinute(endsAt);
     return {
       dayIndex: ghostDayIndex,
@@ -253,7 +262,12 @@ const CalendarGrid = ({
       if (anchorDay === undefined) return;
       onDraftEvent(
         finalGhost?.eventTimes ??
-          draftTimes(anchorDay.dayStart, dragGesture.anchorMinute, dragGesture.anchorMinute),
+          draftTimes(
+            anchorDay.calendarDate,
+            dragGesture.anchorMinute,
+            dragGesture.anchorMinute,
+            timeZone,
+          ),
       );
       return;
     }
@@ -282,14 +296,14 @@ const CalendarGrid = ({
           <span />
           {gridDays.map((gridDay) => (
             <div
-              key={gridDay.dayStart.toISOString()}
+              key={gridDay.calendarDate}
               className={joinClassNames(
                 'flex items-baseline gap-1.5 py-3',
                 isDayView ? 'justify-start pl-3' : 'justify-center',
               )}
             >
               <span className="text-xs text-muted-foreground">
-                {weekdayFormat.format(gridDay.dayStart)}
+                {calendarDateTitle(gridDay.calendarDate, { weekday: 'short' }, 'en')}
               </span>
               <span
                 className={joinClassNames(
@@ -297,7 +311,7 @@ const CalendarGrid = ({
                   gridDay.isToday ? 'bg-primary text-primary-foreground' : 'text-foreground',
                 )}
               >
-                {gridDay.dayStart.getDate()}
+                {Number(gridDay.calendarDate.slice(8))}
               </span>
             </div>
           ))}
@@ -323,7 +337,7 @@ const CalendarGrid = ({
           </div>
           {gridDays.map((gridDay, dayIndex) => (
             <div
-              key={gridDay.dayStart.toISOString()}
+              key={gridDay.calendarDate}
               ref={(dayColumn) => {
                 dayColumnRefs.current[dayIndex] = dayColumn;
               }}
@@ -345,16 +359,18 @@ const CalendarGrid = ({
                     stackEntry={layoutEntry}
                     minuteHeight={MINUTE_HEIGHT}
                     selectedEventId={selectedEventId}
+                    timeZone={timeZone}
                     onSelectEvent={onSelectEvent}
                   />
                 ) : (
                   <CalendarEventBlock
-                    key={`${layoutEntry.piece.event.id}-${layoutEntry.piece.dayStart.toISOString()}`}
+                    key={`${layoutEntry.piece.event.id}-${layoutEntry.piece.calendarDate}`}
                     piece={layoutEntry.piece}
                     cascadeLevel={layoutEntry.cascadeLevel}
                     minuteHeight={MINUTE_HEIGHT}
                     isSelected={layoutEntry.piece.event.id === selectedEventId}
                     isDragged={layoutEntry.piece.event.id === draggedEventId}
+                    timeZone={timeZone}
                     onSelect={handleSelectEvent}
                     onStartDrag={handleBlockPointerDown}
                   />
@@ -372,14 +388,13 @@ const CalendarGrid = ({
                     ),
                   }}
                 >
-                  {formatClock(dragGhost.eventTimes.startsAt)} –{' '}
-                  {formatClock(dragGhost.eventTimes.endsAt)}
+                  {clockText(dragGhost.eventTimes.startsAt)} –{' '}
+                  {clockText(dragGhost.eventTimes.endsAt)}
                 </div>
               ) : null}
               {scheduledMoves
                 .filter(
-                  (scheduledMove) =>
-                    startOfLocalDay(scheduledMove.at).getTime() === gridDay.dayStart.getTime(),
+                  (scheduledMove) => calendarDateOf(scheduledMove.at) === gridDay.calendarDate,
                 )
                 .map((scheduledMove) => (
                   <div
@@ -389,14 +404,14 @@ const CalendarGrid = ({
                   >
                     <Link
                       href={`/board?board=${scheduledMove.boardId}&card=${scheduledMove.cardId}`}
-                      title={`${formatClock(scheduledMove.at)} · ${scheduledMove.cardTitle} moves to ${scheduledMove.listName}`}
+                      title={`${clockText(scheduledMove.at)} · ${scheduledMove.cardTitle} moves to ${scheduledMove.listName}`}
                       className="pointer-events-auto ml-1 inline-flex h-5 max-w-[calc(100%-0.5rem)] -translate-y-1/2 items-center gap-1 rounded-full border border-border-strong bg-background pr-2 pl-1.5 text-[11px] leading-none font-medium text-foreground shadow-soft transition-colors duration-150 hover:border-primary/50 hover:text-primary focus-visible:ring-4 focus-visible:ring-primary/20 focus-visible:outline-none"
                     >
                       <MoveRight aria-hidden="true" className="size-3 shrink-0" />
                       <span className="sr-only">
-                        {formatClock(scheduledMove.at)}: {scheduledMove.cardTitle} moves to{' '}
+                        {`${clockText(scheduledMove.at)}: ${scheduledMove.cardTitle} moves to ${scheduledMove.listName}`}
                       </span>
-                      <span className="max-w-[7rem] shrink-0 truncate">
+                      <span aria-hidden="true" className="max-w-[7rem] shrink-0 truncate">
                         {scheduledMove.listName}
                       </span>
                       <span
@@ -414,7 +429,7 @@ const CalendarGrid = ({
                 ))}
               {gridDay.isToday ? (
                 <div
-                  aria-label={`Now, ${formatClock(now)}`}
+                  aria-label={`Now, ${clockText(now)}`}
                   className="pointer-events-none absolute inset-x-0 z-[3] flex items-center"
                   style={{ top: nowMinute * MINUTE_HEIGHT }}
                 >

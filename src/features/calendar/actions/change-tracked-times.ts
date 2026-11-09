@@ -1,4 +1,5 @@
 import AppError from '@/core/app-error';
+import { wallClockInZone } from '@/core/zoned-time';
 import backendCalendarEventSource from '@/features/calendar/data_sources/backend/calendar-event-source';
 import type CalendarEventRecord from '@/features/calendar/entities/calendar-event-record';
 
@@ -6,6 +7,7 @@ type ChangeTrackedTimesParams = {
   eventId: CalendarEventRecord['id'];
   startsAt: Date;
   endsAt: Date;
+  inputZone: string;
   now: Date;
 };
 
@@ -22,8 +24,9 @@ const changeTrackedTimes = async (
     throw new AppError('Check the Times', "A tracked event can't end in the future.");
   }
   return backendCalendarEventSource.update(params.eventId, {
-    startsAt: params.startsAt.toISOString(),
-    endsAt: params.endsAt.toISOString(),
+    start: wallClockInZone(params.startsAt, params.inputZone),
+    end: wallClockInZone(params.endsAt, params.inputZone),
+    inputZone: params.inputZone,
   });
 };
 

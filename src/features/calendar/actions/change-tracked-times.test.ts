@@ -14,7 +14,12 @@ test('refuses an end before the start or after now without a request', async () 
     { startsAt: at(10), endsAt: at(19) },
   ]) {
     await expect(
-      changeTrackedTimes({ eventId: 'event-1', ...refusedTimes, now: at(18) }),
+      changeTrackedTimes({
+        eventId: 'event-1',
+        ...refusedTimes,
+        inputZone: 'America/Los_Angeles',
+        now: at(18),
+      }),
     ).rejects.toBeInstanceOf(AppError);
   }
 });

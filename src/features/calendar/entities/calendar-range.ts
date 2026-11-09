@@ -1,25 +1,31 @@
+import { WEEKDAYS_IN_ORDER, weekdayOf } from '@/core/repeat-rule';
+import { addCalendarDays } from '@/core/zoned-time';
+
+type CalendarRangeDays = 1 | 7;
+
 type CalendarRange = {
-  from: Date;
-  to: Date;
+  start: string;
+  days: CalendarRangeDays;
+  timeZone: string;
 };
 
-const DAYS_PER_WEEK = 7;
-
-const localDayAfter = (moment: Date, dayCount: number): Date =>
-  new Date(moment.getFullYear(), moment.getMonth(), moment.getDate() + dayCount);
-
-const dayRange = (moment: Date): CalendarRange => ({
-  from: localDayAfter(moment, 0),
-  to: localDayAfter(moment, 1),
+const dayRange = (calendarDate: string, timeZone: string): CalendarRange => ({
+  start: calendarDate,
+  days: 1,
+  timeZone,
 });
 
-const weekRange = (moment: Date): CalendarRange => {
-  const daysSinceMonday = (moment.getDay() + DAYS_PER_WEEK - 1) % DAYS_PER_WEEK;
-  return {
-    from: localDayAfter(moment, -daysSinceMonday),
-    to: localDayAfter(moment, DAYS_PER_WEEK - daysSinceMonday),
-  };
-};
+const weekRange = (calendarDate: string, timeZone: string): CalendarRange => ({
+  start: addCalendarDays(calendarDate, -WEEKDAYS_IN_ORDER.indexOf(weekdayOf(calendarDate))),
+  days: 7,
+  timeZone,
+});
 
-export { dayRange, weekRange };
+const calendarDatesOf = (calendarRange: CalendarRange): string[] =>
+  Array.from({ length: calendarRange.days }, (_, dayIndex) =>
+    addCalendarDays(calendarRange.start, dayIndex),
+  );
+
+export type { CalendarRangeDays };
+export { calendarDatesOf, dayRange, weekRange };
 export default CalendarRange;

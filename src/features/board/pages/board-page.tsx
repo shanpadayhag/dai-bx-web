@@ -6,13 +6,12 @@ import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
 import EmptyState from '@/core/components/molecules/empty-state';
 import PageHeader from '@/core/components/molecules/page-header';
-import { deviceTimeZone } from '@/core/time-zone';
 import BoardColumn from '@/features/board/components/board-column';
-import sampleCardScheduleSource from '@/features/board/data_sources/sample/card-schedule-source';
 import BoardNameDialog from '@/features/board/components/board-name-dialog';
 import BoardSettingsDialog from '@/features/board/components/board-settings-dialog';
 import BoardSwitcher from '@/features/board/components/board-switcher';
 import CardDetailDialog from '@/features/board/components/card-detail-dialog';
+import CardScheduleSection from '@/features/board/components/card-schedule-section';
 import ConfirmDeleteDialog from '@/features/board/components/confirm-delete-dialog';
 import MoveCardDialog from '@/features/board/components/move-card-dialog';
 import NewPropertyDialog from '@/features/board/components/new-property-dialog';
@@ -43,6 +42,7 @@ import useBoardEvents, {
   PROPERTY_FORM_DIALOG_ID,
   RENAME_CARD_EVENTS_DIALOG_ID,
   RENAME_LIST_DIALOG_ID,
+  SCHEDULE_FORM_DIALOG_ID,
 } from '@/features/board/events/use-board-events';
 import {
   countCardsUsingOption,
@@ -58,7 +58,7 @@ const BoardPage = () => {
   const states = useBoardStates();
   const events = useBoardEvents(states);
   const { handleLoadPage, handleOpenAddressedCard, shownBoard } = events;
-  const { runningSourceIds, handleStartCard } = useTracking();
+  const { runningSourceIds, calendarTimeZone, handleStartCard } = useTracking();
 
   useEffect(() => {
     void handleLoadPage();
@@ -137,8 +137,6 @@ const BoardPage = () => {
 
   const { board, lists, properties } = boardContents;
   const now = new Date();
-  const calendarTimeZone = deviceTimeZone();
-  const nextMoves = sampleCardScheduleSource.findNextMoves(lists, now);
   const cardCount = shownBoard.cards.length;
   const renameTargetList = lists.find((boardList) => boardList.id === states.renameTargetListId);
   const deleteTargetList = lists.find((boardList) => boardList.id === states.deleteTargetListId);
@@ -214,7 +212,7 @@ const BoardPage = () => {
                 onMoveListBy={events.handleMoveListBy}
                 onDeleteList={events.handleStartDeleteList}
                 onCopyListForPlanning={(listId) => void events.handleCopyListForPlanning(listId)}
-                nextMoves={nextMoves}
+                calendarTimeZone={calendarTimeZone}
               />
             ))}
             <button
@@ -341,10 +339,33 @@ const BoardPage = () => {
         renameRequest={states.pendingCardRename?.renameRequest ?? null}
         titleResetCount={states.cardRenameCancelCount}
         onAnswerRename={events.handleAnswerCardRename}
-        lists={lists}
-        cardSchedules={sampleCardScheduleSource.findSchedules(lists, now, calendarTimeZone)}
-        scheduleCategories={sampleCardScheduleSource.categories}
-        calendarTimeZone={calendarTimeZone}
+        scheduleSection={
+          openCardDetail === null ? null : (
+            <CardScheduleSection
+              key={openCardDetail.card.id}
+              formDialogId={SCHEDULE_FORM_DIALOG_ID}
+              cardTitle={openCardDetail.card.title}
+              schedules={states.openCardSchedules}
+              runsPages={states.scheduleRunsPages}
+              lists={lists}
+              categories={states.scheduleCategories ?? []}
+              calendarTimeZone={calendarTimeZone}
+              now={now}
+              isSubmitting={states.submittingDialogId === SCHEDULE_FORM_DIALOG_ID}
+              onSubmitSchedule={(scheduleId, submitEvent) =>
+                void events.handleSubmitSchedule(scheduleId, submitEvent)
+              }
+              onSetPaused={(scheduleId, isPaused) =>
+                void events.handleSetSchedulePaused(scheduleId, isPaused)
+              }
+              onRunNow={(scheduleId) => void events.handleRunScheduleNow(scheduleId)}
+              onDelete={(scheduleId) => void events.handleDeleteSchedule(scheduleId)}
+              onLoadRuns={(scheduleId, olderThan) =>
+                void events.handleLoadScheduleRuns(scheduleId, olderThan)
+              }
+            />
+          )
+        }
       />
       <MoveCardDialog
         key={states.openCardId ?? 'none'}

@@ -5,6 +5,7 @@ type TimeTrackingSettings = {
   workingHoursStart: string;
   workingHoursEnd: string;
   trackedCategoryId: string | null;
+  calendarTimeZone: string | null;
 };
 
 type TimeTrackingChanges = Partial<TimeTrackingSettings>;

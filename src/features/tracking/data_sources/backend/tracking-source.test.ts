@@ -15,6 +15,8 @@ const runningItemRecord: RunningItemRecord = {
   endsAt: null,
   finishedAt: null,
   lastAnsweredAt: null,
+  timeZone: null,
+  series: null,
   source: { kind: 'task', id: 'task-1', groupId: 'group-1' },
   estimateMinutes: 45,
   sourceName: 'DaiBX',

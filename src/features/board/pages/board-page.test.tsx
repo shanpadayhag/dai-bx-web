@@ -11,6 +11,9 @@ import {
   type LocalBoardChange,
 } from '@/features/board/entities/board-record-changes';
 import type CardDetailRecord from '@/features/board/entities/card-detail-record';
+import type CardScheduleRecord from '@/features/board/entities/card-schedule-record';
+import type { ScheduleRunRecord } from '@/features/board/entities/card-schedule-record';
+import type { RepeatRule } from '@/core/repeat-rule';
 import type CardPropertyValue from '@/features/board/entities/card-property-value';
 import BoardPropertyKind from '@/features/board/enums/board-property-kind';
 import BoardPage from '@/features/board/pages/board-page';
@@ -41,6 +44,7 @@ const cardRecord = (
   values: [],
   linkedTaskCount: 0,
   doneLinkedTaskCount: 0,
+  nextMove: null,
   ...overrides,
 });
 
@@ -162,6 +166,7 @@ beforeEach(() => {
   cardPatches = [];
   let createdCount = 0;
   backendServer.use(
+    http.get('/backend/categories', () => HttpResponse.json([])),
     http.get('/backend/boards', () =>
       HttpResponse.json(serverBoards.map((boardRecord): Board => boardRecord.board)),
     ),
@@ -247,6 +252,7 @@ beforeEach(() => {
         notes: serverNotes.get(cardId) ?? DEFAULT_NOTES,
         linkedTasks: [],
         trackedEventCount: serverTrackedEventCounts.get(cardId) ?? 0,
+        schedules: [],
       };
       return HttpResponse.json(cardDetail);
     }),
@@ -645,6 +651,7 @@ test('Start in the card detail runs the card and turns into Running', async () =
         workingHoursStart: '16:00',
         workingHoursEnd: '02:00',
         trackedCategoryId: null,
+        calendarTimeZone: null,
       }),
     ),
     http.post('/backend/cards/:cardId/start', ({ params }) => {
@@ -658,6 +665,8 @@ test('Start in the card detail runs the card and turns into Running', async () =
         endsAt: null,
         finishedAt: null,
         lastAnsweredAt: null,
+        timeZone: null,
+        series: null,
         source: { kind: 'card', id: startedCardId, boardId: 'board-personal' },
         estimateMinutes: null,
         sourceName: 'Personal',
@@ -1023,4 +1032,388 @@ test('a card named in the address opens with the board', async () => {
   ).toHaveValue('Pay rent');
   expect(cardDialog).toHaveStyle({ display: 'block' });
   expect(routerReplace).toHaveBeenCalledWith('/board?board=board-personal', { scroll: false });
+});
+
+describe('card schedules', () => {
+  const weeklyOnMonday: RepeatRule = {
+    frequency: 'weekly',
+    interval: 1,
+    weekdays: ['mon'],
+    ends: { never: true },
+  };
+  const NEXT_RUN_AT = '2027-01-05T02:00:00.000Z';
+
+  let serverSchedules = new Map<string, CardScheduleRecord[]>();
+  let serverRuns = new Map<string, ScheduleRunRecord[]>();
+  let scheduleWrites: { path: string; body: unknown }[] = [];
+
+  const scheduleRecord = (
+    id: string,
+    overrides: Partial<CardScheduleRecord> = {},
+  ): CardScheduleRecord => ({
+    id,
+    kind: 'repeating',
+    targetListId: 'list-doing',
+    targetListName: 'Doing',
+    start: '2026-11-16T18:00',
+    startsAt: '2026-11-17T02:00:00.000Z',
+    timeZone: 'America/Los_Angeles',
+    repeat: weeklyOnMonday,
+    block: null,
+    paused: false,
+    nextRunAt: NEXT_RUN_AT,
+    ...overrides,
+  });
+
+  const syncNextMoves = () => {
+    serverBoards = serverBoards.map((boardRecord) => ({
+      ...boardRecord,
+      cards: boardRecord.cards.map((card) => {
+        const activeSchedule = (serverSchedules.get(card.id) ?? []).find(
+          (schedule) =>
+            !schedule.paused && schedule.nextRunAt !== null && schedule.targetListName !== null,
+        );
+        return {
+          ...card,
+          nextMove:
+            activeSchedule?.nextRunAt == null || activeSchedule.targetListName === null
+              ? null
+              : { at: activeSchedule.nextRunAt, listName: activeSchedule.targetListName },
+        };
+      }),
+    }));
+  };
+
+  const cardIdOfSchedule = (scheduleId: string) => {
+    const cardEntry = [...serverSchedules].find(([, schedules]) =>
+      schedules.some((schedule) => schedule.id === scheduleId),
+    );
+    if (cardEntry === undefined) throw new Error('no card has that schedule');
+    return cardEntry[0];
+  };
+
+  const listNameOf = (listId: string) =>
+    serverBoardOf('board-personal')?.lists.find((listRecord) => listRecord.id === listId)?.name ??
+    null;
+
+  const changeSchedule = (
+    scheduleId: string,
+    makeChange: (schedule: CardScheduleRecord) => CardScheduleRecord,
+  ) => {
+    const cardId = cardIdOfSchedule(scheduleId);
+    const changedSchedules = (serverSchedules.get(cardId) ?? []).map((schedule) =>
+      schedule.id === scheduleId ? makeChange(schedule) : schedule,
+    );
+    serverSchedules.set(cardId, changedSchedules);
+    syncNextMoves();
+    return { cardId, changedSchedules };
+  };
+
+  const answerOneSchedule = (scheduleId: string, isPaused: boolean) => {
+    const { changedSchedules } = changeSchedule(scheduleId, (schedule) => ({
+      ...schedule,
+      paused: isPaused,
+    }));
+    return HttpResponse.json(changedSchedules.find((schedule) => schedule.id === scheduleId));
+  };
+
+  type ScheduleBody = {
+    kind: 'once' | 'repeating';
+    targetListId: string;
+    start: string;
+    timeZone: string;
+    repeat?: RepeatRule;
+    block: CardScheduleRecord['block'];
+  };
+
+  const fromBody = (scheduleBody: ScheduleBody): Partial<CardScheduleRecord> => ({
+    kind: scheduleBody.kind,
+    targetListId: scheduleBody.targetListId,
+    targetListName: listNameOf(scheduleBody.targetListId),
+    start: scheduleBody.start,
+    timeZone: scheduleBody.timeZone,
+    repeat: scheduleBody.repeat ?? null,
+    block: scheduleBody.block,
+  });
+
+  beforeEach(() => {
+    serverSchedules = new Map([['card-rent', [scheduleRecord('schedule-rent')]]]);
+    serverRuns = new Map();
+    scheduleWrites = [];
+    syncNextMoves();
+    let createdScheduleCount = 0;
+    backendServer.use(
+      http.get('/backend/cards/:cardId', ({ params }) => {
+        const cardId = String(params.cardId);
+        const card = boardHolding(holdsCard(cardId)).cards.find(
+          (cardItem) => cardItem.id === cardId,
+        );
+        const cardDetail: CardDetailRecord = {
+          card: card as BoardCardRecord,
+          notes: DEFAULT_NOTES,
+          linkedTasks: [],
+          trackedEventCount: 0,
+          schedules: serverSchedules.get(cardId) ?? [],
+        };
+        return HttpResponse.json(cardDetail);
+      }),
+      http.post('/backend/cards/:cardId/schedules', async ({ params, request }) => {
+        const scheduleBody = (await request.json()) as ScheduleBody;
+        const cardId = String(params.cardId);
+        scheduleWrites.push({ path: `/cards/${cardId}/schedules`, body: scheduleBody });
+        createdScheduleCount += 1;
+        serverSchedules.set(cardId, [
+          ...(serverSchedules.get(cardId) ?? []),
+          scheduleRecord(`schedule-created-${createdScheduleCount}`, fromBody(scheduleBody)),
+        ]);
+        syncNextMoves();
+        return HttpResponse.json({ schedules: serverSchedules.get(cardId) }, { status: 201 });
+      }),
+      http.patch('/backend/schedules/:scheduleId', async ({ params, request }) => {
+        const scheduleBody = (await request.json()) as ScheduleBody;
+        const scheduleId = String(params.scheduleId);
+        scheduleWrites.push({ path: `/schedules/${scheduleId}`, body: scheduleBody });
+        const { changedSchedules } = changeSchedule(scheduleId, (schedule) => ({
+          ...schedule,
+          ...fromBody(scheduleBody),
+        }));
+        return HttpResponse.json({ schedules: changedSchedules });
+      }),
+      http.delete('/backend/schedules/:scheduleId', ({ params }) => {
+        const scheduleId = String(params.scheduleId);
+        const cardId = cardIdOfSchedule(scheduleId);
+        serverSchedules.set(
+          cardId,
+          (serverSchedules.get(cardId) ?? []).filter((schedule) => schedule.id !== scheduleId),
+        );
+        syncNextMoves();
+        return HttpResponse.json({ schedules: serverSchedules.get(cardId) });
+      }),
+      http.post('/backend/schedules/:scheduleId/pause', ({ params }) =>
+        answerOneSchedule(String(params.scheduleId), true),
+      ),
+      http.post('/backend/schedules/:scheduleId/resume', ({ params }) =>
+        answerOneSchedule(String(params.scheduleId), false),
+      ),
+      http.post('/backend/schedules/:scheduleId/run-now', ({ params }) => {
+        const scheduleId = String(params.scheduleId);
+        const cardId = cardIdOfSchedule(scheduleId);
+        const ranSchedule = serverSchedules
+          .get(cardId)
+          ?.find((schedule) => schedule.id === scheduleId) as CardScheduleRecord;
+        const movedBoard = applyBoardChange(boardHolding(holdsCard(cardId)), {
+          kind: 'moveCard',
+          cardId,
+          listId: ranSchedule.targetListId as string,
+          position: 0,
+        });
+        serverBoards = serverBoards.map((boardRecord) =>
+          boardRecord.board.id === movedBoard.board.id ? movedBoard : boardRecord,
+        );
+        syncNextMoves();
+        return HttpResponse.json(ranSchedule);
+      }),
+      http.get('/backend/schedules/:scheduleId/runs', ({ params }) =>
+        HttpResponse.json(serverRuns.get(String(params.scheduleId)) ?? []),
+      ),
+    );
+  });
+
+  const scheduleMenu = async (
+    user: ReturnType<typeof userEvent.setup>,
+    cardDialog: HTMLElement,
+  ) => {
+    await user.click(
+      await within(cardDialog).findByRole('button', {
+        name: 'Actions for this schedule',
+        hidden: true,
+      }),
+    );
+    return screen.getByRole('menu', { name: 'Schedule actions', hidden: true });
+  };
+
+  test('a new repeating schedule is sent in its zone and shows on the card and its tile', async () => {
+    const user = await openBoardPage();
+    const cardDialog = await openCard(user, 'Plan the week');
+
+    await user.click(
+      within(cardDialog).getByRole('button', { name: 'Add schedule', hidden: true }),
+    );
+    const scheduleDialog = screen.getByRole('dialog', { name: 'Add schedule', hidden: true });
+    await user.click(
+      within(scheduleDialog).getByRole('radio', { name: 'Repeating', hidden: true }),
+    );
+    await user.selectOptions(within(scheduleDialog).getByLabelText('Move to'), 'Done');
+    fireEvent.change(within(scheduleDialog).getByLabelText('First date'), {
+      target: { value: '2026-11-16' },
+    });
+    fireEvent.change(within(scheduleDialog).getByLabelText('Time'), {
+      target: { value: '18:00' },
+    });
+    await user.click(
+      within(scheduleDialog).getByRole('button', { name: 'Add schedule', hidden: true }),
+    );
+
+    expect(await within(cardDialog).findByText('Weekly on Monday · 18:00')).toBeInTheDocument();
+    expect(scheduleWrites).toEqual([
+      {
+        path: '/cards/card-plan/schedules',
+        body: {
+          kind: 'repeating',
+          targetListId: 'list-done',
+          start: '2026-11-16T18:00',
+          inputZone: 'America/Los_Angeles',
+          timeZone: 'America/Los_Angeles',
+          repeat: weeklyOnMonday,
+          block: null,
+        },
+      },
+    ]);
+    expect(await within(column('Backlog')).findByText(/Moves to Done/)).toBeInTheDocument();
+  });
+
+  test('a one-time move in the past is refused before it is sent', async () => {
+    const user = await openBoardPage();
+    const cardDialog = await openCard(user, 'Plan the week');
+
+    await user.click(
+      within(cardDialog).getByRole('button', { name: 'Add schedule', hidden: true }),
+    );
+    const scheduleDialog = screen.getByRole('dialog', { name: 'Add schedule', hidden: true });
+    fireEvent.change(within(scheduleDialog).getByLabelText('Date'), {
+      target: { value: '2020-01-06' },
+    });
+    await user.click(
+      within(scheduleDialog).getByRole('button', { name: 'Add schedule', hidden: true }),
+    );
+
+    expect(await screen.findByText('Pick a later time')).toBeInTheDocument();
+    expect(scheduleWrites).toEqual([]);
+  });
+
+  test('Run now moves the card to the top of its column and keeps the next run', async () => {
+    const user = await openBoardPage();
+    const cardDialog = await openCard(user, 'Pay rent');
+
+    const actionsMenu = await scheduleMenu(user, cardDialog);
+    await user.click(within(actionsMenu).getByRole('menuitem', { name: 'Run now', hidden: true }));
+
+    expect(await screen.findByText('Moved to Doing')).toBeInTheDocument();
+    await waitFor(() => expect(cardTitlesIn('Doing')).toEqual(['Pay rent', 'Ship the board']));
+    expect(within(cardDialog).getByText(/^Next/)).toBeInTheDocument();
+  });
+
+  test('pausing hides the next run and the tile clock, and resuming brings them back', async () => {
+    const user = await openBoardPage();
+    expect(within(column('Backlog')).getByText(/Moves to Doing/)).toBeInTheDocument();
+    const cardDialog = await openCard(user, 'Pay rent');
+
+    await user.click(
+      within(await scheduleMenu(user, cardDialog)).getByRole('menuitem', {
+        name: 'Pause',
+        hidden: true,
+      }),
+    );
+
+    expect(await within(cardDialog).findByText('Paused')).toBeInTheDocument();
+    expect(within(cardDialog).queryByText(/^Next/)).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(column('Backlog')).queryByText(/Moves to Doing/)).not.toBeInTheDocument(),
+    );
+
+    await user.click(
+      within(await scheduleMenu(user, cardDialog)).getByRole('menuitem', {
+        name: 'Resume',
+        hidden: true,
+      }),
+    );
+
+    await waitFor(() => expect(within(cardDialog).queryByText('Paused')).not.toBeInTheDocument());
+    expect(await within(column('Backlog')).findByText(/Moves to Doing/)).toBeInTheDocument();
+  });
+
+  test('a schedule whose column was deleted is flagged until another column is picked', async () => {
+    serverSchedules.set('card-plan', [
+      scheduleRecord('schedule-orphan', {
+        targetListId: null,
+        targetListName: null,
+        paused: true,
+        nextRunAt: null,
+      }),
+    ]);
+    const user = await openBoardPage();
+    const cardDialog = await openCard(user, 'Plan the week');
+
+    expect(
+      await within(cardDialog).findByText('Its column was deleted. Pick another.'),
+    ).toBeInTheDocument();
+    await user.click(
+      within(cardDialog).getByRole('button', { name: 'Pick a column', hidden: true }),
+    );
+    const scheduleDialog = screen.getByRole('dialog', { name: 'Edit schedule', hidden: true });
+    await user.selectOptions(within(scheduleDialog).getByLabelText('Move to'), 'Done');
+    await user.click(within(scheduleDialog).getByRole('button', { name: 'Save', hidden: true }));
+
+    await waitFor(() =>
+      expect(
+        within(cardDialog).queryByText('Its column was deleted. Pick another.'),
+      ).not.toBeInTheDocument(),
+    );
+    expect(
+      within(cardDialog).getByText(
+        (_, element) =>
+          element?.tagName === 'P' && element.textContent?.startsWith('Move to Done') === true,
+      ),
+    ).toBeInTheDocument();
+    expect(scheduleWrites[0]).toMatchObject({
+      path: '/schedules/schedule-orphan',
+      body: { targetListId: 'list-done' },
+    });
+  });
+
+  test('deleting a schedule removes it and the tile clock', async () => {
+    const user = await openBoardPage();
+    const cardDialog = await openCard(user, 'Pay rent');
+
+    await user.click(
+      within(await scheduleMenu(user, cardDialog)).getByRole('menuitem', {
+        name: 'Delete schedule',
+        hidden: true,
+      }),
+    );
+
+    expect(await within(cardDialog).findByText(/^Nothing scheduled/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(column('Backlog')).queryByText(/Moves to Doing/)).not.toBeInTheDocument(),
+    );
+  });
+
+  test('past runs load when the run list is opened', async () => {
+    serverRuns.set('schedule-rent', [
+      {
+        id: 'run-late',
+        ranAt: '2026-11-10T02:04:00.000Z',
+        how: 'late',
+        moved: false,
+        trackedMinutes: 0,
+      },
+      {
+        id: 'run-by-hand',
+        ranAt: '2026-11-03T17:00:00.000Z',
+        how: 'byHand',
+        moved: true,
+        trackedMinutes: 90,
+      },
+    ]);
+    const user = await openBoardPage();
+    const cardDialog = await openCard(user, 'Pay rent');
+
+    await user.click(await within(cardDialog).findByText('Runs'));
+
+    expect(await within(cardDialog).findByText('Late')).toBeInTheDocument();
+    expect(within(cardDialog).getByText('already there')).toBeInTheDocument();
+    expect(within(cardDialog).getByText('By hand')).toBeInTheDocument();
+    expect(within(cardDialog).getByText('1h 30m tracked')).toBeInTheDocument();
+    expect(within(cardDialog).getByText('Mon 9 Nov, 18:04')).toBeInTheDocument();
+  });
 });

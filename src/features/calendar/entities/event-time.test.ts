@@ -20,14 +20,26 @@ const buildEvent = (startsAt: Date, endsAt: Date | null): CalendarEvent => ({
 describe('formatEventTimeRange', () => {
   test('a finished event shows both clock times', () => {
     expect(
-      formatEventTimeRange(buildEvent(new Date(2026, 10, 5, 9, 5), new Date(2026, 10, 5, 17, 30))),
+      formatEventTimeRange(
+        buildEvent(new Date(2026, 10, 5, 9, 5), new Date(2026, 10, 5, 17, 30)),
+        'America/Los_Angeles',
+      ),
     ).toBe('09:05 – 17:30');
   });
 
   test('a running event ends at now', () => {
-    expect(formatEventTimeRange(buildEvent(new Date(2026, 10, 5, 16, 20), null))).toBe(
-      '16:20 – now',
-    );
+    expect(
+      formatEventTimeRange(buildEvent(new Date(2026, 10, 5, 16, 20), null), 'America/Los_Angeles'),
+    ).toBe('16:20 – now');
+  });
+
+  test('shows the clock of the calendar zone', () => {
+    expect(
+      formatEventTimeRange(
+        buildEvent(new Date('2026-11-09T10:00:00Z'), new Date('2026-11-09T11:30:00Z')),
+        'Asia/Manila',
+      ),
+    ).toBe('18:00 – 19:30');
   });
 });
 

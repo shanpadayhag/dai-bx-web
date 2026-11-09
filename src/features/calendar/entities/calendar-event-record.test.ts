@@ -15,6 +15,8 @@ const trackedRecord: CalendarEventRecord = {
   endsAt: '2026-11-05T02:30:00.000Z',
   finishedAt: '2026-11-05T02:45:00.000Z',
   lastAnsweredAt: '2026-11-05T02:30:00.000Z',
+  timeZone: null,
+  series: null,
   source: { kind: 'task', id: 'task-1', groupId: 'group-1' },
 };
 

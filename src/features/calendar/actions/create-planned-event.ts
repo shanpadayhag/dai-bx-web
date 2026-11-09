@@ -1,4 +1,6 @@
 import AppError from '@/core/app-error';
+import type { RepeatRule } from '@/core/repeat-rule';
+import { wallClockInZone } from '@/core/zoned-time';
 import backendCalendarEventSource from '@/features/calendar/data_sources/backend/calendar-event-source';
 import type CalendarEventRecord from '@/features/calendar/entities/calendar-event-record';
 
@@ -7,6 +9,9 @@ type CreatePlannedEventParams = {
   categoryId: string | null;
   startsAt: Date;
   endsAt: Date;
+  inputZone: string;
+  timeZone?: string;
+  repeat?: RepeatRule;
 };
 
 const PLANNED_TITLE_MAX_CHARACTERS = 200;
@@ -39,8 +44,11 @@ const createPlannedEvent = async (
   return backendCalendarEventSource.createPlanned({
     title: plannedTitle,
     categoryId: params.categoryId,
-    startsAt: params.startsAt.toISOString(),
-    endsAt: params.endsAt.toISOString(),
+    start: wallClockInZone(params.startsAt, params.inputZone),
+    end: wallClockInZone(params.endsAt, params.inputZone),
+    inputZone: params.inputZone,
+    ...(params.timeZone === undefined ? {} : { timeZone: params.timeZone }),
+    ...(params.repeat === undefined ? {} : { repeat: params.repeat }),
   });
 };
 

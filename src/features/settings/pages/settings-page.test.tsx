@@ -67,6 +67,7 @@ const storedTimeTrackingSettings: TimeTrackingSettings = {
   workingHoursStart: '16:00',
   workingHoursEnd: '02:00',
   trackedCategoryId: null,
+  calendarTimeZone: null,
 };
 
 let currentAccount = storedAccount;
@@ -646,4 +647,38 @@ test('a shorter check-in gap brings the next check-in forward', async () => {
   } finally {
     vi.useRealTimers();
   }
+});
+
+test('the calendar time zone follows the device until one is chosen', async () => {
+  const user = await openSettings();
+
+  await user.click(screen.getByRole('switch', { name: 'Use device time zone' }));
+  await waitFor(() =>
+    expect(timeTrackingPatches).toEqual([{ calendarTimeZone: 'America/Los_Angeles' }]),
+  );
+
+  await user.selectOptions(screen.getByLabelText('Calendar time zone'), 'Asia/Manila');
+  await waitFor(() => expect(timeTrackingPatches).toHaveLength(2));
+  expect(timeTrackingPatches[1]).toEqual({ calendarTimeZone: 'Asia/Manila' });
+
+  await user.click(screen.getByRole('switch', { name: 'Use device time zone' }));
+  await waitFor(() => expect(timeTrackingPatches).toHaveLength(3));
+  expect(timeTrackingPatches[2]).toEqual({ calendarTimeZone: null });
+  expect(screen.queryByLabelText('Calendar time zone')).not.toBeInTheDocument();
+});
+
+test('a calendar time zone the server refuses is put back', async () => {
+  backendServer.use(
+    http.patch('/backend/account/time-tracking', () =>
+      HttpResponse.json({ title: 'Could not save' }, { status: 500 }),
+    ),
+  );
+  const user = await openSettings();
+
+  await user.click(screen.getByRole('switch', { name: 'Use device time zone' }));
+
+  await waitFor(() =>
+    expect(screen.getByRole('switch', { name: 'Use device time zone' })).toBeChecked(),
+  );
+  expect(screen.queryByLabelText('Calendar time zone')).not.toBeInTheDocument();
 });
