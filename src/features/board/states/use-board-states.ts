@@ -31,6 +31,10 @@ const useBoardStates = () => {
     Readonly<Record<string, ScheduleRunsPage>>
   >({});
   const [scheduleCategories, setScheduleCategories] = useState<readonly Category[] | null>(null);
+  const [archiveAfterByListId, setArchiveAfterByListId] = useState<
+    Readonly<Record<string, string>>
+  >({});
+  const [archivedCardIds, setArchivedCardIds] = useState<ReadonlySet<string>>(new Set());
 
   return {
     boards,
@@ -73,6 +77,10 @@ const useBoardStates = () => {
     setScheduleRunsPages,
     scheduleCategories,
     setScheduleCategories,
+    archiveAfterByListId,
+    setArchiveAfterByListId,
+    archivedCardIds,
+    setArchivedCardIds,
   };
 };
 

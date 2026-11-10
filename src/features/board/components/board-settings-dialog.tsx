@@ -10,7 +10,7 @@ import {
   Type,
   X,
 } from 'lucide-react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import Badge from '@/core/components/atoms/badge';
 import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
@@ -38,6 +38,7 @@ type BoardSettingsDialogProps = {
   onStartEditProperty: (propertyId: string) => void;
   onMovePropertyBy: (propertyId: string, positionStep: number) => void;
   onStartDeleteProperty: (propertyId: string) => void;
+  columnsSection: ReactNode;
 };
 
 const kindIcons = {
@@ -58,6 +59,7 @@ const BoardSettingsDialog = ({
   onStartEditProperty,
   onMovePropertyBy,
   onStartDeleteProperty,
+  columnsSection,
 }: BoardSettingsDialogProps) => {
   const nameInputId = `${dialogId}-name`;
   const isPropertyLimitReached = properties.length >= BOARD_PROPERTIES_MAX;
@@ -182,6 +184,7 @@ const BoardSettingsDialog = ({
               </ul>
             )}
           </section>
+          {columnsSection}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-5 py-4 sm:px-6">
           <Button

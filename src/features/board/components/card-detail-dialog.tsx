@@ -1,4 +1,14 @@
-import { CalendarClock, Check, MoveRight, Pencil, Play, Trash2, X } from 'lucide-react';
+import {
+  Archive,
+  ArchiveRestore,
+  CalendarClock,
+  Check,
+  MoveRight,
+  Pencil,
+  Play,
+  Trash2,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRef, useState, type ReactNode } from 'react';
 import joinClassNames from '@/core/class-names';
@@ -13,6 +23,8 @@ import CardPropertyField from '@/features/board/components/card-property-field';
 import { CARD_NOTES_MAX_CHARACTERS } from '@/features/board/actions/update-card-notes';
 import type Board from '@/features/board/entities/board';
 import type BoardProperty from '@/features/board/entities/board-property';
+import type CardArchive from '@/features/board/entities/card-archive';
+import { describeCardArchive } from '@/features/board/entities/card-archive';
 import type CardDetail from '@/features/board/entities/card-detail';
 import { isCardDueOverdue } from '@/features/board/entities/card-due';
 
@@ -38,6 +50,11 @@ type CardDetailDialogProps = {
   titleResetCount: number;
   onAnswerRename: (renameAnswer: RenameEventsAnswer) => void;
   scheduleSection: ReactNode;
+  workflowSection: ReactNode;
+  historySection: ReactNode;
+  cardArchive: CardArchive | null;
+  calendarTimeZone: string;
+  onSetArchived: (cardId: string, isArchived: boolean) => void;
 };
 
 const COMPLETE_DATE_PATTERN = /^[1-9]\d{3}-\d{2}-\d{2}$/;
@@ -91,6 +108,11 @@ const CardDetailContent = ({
   onStartCard,
   titleResetCount,
   scheduleSection,
+  workflowSection,
+  historySection,
+  cardArchive,
+  calendarTimeZone,
+  onSetArchived,
 }: CardDetailContentProps) => {
   const { card, listName, notes, linkedTasks } = cardDetail;
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -179,6 +201,18 @@ const CardDetailContent = ({
         </IconButton>
       </div>
       <div className="grid grid-cols-1 content-start gap-6 overflow-y-auto overscroll-contain px-5 pb-5 sm:px-6">
+        {cardArchive === null ? null : (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-surface-strong px-3.5 py-2.5">
+            <p className="flex min-w-0 flex-1 items-center gap-2 text-[13px] text-foreground">
+              <Archive aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+              {describeCardArchive(cardArchive, calendarTimeZone)}
+            </p>
+            <Button variant="secondary" size="sm" onClick={() => onSetArchived(card.id, false)}>
+              <ArchiveRestore />
+              Restore
+            </Button>
+          </div>
+        )}
         <section className="grid gap-3 sm:gap-2" aria-label="Properties">
           {properties.map((property) => (
             <CardPropertyField
@@ -378,6 +412,8 @@ const CardDetailContent = ({
           )}
         </section>
         {scheduleSection}
+        {workflowSection}
+        {historySection}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-5 py-4 sm:px-6">
         <Button
@@ -389,15 +425,23 @@ const CardDetailContent = ({
           <Trash2 />
           Delete card
         </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          popoverTarget={moveCardDialogId}
-          onClick={onOpenMoveCard}
-        >
-          <MoveRight />
-          Move to…
-        </Button>
+        {cardArchive === null ? (
+          <div className="flex flex-wrap gap-2">
+            <Button variant="ghost" size="sm" onClick={() => onSetArchived(card.id, true)}>
+              <Archive />
+              Archive
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              popoverTarget={moveCardDialogId}
+              onClick={onOpenMoveCard}
+            >
+              <MoveRight />
+              Move to…
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { GripVertical, MoreHorizontal, Plus } from 'lucide-react';
+import { Archive, GripVertical, MoreHorizontal, Plus } from 'lucide-react';
 import { useState } from 'react';
 import joinClassNames from '@/core/class-names';
 import IconButton from '@/core/components/atoms/icon-button';
@@ -35,6 +35,7 @@ type BoardColumnProps = {
   onDeleteList: (listId: string) => void;
   onCopyListForPlanning: (listId: string) => void;
   calendarTimeZone: string;
+  archiveAfter: string | null;
 };
 
 const BoardColumn = ({
@@ -58,6 +59,7 @@ const BoardColumn = ({
   onDeleteList,
   onCopyListForPlanning,
   calendarTimeZone,
+  archiveAfter,
 }: BoardColumnProps) => {
   const [dropKind, setDropKind] = useState<'card' | 'list' | null>(null);
   const listMenuId = `list-actions-menu-${boardList.id}`;
@@ -109,8 +111,20 @@ const BoardColumn = ({
         >
           <GripVertical className="size-3.5" />
         </span>
-        <h2 className="truncate text-[13px] font-semibold text-foreground">{boardList.name}</h2>
-        <span className="text-xs text-muted-foreground tabular-nums">{boardList.cards.length}</span>
+        <div className="grid min-w-0">
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 className="truncate text-[13px] font-semibold text-foreground">{boardList.name}</h2>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {boardList.cards.length}
+            </span>
+          </div>
+          {archiveAfter === null ? null : (
+            <p className="flex items-center gap-1 text-[11px] text-muted-foreground/80">
+              <Archive aria-hidden="true" className="size-3 shrink-0" />
+              Archives after {archiveAfter}
+            </p>
+          )}
+        </div>
         <IconButton
           label={`Actions for ${boardList.name}`}
           popoverTarget={listMenuId}

@@ -44,6 +44,7 @@ import setCardValue, { readCardValueInput } from '@/features/board/actions/set-c
 import updateCardDue from '@/features/board/actions/update-card-due';
 import updateCardNotes from '@/features/board/actions/update-card-notes';
 import updatePropertyOption from '@/features/board/actions/update-property-option';
+import sampleCardWorkflowSource from '@/features/board/data_sources/sample/card-workflow-source';
 import localStorageBoardViewSource from '@/features/board/data_sources/local_storage/board-view-source';
 import type Board from '@/features/board/entities/board';
 import type BoardRecord from '@/features/board/entities/board-record';
@@ -58,6 +59,7 @@ import {
   startOptimisticBoard,
   visibleBoard,
 } from '@/features/board/entities/optimistic-board';
+import type { ArchiveAfterSaving } from '@/features/board/components/board-columns-settings';
 import type useBoardStates from '@/features/board/states/use-board-states';
 import findCategories from '@/features/categories/actions/find-categories';
 
@@ -78,6 +80,8 @@ export const DELETE_CARD_DIALOG_ID = 'delete-card-dialog';
 export const PENDING_CARD_ID_PREFIX = 'pending-card-';
 export const RENAME_CARD_EVENTS_DIALOG_ID = 'rename-card-events-dialog';
 export const SCHEDULE_FORM_DIALOG_ID = 'card-schedule-form-dialog';
+export const ARCHIVED_CARDS_DIALOG_ID = 'archived-cards-dialog';
+export const DELETE_ARCHIVED_CARD_DIALOG_ID = 'delete-archived-card-dialog';
 export const SCHEDULE_BLOCK_CATEGORY_FIELD = `${SCHEDULE_FORM_DIALOG_ID}-field-block-category`;
 const BOARD_PATH = '/board';
 const BOARD_QUERY_NAME = 'board';
@@ -131,6 +135,8 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     deleteTargetOptionId,
     openCardId,
     moveDialogListId,
+    setArchiveAfterByListId,
+    setArchivedCardIds,
     setBoards,
     setPageLoadError,
     setAddressedCardId,
@@ -953,6 +959,31 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     void runBoardWrite({ kind: 'deleteCard', cardId: openCardId }, () => deleteCard(openCardId));
   }, [openCardId, runBoardWrite, setOpenCardDetail, setOpenCardId]);
 
+  const handleSaveArchiveAfter = useCallback(
+    async (listId: string, enteredText: string): Promise<ArchiveAfterSaving> => {
+      const archiveAfterTidying = sampleCardWorkflowSource.tidyArchiveAfterText(enteredText);
+      if ('hint' in archiveAfterTidying) return { isSaved: false, hint: archiveAfterTidying.hint };
+      setArchiveAfterByListId((currentArchiveAfters) => ({
+        ...currentArchiveAfters,
+        [listId]: archiveAfterTidying.archiveAfter ?? '',
+      }));
+      return { isSaved: true };
+    },
+    [setArchiveAfterByListId],
+  );
+
+  const handleSetCardArchived = useCallback(
+    (cardId: string, isArchived: boolean) => {
+      setArchivedCardIds((currentCardIds) => {
+        const nextCardIds = new Set(currentCardIds);
+        if (isArchived) nextCardIds.add(cardId);
+        else nextCardIds.delete(cardId);
+        return nextCardIds;
+      });
+    },
+    [setArchivedCardIds],
+  );
+
   return {
     shownBoard,
     handleLoadPage,
@@ -1000,6 +1031,8 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     handleRunScheduleNow,
     handleDeleteSchedule,
     handleLoadScheduleRuns,
+    handleSaveArchiveAfter,
+    handleSetCardArchived,
   };
 };
 

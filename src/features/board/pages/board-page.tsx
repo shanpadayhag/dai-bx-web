@@ -1,23 +1,37 @@
 'use client';
 
-import { Columns3, LayoutGrid, Pencil, Plus, RotateCw, Settings2, WifiOff } from 'lucide-react';
+import {
+  Archive,
+  Columns3,
+  LayoutGrid,
+  Pencil,
+  Plus,
+  RotateCw,
+  Settings2,
+  WifiOff,
+} from 'lucide-react';
 import { useEffect, useMemo } from 'react';
 import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
 import EmptyState from '@/core/components/molecules/empty-state';
 import PageHeader from '@/core/components/molecules/page-header';
+import ArchivedCardsDialog from '@/features/board/components/archived-cards-dialog';
 import BoardColumn from '@/features/board/components/board-column';
+import BoardColumnsSettings from '@/features/board/components/board-columns-settings';
 import BoardNameDialog from '@/features/board/components/board-name-dialog';
 import BoardSettingsDialog from '@/features/board/components/board-settings-dialog';
 import BoardSwitcher from '@/features/board/components/board-switcher';
 import CardDetailDialog from '@/features/board/components/card-detail-dialog';
+import CardHistorySection from '@/features/board/components/card-history-section';
 import CardScheduleSection from '@/features/board/components/card-schedule-section';
+import CardWorkflowSection from '@/features/board/components/card-workflow-section';
 import ConfirmDeleteDialog from '@/features/board/components/confirm-delete-dialog';
 import MoveCardDialog from '@/features/board/components/move-card-dialog';
 import NewPropertyDialog from '@/features/board/components/new-property-dialog';
 import NoBoardsState from '@/features/board/components/no-boards-state';
 import NoListsState from '@/features/board/components/no-lists-state';
 import PropertyFormDialog from '@/features/board/components/property-form-dialog';
+import sampleCardWorkflowSource from '@/features/board/data_sources/sample/card-workflow-source';
 import { arrangeBoard, arrangeCardDetail } from '@/features/board/entities/board-arrangement';
 import {
   describeBoardDeletion,
@@ -26,9 +40,11 @@ import {
   describePropertyUseDeletion,
 } from '@/features/board/entities/delete-summary';
 import useBoardEvents, {
+  ARCHIVED_CARDS_DIALOG_ID,
   BOARD_SETTINGS_DIALOG_ID,
   BOARD_SWITCHER_MENU_ID,
   CARD_DETAIL_DIALOG_ID,
+  DELETE_ARCHIVED_CARD_DIALOG_ID,
   DELETE_BOARD_DIALOG_ID,
   DELETE_CARD_DIALOG_ID,
   DELETE_LIST_DIALOG_ID,
@@ -161,6 +177,15 @@ const BoardPage = () => {
   const deleteTargetOption = properties
     .flatMap((property) => property.options)
     .find((option) => option.id === states.deleteTargetOptionId);
+  const archiveAfterByListId = {
+    ...sampleCardWorkflowSource.findArchiveAfterByListId(lists),
+    ...states.archiveAfterByListId,
+  };
+  const archivedCards = sampleCardWorkflowSource.findArchivedCards(lists, now);
+  const openCardArchive =
+    openCardDetail !== null && states.archivedCardIds.has(openCardDetail.card.id)
+      ? { archivedAt: now, how: 'byHand' as const }
+      : null;
 
   return (
     <div className="grid min-h-0 grid-cols-[minmax(0,1fr)] gap-6">
@@ -177,6 +202,10 @@ const BoardPage = () => {
           <IconButton label="Board settings" popoverTarget={BOARD_SETTINGS_DIALOG_ID}>
             <Settings2 />
           </IconButton>
+          <Button variant="ghost" size="sm" popoverTarget={ARCHIVED_CARDS_DIALOG_ID}>
+            <Archive />
+            Archived
+          </Button>
         </div>
         {lists.length > 0 ? (
           <Button popoverTarget={NEW_LIST_DIALOG_ID}>
@@ -213,6 +242,7 @@ const BoardPage = () => {
                 onDeleteList={events.handleStartDeleteList}
                 onCopyListForPlanning={(listId) => void events.handleCopyListForPlanning(listId)}
                 calendarTimeZone={calendarTimeZone}
+                archiveAfter={archiveAfterByListId[boardList.id] || null}
               />
             ))}
             <button
@@ -270,6 +300,32 @@ const BoardPage = () => {
         onStartEditProperty={events.handleStartEditProperty}
         onMovePropertyBy={events.handleMovePropertyBy}
         onStartDeleteProperty={events.handleStartDeleteProperty}
+        columnsSection={
+          <BoardColumnsSettings
+            headingId={`${BOARD_SETTINGS_DIALOG_ID}-columns`}
+            lists={lists}
+            archiveAfterByListId={archiveAfterByListId}
+            onSaveArchiveAfter={events.handleSaveArchiveAfter}
+          />
+        }
+      />
+      <ArchivedCardsDialog
+        dialogId={ARCHIVED_CARDS_DIALOG_ID}
+        deleteDialogId={DELETE_ARCHIVED_CARD_DIALOG_ID}
+        boardName={board.name}
+        archivedCards={archivedCards}
+        hasOlderCards={false}
+        calendarTimeZone={calendarTimeZone}
+        onRestoreCard={() => undefined}
+        onStartDeleteCard={() => undefined}
+        onLoadOlderCards={() => undefined}
+      />
+      <ConfirmDeleteDialog
+        dialogId={DELETE_ARCHIVED_CARD_DIALOG_ID}
+        title="Delete this archived card?"
+        description={describeCardDeletion(0)}
+        confirmLabel="Delete card"
+        onConfirm={() => undefined}
       />
       <ConfirmDeleteDialog
         dialogId={DELETE_BOARD_DIALOG_ID}
@@ -339,6 +395,29 @@ const BoardPage = () => {
         renameRequest={states.pendingCardRename?.renameRequest ?? null}
         titleResetCount={states.cardRenameCancelCount}
         onAnswerRename={events.handleAnswerCardRename}
+        cardArchive={openCardArchive}
+        calendarTimeZone={calendarTimeZone}
+        onSetArchived={events.handleSetCardArchived}
+        workflowSection={
+          openCardDetail === null ? null : (
+            <CardWorkflowSection
+              key={`workflow-${openCardDetail.card.id}`}
+              triggers={sampleCardWorkflowSource.findTriggers(lists)}
+              lists={lists}
+              onChangeTrigger={() => undefined}
+            />
+          )
+        }
+        historySection={
+          openCardDetail === null ? null : (
+            <CardHistorySection
+              key={`history-${openCardDetail.card.id}`}
+              historyPage={sampleCardWorkflowSource.findHistory(lists, now)}
+              calendarTimeZone={calendarTimeZone}
+              onLoadHistory={() => undefined}
+            />
+          )
+        }
         scheduleSection={
           openCardDetail === null ? null : (
             <CardScheduleSection

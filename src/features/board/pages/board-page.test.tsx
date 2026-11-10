@@ -1343,9 +1343,13 @@ describe('card schedules', () => {
     ]);
     const user = await openBoardPage();
     const cardDialog = await openCard(user, 'Plan the week');
+    const scheduleSection = within(cardDialog).getByRole('region', {
+      name: 'Schedule',
+      hidden: true,
+    });
 
     expect(
-      await within(cardDialog).findByText('Its column was deleted. Pick another.'),
+      await within(scheduleSection).findByText('Its column was deleted. Pick another.'),
     ).toBeInTheDocument();
     await user.click(
       within(cardDialog).getByRole('button', { name: 'Pick a column', hidden: true }),
@@ -1356,7 +1360,7 @@ describe('card schedules', () => {
 
     await waitFor(() =>
       expect(
-        within(cardDialog).queryByText('Its column was deleted. Pick another.'),
+        within(scheduleSection).queryByText('Its column was deleted. Pick another.'),
       ).not.toBeInTheDocument(),
     );
     expect(
