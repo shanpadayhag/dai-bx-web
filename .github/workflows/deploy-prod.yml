@@ -12,11 +12,11 @@ concurrency:
 
 env:
   VERCEL_CLI_VERSION: 65.2.0
-  ALPHA_ORIGIN: https://dai-bx.vercel.app
+  PROD_ORIGIN: https://dai-bx.vercel.app
 
 jobs:
   deploy:
-    name: Build and deploy to the v3 alpha address
+    name: Build and deploy to dai-bx.vercel.app
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: prod
@@ -45,4 +45,4 @@ jobs:
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Check the API through the rewrite
-        run: curl --fail --silent --show-error --retry 12 --retry-delay 10 --retry-all-errors "${ALPHA_ORIGIN}/backend/health"
+        run: curl --fail --silent --show-error --retry 12 --retry-delay 10 --retry-all-errors "${PROD_ORIGIN}/backend/health"

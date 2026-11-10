@@ -1,0 +1,33 @@
+export const metadata = {
+  title: 'Card schedules, repeating events and time zones',
+  version: 'v3.3.0',
+  date: '2026-11-10',
+  summary: 'Cards move themselves on a date or a routine, planned events repeat, and the calendar keeps its own time zone.',
+};
+
+Cards can now move by themselves. Give one a schedule and it lands at the top of the column you chose, on a date or every time a routine comes round.
+
+## Card schedules
+
+- A card's details have a **Schedule** section with up to 20 schedules. Each one is **Once** (move to a column on a date and time) or **Repeating**.
+- A run moves the card to the top of its column within two minutes of the time. If a run is missed, only the latest one catches up, marked late. Runs missed while a schedule is paused never catch up.
+- A repeating schedule can **block calendar time**: each run adds a planned event named after the card, with the length and category you pick.
+- **Pause**, **Resume**, **Run now**, **Edit** and **Delete** from each schedule's menu. **Run now** moves the card straight away and keeps the next run as it was.
+- **Runs** lists each run, newest first, with late and by-hand marks and the time tracked on the card.
+- Deleting a schedule's column pauses it and asks you to pick another. Deleting the card deletes its schedules.
+- Scheduled cards show a clock on the board, with the next move on hover or focus. The calendar shows each upcoming move as a thin flag; pick one to open its card.
+
+## Repeating events
+
+- Planned events repeat with the same picker as schedules: daily, weekly on the day, monthly, yearly, every weekday, or **Custom** (every N days, weeks, months or years, on chosen weekdays, a day of the month or its nth or last weekday, ending never, on a date or after N times).
+- Moving, resizing, editing or deleting one occurrence asks whether it's for **This event**, **This and following events** or **All events**, and changes only what you pick.
+
+## Time zones
+
+- **Settings → Time zone** sets the calendar's zone. It follows your device until you pick one, and the calendar, its days and its flags redraw in that zone.
+- New events and schedules start in the calendar's zone. Each one can have its own under **More options**.
+- A repeat keeps its local time in its own zone, so daylight saving doesn't move it.
+
+## Coming next
+
+- **Card triggers:** starting a card's first task moves it to one column and finishing its last task moves it to another, and cards left idle are archived.
