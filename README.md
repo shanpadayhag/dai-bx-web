@@ -2,7 +2,7 @@
 
 The web frontend for DaiBX: one open-source workspace for nested tasks, a board and a calendar. Starting a task opens a calendar event and finishing it sets the end, with check-ins for when you step away.
 
-Live at [dai-bx.vercel.app](https://dai-bx.vercel.app). Accounts, tasks, the board, the calendar, time tracking and card schedules run on the [Axum API](https://github.com/shanpadayhag/dai-bx-api). The today screen is designed and still reads from `data_sources/sample/`; each milestone replaces a feature's sample source with `data_sources/backend/`. DaiBX 2 is retired; its code stays on the `v2` branch.
+Live at [dai-bx.vercel.app](https://dai-bx.vercel.app). Accounts, tasks, the board, the calendar, time tracking, card schedules, card triggers and the card archive run on the [Axum API](https://github.com/shanpadayhag/dai-bx-api). The today screen is designed and still reads from `data_sources/sample/`; each milestone replaces a feature's sample source with `data_sources/backend/`. DaiBX 2 is retired; its code stays on the `v2` branch.
 
 ## Releases
 

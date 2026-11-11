@@ -1,0 +1,37 @@
+export const metadata = {
+  title: 'Card triggers, history and the card archive',
+  version: 'v3.4.0',
+  date: '2026-11-11',
+  summary: 'Cards follow the work: they move when you start and finish them, keep a history of every move, and archive themselves when left idle.',
+};
+
+Cards now follow the work. Starting one can move it into your doing column, finishing its last task can move it to done, and cards left sitting in a column can archive themselves.
+
+## Card triggers
+
+- A card's details have a **Workflow** section with two pickers: **When started, move to** and **When finished, move to**. Each is a column on the card's board, or **Don’t move**.
+- The started trigger fires every time you start the card. A card that's already in that column stays where it is.
+- The finished trigger fires when the card's last open linked task is done. A card with no linked tasks never finishes, and reopening or linking a task doesn't fire it.
+- If a trigger's column is deleted, the picker is flagged until you choose another.
+
+## History
+
+- A **History** section lists the card's moves, newest first, with where it came from, where it went and why: moved by hand, by a schedule, started, finished a task, archived or restored.
+- **Show older moves** pages back through the rest.
+
+## The card archive
+
+- **Archive** takes a card off the board and pauses its schedules. An archived card's details show when and how it was archived, with **Restore**.
+- The **Archived** button in the board header lists the board's archived cards, newest first, each with **Restore** and **Delete**.
+- Restoring puts the card back at the top of the column it left and resumes only the schedules archiving paused.
+
+## Idle cards
+
+- **Board settings → Columns** has an **Archive after** length for each column, typed like `3d`, `2w` or `1m`, and combinable (`1m 2w`), up to a year. Leave it empty to keep cards forever.
+- A column with a length shows it under its name, like "Archives after 1w".
+- The clock counts from the card's last move, so editing a card doesn't reset it. A card with a running timer is never archived.
+- Idle cards are archived within a minute or two of their time, marked **by idle**.
+
+## Coming next
+
+- **Group schedules and repeat follow-ups:** groups that show when they're due, a separate uncheck rule, a card schedule's own block time, and "Does not repeat" for a series.
