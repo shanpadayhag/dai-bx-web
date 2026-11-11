@@ -10,7 +10,7 @@ import {
   Settings2,
   WifiOff,
 } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
 import EmptyState from '@/core/components/molecules/empty-state';
@@ -31,8 +31,8 @@ import NewPropertyDialog from '@/features/board/components/new-property-dialog';
 import NoBoardsState from '@/features/board/components/no-boards-state';
 import NoListsState from '@/features/board/components/no-lists-state';
 import PropertyFormDialog from '@/features/board/components/property-form-dialog';
-import sampleCardWorkflowSource from '@/features/board/data_sources/sample/card-workflow-source';
 import { arrangeBoard, arrangeCardDetail } from '@/features/board/entities/board-arrangement';
+import { cardArchiveFromRecord } from '@/features/board/entities/card-archive';
 import {
   describeBoardDeletion,
   describeCardDeletion,
@@ -74,7 +74,9 @@ const BoardPage = () => {
   const states = useBoardStates();
   const events = useBoardEvents(states);
   const { handleLoadPage, handleOpenAddressedCard, shownBoard } = events;
-  const { runningSourceIds, calendarTimeZone, handleStartCard } = useTracking();
+  const { runningSourceIds, calendarTimeZone, handleStartCard, trackingRevision } = useTracking();
+  const { handleReloadAfterTracking } = events;
+  const shownTrackingRevisionRef = useRef(trackingRevision);
 
   useEffect(() => {
     void handleLoadPage();
@@ -83,6 +85,12 @@ const BoardPage = () => {
   useEffect(() => {
     handleOpenAddressedCard();
   }, [handleOpenAddressedCard]);
+
+  useEffect(() => {
+    if (shownTrackingRevisionRef.current === trackingRevision) return;
+    shownTrackingRevisionRef.current = trackingRevision;
+    void handleReloadAfterTracking();
+  }, [handleReloadAfterTracking, trackingRevision]);
 
   const boardContents = useMemo(
     () => (shownBoard === null ? null : arrangeBoard(shownBoard)),
@@ -156,8 +164,13 @@ const BoardPage = () => {
   const cardCount = shownBoard.cards.length;
   const renameTargetList = lists.find((boardList) => boardList.id === states.renameTargetListId);
   const deleteTargetList = lists.find((boardList) => boardList.id === states.deleteTargetListId);
-  const openCardRecord = shownBoard.cards.find((cardRecord) => cardRecord.id === states.openCardId);
   const isOpenCardDetailLoaded = states.openCardDetail?.card.id === states.openCardId;
+  const openCardArchiveRecord = isOpenCardDetailLoaded
+    ? (states.openCardDetail?.archived ?? null)
+    : null;
+  const openCardRecord =
+    shownBoard.cards.find((cardRecord) => cardRecord.id === states.openCardId) ??
+    (openCardArchiveRecord === null ? undefined : states.openCardDetail?.card);
   const openCardDetail =
     openCardRecord === undefined
       ? null
@@ -177,15 +190,11 @@ const BoardPage = () => {
   const deleteTargetOption = properties
     .flatMap((property) => property.options)
     .find((option) => option.id === states.deleteTargetOptionId);
-  const archiveAfterByListId = {
-    ...sampleCardWorkflowSource.findArchiveAfterByListId(lists),
-    ...states.archiveAfterByListId,
-  };
-  const archivedCards = sampleCardWorkflowSource.findArchivedCards(lists, now);
   const openCardArchive =
-    openCardDetail !== null && states.archivedCardIds.has(openCardDetail.card.id)
-      ? { archivedAt: now, how: 'byHand' as const }
-      : null;
+    openCardArchiveRecord === null ? null : cardArchiveFromRecord(openCardArchiveRecord);
+  const deleteTargetArchivedCard = states.archivedCardsPage?.cards.find(
+    (archivedCard) => archivedCard.id === states.deleteTargetArchivedCardId,
+  );
 
   return (
     <div className="grid min-h-0 grid-cols-[minmax(0,1fr)] gap-6">
@@ -202,7 +211,12 @@ const BoardPage = () => {
           <IconButton label="Board settings" popoverTarget={BOARD_SETTINGS_DIALOG_ID}>
             <Settings2 />
           </IconButton>
-          <Button variant="ghost" size="sm" popoverTarget={ARCHIVED_CARDS_DIALOG_ID}>
+          <Button
+            variant="ghost"
+            size="sm"
+            popoverTarget={ARCHIVED_CARDS_DIALOG_ID}
+            onClick={events.handleOpenArchivedCards}
+          >
             <Archive />
             Archived
           </Button>
@@ -242,7 +256,7 @@ const BoardPage = () => {
                 onDeleteList={events.handleStartDeleteList}
                 onCopyListForPlanning={(listId) => void events.handleCopyListForPlanning(listId)}
                 calendarTimeZone={calendarTimeZone}
-                archiveAfter={archiveAfterByListId[boardList.id] || null}
+                archiveAfter={boardList.archiveAfter}
               />
             ))}
             <button
@@ -304,7 +318,6 @@ const BoardPage = () => {
           <BoardColumnsSettings
             headingId={`${BOARD_SETTINGS_DIALOG_ID}-columns`}
             lists={lists}
-            archiveAfterByListId={archiveAfterByListId}
             onSaveArchiveAfter={events.handleSaveArchiveAfter}
           />
         }
@@ -313,19 +326,19 @@ const BoardPage = () => {
         dialogId={ARCHIVED_CARDS_DIALOG_ID}
         deleteDialogId={DELETE_ARCHIVED_CARD_DIALOG_ID}
         boardName={board.name}
-        archivedCards={archivedCards}
-        hasOlderCards={false}
+        archivedCards={states.archivedCardsPage?.cards ?? null}
+        hasOlderCards={states.archivedCardsPage?.hasOlderCards ?? false}
         calendarTimeZone={calendarTimeZone}
-        onRestoreCard={() => undefined}
-        onStartDeleteCard={() => undefined}
-        onLoadOlderCards={() => undefined}
+        onRestoreCard={(cardId) => void events.handleRestoreArchivedCard(cardId)}
+        onStartDeleteCard={events.handleStartDeleteArchivedCard}
+        onLoadOlderCards={events.handleLoadOlderArchivedCards}
       />
       <ConfirmDeleteDialog
         dialogId={DELETE_ARCHIVED_CARD_DIALOG_ID}
-        title="Delete this archived card?"
+        title={`Delete “${deleteTargetArchivedCard?.title ?? 'this archived card'}”?`}
         description={describeCardDeletion(0)}
         confirmLabel="Delete card"
-        onConfirm={() => undefined}
+        onConfirm={() => void events.handleConfirmDeleteArchivedCard()}
       />
       <ConfirmDeleteDialog
         dialogId={DELETE_BOARD_DIALOG_ID}
@@ -397,14 +410,18 @@ const BoardPage = () => {
         onAnswerRename={events.handleAnswerCardRename}
         cardArchive={openCardArchive}
         calendarTimeZone={calendarTimeZone}
-        onSetArchived={events.handleSetCardArchived}
+        onSetArchived={(cardId, isArchived) =>
+          void events.handleSetCardArchived(cardId, isArchived)
+        }
         workflowSection={
           openCardDetail === null ? null : (
             <CardWorkflowSection
               key={`workflow-${openCardDetail.card.id}`}
-              triggers={sampleCardWorkflowSource.findTriggers(lists)}
+              triggers={states.openCardTriggers}
               lists={lists}
-              onChangeTrigger={() => undefined}
+              onChangeTrigger={(triggerKind, listId) =>
+                void events.handleChangeTrigger(triggerKind, listId)
+              }
             />
           )
         }
@@ -412,9 +429,9 @@ const BoardPage = () => {
           openCardDetail === null ? null : (
             <CardHistorySection
               key={`history-${openCardDetail.card.id}`}
-              historyPage={sampleCardWorkflowSource.findHistory(lists, now)}
+              historyPage={states.cardHistoryPage}
               calendarTimeZone={calendarTimeZone}
-              onLoadHistory={() => undefined}
+              onLoadHistory={(olderThanMoveId) => void events.handleLoadHistory(olderThanMoveId)}
             />
           )
         }

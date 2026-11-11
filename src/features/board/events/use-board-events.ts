@@ -6,6 +6,7 @@ import readFormText from '@/core/form-text';
 import hidePopover, { showPopover } from '@/core/popover';
 import { trackedEventCountOf, type RenameEventsAnswer } from '@/core/rename-events';
 import reportAppError from '@/core/report-app-error';
+import archiveCard from '@/features/board/actions/archive-card';
 import clearCardValue from '@/features/board/actions/clear-card-value';
 import createBoard, { readBoardName } from '@/features/board/actions/create-board';
 import createBoardList, { readListName } from '@/features/board/actions/create-board-list';
@@ -23,8 +24,10 @@ import deleteCard from '@/features/board/actions/delete-card';
 import deleteCardSchedule from '@/features/board/actions/delete-card-schedule';
 import deletePropertyOption from '@/features/board/actions/delete-property-option';
 import findBoard from '@/features/board/actions/find-board';
+import findArchivedCards from '@/features/board/actions/find-archived-cards';
 import findBoards from '@/features/board/actions/find-boards';
 import findCardDetail from '@/features/board/actions/find-card-detail';
+import findCardHistory from '@/features/board/actions/find-card-history';
 import findListForPlanning from '@/features/board/actions/find-list-for-planning';
 import findScheduleRuns, {
   SCHEDULE_RUNS_PAGE_SIZE,
@@ -37,14 +40,16 @@ import renameBoard from '@/features/board/actions/rename-board';
 import renameBoardList from '@/features/board/actions/rename-board-list';
 import renameBoardProperty from '@/features/board/actions/rename-board-property';
 import renameCard from '@/features/board/actions/rename-card';
+import restoreCard from '@/features/board/actions/restore-card';
 import runCardScheduleNow from '@/features/board/actions/run-card-schedule-now';
+import saveCardTriggers from '@/features/board/actions/save-card-triggers';
 import saveCardSchedule, { readScheduleForm } from '@/features/board/actions/save-card-schedule';
 import setCardSchedulePaused from '@/features/board/actions/set-card-schedule-paused';
 import setCardValue, { readCardValueInput } from '@/features/board/actions/set-card-value';
+import setListArchiveAfter from '@/features/board/actions/set-list-archive-after';
 import updateCardDue from '@/features/board/actions/update-card-due';
 import updateCardNotes from '@/features/board/actions/update-card-notes';
 import updatePropertyOption from '@/features/board/actions/update-property-option';
-import sampleCardWorkflowSource from '@/features/board/data_sources/sample/card-workflow-source';
 import localStorageBoardViewSource from '@/features/board/data_sources/local_storage/board-view-source';
 import type Board from '@/features/board/entities/board';
 import type BoardRecord from '@/features/board/entities/board-record';
@@ -52,6 +57,8 @@ import type { LocalBoardChange } from '@/features/board/entities/board-record-ch
 import type CardPropertyValue from '@/features/board/entities/card-property-value';
 import type CardSchedule from '@/features/board/entities/card-schedule';
 import { cardScheduleFromRecord } from '@/features/board/entities/card-schedule';
+import type CardTriggers from '@/features/board/entities/card-triggers';
+import type { CardTriggerKind } from '@/features/board/entities/card-triggers';
 import {
   confirmBoardWrite,
   failBoardWrite,
@@ -135,8 +142,14 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     deleteTargetOptionId,
     openCardId,
     moveDialogListId,
-    setArchiveAfterByListId,
-    setArchivedCardIds,
+    openCardTriggers,
+    setOpenCardTriggers,
+    cardHistoryPage,
+    setCardHistoryPage,
+    archivedCardsPage,
+    setArchivedCardsPage,
+    deleteTargetArchivedCardId,
+    setDeleteTargetArchivedCardId,
     setBoards,
     setPageLoadError,
     setAddressedCardId,
@@ -186,6 +199,7 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
       setComposingListId(null);
       setOpenCardId(null);
       setOpenCardDetail(null);
+      setArchivedCardsPage(null);
       if (boardId === null) return;
       localStorageBoardViewSource.saveLastBoardId(boardId);
       try {
@@ -195,6 +209,7 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
       }
     },
     [
+      setArchivedCardsPage,
       setComposingListId,
       setOpenCardDetail,
       setOpenCardId,
@@ -616,6 +631,8 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
       setOpenCardId(cardId);
       setOpenCardDetail(null);
       setOpenCardSchedules(null);
+      setOpenCardTriggers(null);
+      setCardHistoryPage(null);
       setScheduleRunsPages({});
       showPopover(CARD_DETAIL_DIALOG_ID);
       if (scheduleCategories === null) {
@@ -625,15 +642,18 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
         const loadedDetail = await findCardDetail(cardId);
         setOpenCardDetail(loadedDetail);
         setOpenCardSchedules(loadedDetail.schedules.map(cardScheduleFromRecord));
+        setOpenCardTriggers(loadedDetail.triggers);
       } catch (loadError) {
         reportAppError(loadError);
       }
     },
     [
       scheduleCategories,
+      setCardHistoryPage,
       setOpenCardDetail,
       setOpenCardId,
       setOpenCardSchedules,
+      setOpenCardTriggers,
       setScheduleCategories,
       setScheduleRunsPages,
     ],
@@ -959,29 +979,193 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     void runBoardWrite({ kind: 'deleteCard', cardId: openCardId }, () => deleteCard(openCardId));
   }, [openCardId, runBoardWrite, setOpenCardDetail, setOpenCardId]);
 
-  const handleSaveArchiveAfter = useCallback(
-    async (listId: string, enteredText: string): Promise<ArchiveAfterSaving> => {
-      const archiveAfterTidying = sampleCardWorkflowSource.tidyArchiveAfterText(enteredText);
-      if ('hint' in archiveAfterTidying) return { isSaved: false, hint: archiveAfterTidying.hint };
-      setArchiveAfterByListId((currentArchiveAfters) => ({
-        ...currentArchiveAfters,
-        [listId]: archiveAfterTidying.archiveAfter ?? '',
+  const handleLoadHistory = useCallback(
+    async (olderThanMoveId: string | null) => {
+      if (openCardId === null) return;
+      setCardHistoryPage((currentPage) => ({
+        moves: olderThanMoveId === null ? [] : (currentPage?.moves ?? []),
+        hasOlderMoves: false,
+        isLoading: true,
       }));
-      return { isSaved: true };
+      try {
+        const loadedHistory = await findCardHistory(openCardId, olderThanMoveId);
+        setCardHistoryPage((currentPage) => ({
+          moves: [
+            ...(olderThanMoveId === null ? [] : (currentPage?.moves ?? [])),
+            ...loadedHistory.moves,
+          ],
+          hasOlderMoves: loadedHistory.hasOlderMoves,
+          isLoading: false,
+        }));
+      } catch (loadError) {
+        setCardHistoryPage((currentPage) =>
+          currentPage === null || currentPage.moves.length === 0
+            ? null
+            : { ...currentPage, hasOlderMoves: true, isLoading: false },
+        );
+        reportAppError(loadError);
+      }
     },
-    [setArchiveAfterByListId],
+    [openCardId, setCardHistoryPage],
+  );
+
+  const refreshOpenCard = useCallback(
+    async (cardId: string) => {
+      if (cardId !== openCardId) return;
+      const loadedDetail = await findCardDetail(cardId);
+      setOpenCardDetail(loadedDetail);
+      setOpenCardSchedules(loadedDetail.schedules.map(cardScheduleFromRecord));
+      setOpenCardTriggers(loadedDetail.triggers);
+      if (cardHistoryPage !== null) await handleLoadHistory(null);
+    },
+    [
+      cardHistoryPage,
+      handleLoadHistory,
+      openCardId,
+      setOpenCardDetail,
+      setOpenCardSchedules,
+      setOpenCardTriggers,
+    ],
+  );
+
+  const handleReloadAfterTracking = useCallback(async () => {
+    await reloadShownBoard();
+    if (openCardId === null) return;
+    try {
+      await refreshOpenCard(openCardId);
+    } catch (loadError) {
+      reportAppError(loadError);
+    }
+  }, [openCardId, refreshOpenCard, reloadShownBoard]);
+
+  const handleChangeTrigger = useCallback(
+    async (triggerKind: CardTriggerKind, listId: string | null) => {
+      if (openCardId === null || openCardTriggers === null) return;
+      const chosenList = shownBoard?.lists.find((listRecord) => listRecord.id === listId);
+      const chosenTriggers: CardTriggers = {
+        ...openCardTriggers,
+        [triggerKind]:
+          chosenList === undefined ? null : { listId: chosenList.id, listName: chosenList.name },
+      };
+      setOpenCardTriggers(chosenTriggers);
+      try {
+        setOpenCardTriggers(await saveCardTriggers(openCardId, chosenTriggers));
+      } catch (saveError) {
+        setOpenCardTriggers(openCardTriggers);
+        reportAppError(saveError);
+      }
+    },
+    [openCardId, openCardTriggers, setOpenCardTriggers, shownBoard],
   );
 
   const handleSetCardArchived = useCallback(
-    (cardId: string, isArchived: boolean) => {
-      setArchivedCardIds((currentCardIds) => {
-        const nextCardIds = new Set(currentCardIds);
-        if (isArchived) nextCardIds.add(cardId);
-        else nextCardIds.delete(cardId);
-        return nextCardIds;
-      });
+    async (cardId: string, isArchived: boolean) => {
+      try {
+        if (isArchived) {
+          await archiveCard(cardId);
+          await reloadShownBoard();
+        } else {
+          takeAnsweredBoard(await restoreCard(cardId));
+        }
+        setArchivedCardsPage(null);
+        await refreshOpenCard(cardId);
+      } catch (archiveError) {
+        reportAppError(archiveError);
+      }
     },
-    [setArchivedCardIds],
+    [refreshOpenCard, reloadShownBoard, setArchivedCardsPage, takeAnsweredBoard],
+  );
+
+  const loadArchivedCards = useCallback(
+    async (olderThanCardId: string | null) => {
+      if (selectedBoardId === null) return;
+      try {
+        const loadedPage = await findArchivedCards(selectedBoardId, olderThanCardId);
+        setArchivedCardsPage((currentPage) => ({
+          cards: [
+            ...(olderThanCardId === null ? [] : (currentPage?.cards ?? [])),
+            ...loadedPage.cards,
+          ],
+          hasOlderCards: loadedPage.hasOlderCards,
+        }));
+      } catch (loadError) {
+        reportAppError(loadError);
+      }
+    },
+    [selectedBoardId, setArchivedCardsPage],
+  );
+
+  const handleOpenArchivedCards = useCallback(() => {
+    setArchivedCardsPage(null);
+    void loadArchivedCards(null);
+  }, [loadArchivedCards, setArchivedCardsPage]);
+
+  const handleLoadOlderArchivedCards = useCallback(() => {
+    const oldestCard = archivedCardsPage?.cards.at(-1);
+    if (oldestCard !== undefined) void loadArchivedCards(oldestCard.id);
+  }, [archivedCardsPage, loadArchivedCards]);
+
+  const dropArchivedCard = useCallback(
+    (cardId: string) =>
+      setArchivedCardsPage((currentPage) =>
+        currentPage === null
+          ? currentPage
+          : {
+              ...currentPage,
+              cards: currentPage.cards.filter((archivedCard) => archivedCard.id !== cardId),
+            },
+      ),
+    [setArchivedCardsPage],
+  );
+
+  const handleRestoreArchivedCard = useCallback(
+    async (cardId: string) => {
+      try {
+        takeAnsweredBoard(await restoreCard(cardId));
+        dropArchivedCard(cardId);
+        await refreshOpenCard(cardId);
+      } catch (restoreError) {
+        reportAppError(restoreError);
+      }
+    },
+    [dropArchivedCard, refreshOpenCard, takeAnsweredBoard],
+  );
+
+  const handleStartDeleteArchivedCard = useCallback(
+    (cardId: string) => setDeleteTargetArchivedCardId(cardId),
+    [setDeleteTargetArchivedCardId],
+  );
+
+  const handleConfirmDeleteArchivedCard = useCallback(async () => {
+    if (deleteTargetArchivedCardId === null) return;
+    const cardId = deleteTargetArchivedCardId;
+    hidePopover(DELETE_ARCHIVED_CARD_DIALOG_ID);
+    setDeleteTargetArchivedCardId(null);
+    try {
+      takeAnsweredBoard(await deleteCard(cardId));
+      dropArchivedCard(cardId);
+    } catch (deleteError) {
+      reportAppError(deleteError);
+    }
+  }, [
+    deleteTargetArchivedCardId,
+    dropArchivedCard,
+    setDeleteTargetArchivedCardId,
+    takeAnsweredBoard,
+  ]);
+
+  const handleSaveArchiveAfter = useCallback(
+    async (listId: string, enteredText: string): Promise<ArchiveAfterSaving> => {
+      try {
+        const archiveAfterAnswer = await setListArchiveAfter(listId, enteredText);
+        if ('hint' in archiveAfterAnswer) return { hint: archiveAfterAnswer.hint };
+        takeAnsweredBoard(archiveAfterAnswer.boardRecord);
+      } catch (saveError) {
+        reportAppError(saveError);
+      }
+      return { hint: null };
+    },
+    [takeAnsweredBoard],
   );
 
   return {
@@ -1033,6 +1217,14 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     handleLoadScheduleRuns,
     handleSaveArchiveAfter,
     handleSetCardArchived,
+    handleChangeTrigger,
+    handleLoadHistory,
+    handleReloadAfterTracking,
+    handleOpenArchivedCards,
+    handleLoadOlderArchivedCards,
+    handleRestoreArchivedCard,
+    handleStartDeleteArchivedCard,
+    handleConfirmDeleteArchivedCard,
   };
 };
 

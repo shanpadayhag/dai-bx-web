@@ -12,6 +12,7 @@ import {
 } from '@/features/board/entities/board-record-changes';
 import type CardDetailRecord from '@/features/board/entities/card-detail-record';
 import type CardScheduleRecord from '@/features/board/entities/card-schedule-record';
+import type CardTriggers from '@/features/board/entities/card-triggers';
 import type { ScheduleRunRecord } from '@/features/board/entities/card-schedule-record';
 import type { RepeatRule } from '@/core/repeat-rule';
 import type CardPropertyValue from '@/features/board/entities/card-property-value';
@@ -51,9 +52,9 @@ const cardRecord = (
 const personalBoard: BoardRecord = {
   board: { id: 'board-personal', name: 'Personal' },
   lists: [
-    { id: 'list-backlog', name: 'Backlog', position: 0 },
-    { id: 'list-doing', name: 'Doing', position: 1 },
-    { id: 'list-done', name: 'Done', position: 2 },
+    { id: 'list-backlog', name: 'Backlog', position: 0, archiveAfter: null },
+    { id: 'list-doing', name: 'Doing', position: 1, archiveAfter: null },
+    { id: 'list-done', name: 'Done', position: 2, archiveAfter: null },
   ],
   cards: [
     cardRecord('card-plan', 'Plan the week', 'list-backlog', 0, { linkedTaskCount: 2 }),
@@ -194,7 +195,7 @@ beforeEach(() => {
         boardHolding((boardRecord) => boardRecord.board.id === params.boardId),
         {
           kind: 'addList',
-          listRecord: { id: `list-created-${createdCount}`, name, position: 0 },
+          listRecord: { id: `list-created-${createdCount}`, name, position: 0, archiveAfter: null },
         },
       );
     }),
@@ -253,6 +254,8 @@ beforeEach(() => {
         linkedTasks: [],
         trackedEventCount: serverTrackedEventCounts.get(cardId) ?? 0,
         schedules: [],
+        triggers: { started: null, finished: null },
+        archived: null,
       };
       return HttpResponse.json(cardDetail);
     }),
@@ -1154,6 +1157,8 @@ describe('card schedules', () => {
           linkedTasks: [],
           trackedEventCount: 0,
           schedules: serverSchedules.get(cardId) ?? [],
+          triggers: { started: null, finished: null },
+          archived: null,
         };
         return HttpResponse.json(cardDetail);
       }),
@@ -1419,5 +1424,297 @@ describe('card schedules', () => {
     expect(within(cardDialog).getByText('By hand')).toBeInTheDocument();
     expect(within(cardDialog).getByText('1h 30m tracked')).toBeInTheDocument();
     expect(within(cardDialog).getByText('Mon 9 Nov, 18:04')).toBeInTheDocument();
+  });
+});
+
+describe('card workflow, history and archive', () => {
+  type ArchivedServerCard = { card: BoardCardRecord; fromListName: string; how: 'idle' | 'byHand' };
+  let serverTriggers: Map<string, CardTriggers>;
+  let archivedServerCards: Map<string, ArchivedServerCard>;
+  let triggerWrites: unknown[];
+  let historyRequests: string[];
+  let isTriggerWriteFailing: boolean;
+
+  const ARCHIVED_AT = '2026-11-08T09:00:00.000Z';
+
+  const archiveOnServer = (cardId: string, how: ArchivedServerCard['how']) => {
+    const heldBoard = boardHolding(holdsCard(cardId));
+    const archivedCard = heldBoard.cards.find((card) => card.id === cardId) as BoardCardRecord;
+    const fromList = heldBoard.lists.find((listRecord) => listRecord.id === archivedCard.listId);
+    archivedServerCards.set(cardId, {
+      card: archivedCard,
+      fromListName: fromList?.name ?? '',
+      how,
+    });
+    const changedBoard = applyBoardChange(heldBoard, { kind: 'deleteCard', cardId });
+    serverBoards = serverBoards.map((serverBoard) =>
+      serverBoard.board.id === changedBoard.board.id ? changedBoard : serverBoard,
+    );
+  };
+
+  const restoreOnServer = (cardId: string) => {
+    const archivedServerCard = archivedServerCards.get(cardId) as ArchivedServerCard;
+    archivedServerCards.delete(cardId);
+    const heldBoard = serverBoardOf('board-personal') as BoardRecord;
+    const restoredBoard = applyBoardChange(
+      applyBoardChange(heldBoard, { kind: 'addCard', cardRecord: archivedServerCard.card }),
+      { kind: 'moveCard', cardId, listId: archivedServerCard.card.listId, position: 0 },
+    );
+    serverBoards = serverBoards.map((serverBoard) =>
+      serverBoard.board.id === restoredBoard.board.id ? restoredBoard : serverBoard,
+    );
+    return restoredBoard;
+  };
+
+  beforeEach(() => {
+    serverTriggers = new Map();
+    archivedServerCards = new Map();
+    triggerWrites = [];
+    historyRequests = [];
+    isTriggerWriteFailing = false;
+    backendServer.use(
+      http.get('/backend/cards/:cardId', ({ params }) => {
+        const cardId = String(params.cardId);
+        const archivedServerCard = archivedServerCards.get(cardId);
+        const card =
+          archivedServerCard === undefined
+            ? boardHolding(holdsCard(cardId)).cards.find((cardItem) => cardItem.id === cardId)
+            : { ...archivedServerCard.card, listId: null, position: null };
+        const cardDetail: CardDetailRecord = {
+          card: card as CardDetailRecord['card'],
+          notes: DEFAULT_NOTES,
+          linkedTasks: [],
+          trackedEventCount: 0,
+          schedules: [],
+          triggers: serverTriggers.get(cardId) ?? { started: null, finished: null },
+          archived:
+            archivedServerCard === undefined
+              ? null
+              : { at: ARCHIVED_AT, how: archivedServerCard.how },
+        };
+        return HttpResponse.json(cardDetail);
+      }),
+      http.put('/backend/cards/:cardId/triggers', async ({ params, request }) => {
+        const triggerChoice = (await request.json()) as {
+          startedListId: string | null;
+          finishedListId: string | null;
+        };
+        triggerWrites.push(triggerChoice);
+        if (isTriggerWriteFailing) {
+          return HttpResponse.json({ error: 'not found' }, { status: 404 });
+        }
+        const listsById = new Map(
+          personalBoard.lists.map((listRecord) => [listRecord.id, listRecord.name]),
+        );
+        const targetOf = (listId: string | null) =>
+          listId === null ? null : { listId, listName: listsById.get(listId) ?? null };
+        const savedTriggers = {
+          started: targetOf(triggerChoice.startedListId),
+          finished: targetOf(triggerChoice.finishedListId),
+        };
+        serverTriggers.set(String(params.cardId), savedTriggers);
+        return HttpResponse.json({ triggers: savedTriggers });
+      }),
+      http.get('/backend/cards/:cardId/history', ({ request }) => {
+        const requestUrl = new URL(request.url);
+        historyRequests.push(requestUrl.search);
+        return HttpResponse.json(
+          requestUrl.searchParams.get('before') === null
+            ? {
+                moves: [
+                  {
+                    id: 'move-2',
+                    movedAt: '2026-11-09T10:00:00.000Z',
+                    fromListName: 'Backlog',
+                    toListName: 'Doing',
+                    reason: 'started',
+                    taskTitle: 'Draft the plan',
+                  },
+                ],
+                hasMore: true,
+              }
+            : {
+                moves: [
+                  {
+                    id: 'move-1',
+                    movedAt: '2026-11-08T10:00:00.000Z',
+                    fromListName: 'Done',
+                    toListName: 'Backlog',
+                    reason: 'byHand',
+                    taskTitle: null,
+                  },
+                ],
+                hasMore: false,
+              },
+        );
+      }),
+      http.post('/backend/cards/:cardId/archive', ({ params }) => {
+        archiveOnServer(String(params.cardId), 'byHand');
+        return HttpResponse.json({ status: 'archived' });
+      }),
+      http.post('/backend/cards/:cardId/restore', ({ params }) =>
+        HttpResponse.json(restoreOnServer(String(params.cardId))),
+      ),
+      http.get('/backend/boards/:boardId/archived-cards', () =>
+        HttpResponse.json({
+          cards: [...archivedServerCards.values()].map((archivedServerCard) => ({
+            id: archivedServerCard.card.id,
+            title: archivedServerCard.card.title,
+            fromListName: archivedServerCard.fromListName,
+            archivedAt: ARCHIVED_AT,
+            how: archivedServerCard.how,
+          })),
+          hasMore: false,
+        }),
+      ),
+      http.delete('/backend/cards/:cardId', ({ params }) => {
+        archivedServerCards.delete(String(params.cardId));
+        return HttpResponse.json(serverBoardOf('board-personal'));
+      }),
+      http.patch('/backend/lists/:listId', async ({ params, request }) => {
+        const { archiveAfter } = (await request.json()) as { archiveAfter: string | null };
+        if (archiveAfter === '3x') {
+          return HttpResponse.json(
+            { error: 'Use days, weeks or months, like 3d, 2w or 1m' },
+            { status: 422 },
+          );
+        }
+        const heldBoard = boardHolding(holdsList(String(params.listId)));
+        const changedBoard: BoardRecord = {
+          ...heldBoard,
+          lists: heldBoard.lists.map((listRecord) =>
+            listRecord.id === params.listId
+              ? { ...listRecord, archiveAfter: archiveAfter === '7d' ? '1w' : archiveAfter }
+              : listRecord,
+          ),
+        };
+        serverBoards = serverBoards.map((serverBoard) =>
+          serverBoard.board.id === changedBoard.board.id ? changedBoard : serverBoard,
+        );
+        return HttpResponse.json(changedBoard);
+      }),
+    );
+  });
+
+  test('a trigger saves on change and goes back when the save fails', async () => {
+    const user = await openBoardPage();
+    const cardDialog = await openCard(user, 'Plan the week');
+    const triggerSelect = (label: string) => within(cardDialog).getByLabelText(label);
+
+    await user.selectOptions(triggerSelect('When started, move to'), 'Doing');
+    await waitFor(() => expect(triggerWrites).toHaveLength(1));
+    isTriggerWriteFailing = true;
+    await user.selectOptions(triggerSelect('When finished, move to'), 'Done');
+
+    expect(await screen.findByText('Not found.')).toBeInTheDocument();
+    await waitFor(() => expect(triggerSelect('When finished, move to')).toHaveValue(''));
+    expect(triggerSelect('When started, move to')).toHaveValue('list-doing');
+    expect(triggerWrites).toEqual([
+      { startedListId: 'list-doing', finishedListId: null },
+      { startedListId: 'list-doing', finishedListId: 'list-done' },
+    ]);
+  });
+
+  test('a flagged trigger shows until another column is picked', async () => {
+    serverTriggers.set('card-plan', {
+      started: { listId: null, listName: null },
+      finished: null,
+    });
+    const user = await openBoardPage();
+    const cardDialog = await openCard(user, 'Plan the week');
+
+    expect(
+      await within(cardDialog).findByText('Its column was deleted. Pick another.'),
+    ).toBeInTheDocument();
+    await user.selectOptions(within(cardDialog).getByLabelText('When started, move to'), 'Done');
+
+    await waitFor(() =>
+      expect(
+        within(cardDialog).queryByText('Its column was deleted. Pick another.'),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  test('History loads when it is opened and Show older moves pages back', async () => {
+    const user = await openBoardPage();
+    const cardDialog = await openCard(user, 'Plan the week');
+
+    expect(historyRequests).toEqual([]);
+    await user.click(within(cardDialog).getByText('History'));
+    expect(await within(cardDialog).findByText('Started “Draft the plan”')).toBeInTheDocument();
+    await user.click(
+      within(cardDialog).getByRole('button', { name: 'Show older moves', hidden: true }),
+    );
+
+    expect(await within(cardDialog).findByText('Moved by hand')).toBeInTheDocument();
+    expect(historyRequests).toEqual(['', '?before=move-2']);
+    expect(
+      within(cardDialog).queryByRole('button', { name: 'Show older moves', hidden: true }),
+    ).not.toBeInTheDocument();
+  });
+
+  test('Archive takes the card off the board and Restore puts it back on top', async () => {
+    const user = await openBoardPage();
+    const cardDialog = await openCard(user, 'Plan the week');
+
+    await user.click(within(cardDialog).getByRole('button', { name: 'Archive', hidden: true }));
+
+    expect(await within(cardDialog).findByText(/^Archived on .*, by hand$/)).toBeInTheDocument();
+    await waitFor(() => expect(cardTitlesIn('Backlog')).toEqual(['Pay rent']));
+    await user.click(within(cardDialog).getByRole('button', { name: 'Restore', hidden: true }));
+
+    await waitFor(() => expect(cardTitlesIn('Backlog')).toEqual(['Plan the week', 'Pay rent']));
+    expect(within(cardDialog).queryByText(/^Archived on /)).not.toBeInTheDocument();
+  });
+
+  test('the Archived panel restores one card and deletes another', async () => {
+    archiveOnServer('card-plan', 'idle');
+    archiveOnServer('card-ship', 'byHand');
+    const user = userEvent.setup();
+    renderWithToaster(<BoardPage />);
+    await screen.findByText('Pay rent');
+
+    await user.click(screen.getByRole('button', { name: 'Archived' }));
+    const archivedDialog = screen.getByRole('dialog', { name: 'Archived cards', hidden: true });
+    expect(await within(archivedDialog).findByText('Plan the week')).toBeInTheDocument();
+    expect(within(archivedDialog).getByText(/^From Backlog · .*, by idle$/)).toBeInTheDocument();
+    await user.click(
+      within(archivedDialog).getByRole('button', { name: 'Restore Plan the week', hidden: true }),
+    );
+    await waitFor(() => expect(cardTitlesIn('Backlog')).toEqual(['Plan the week', 'Pay rent']));
+    await user.click(
+      within(archivedDialog).getByRole('button', { name: 'Delete Ship the board', hidden: true }),
+    );
+    const deleteDialog = screen.getByRole('dialog', {
+      name: 'Delete “Ship the board”?',
+      hidden: true,
+    });
+    await user.click(
+      within(deleteDialog).getByRole('button', { name: 'Delete card', hidden: true }),
+    );
+
+    await waitFor(() =>
+      expect(within(archivedDialog).getByText('No archived cards.')).toBeInTheDocument(),
+    );
+    expect(archivedServerCards.size).toBe(0);
+  });
+
+  test('Archive after saves the tidied length and a bad one shows the hint', async () => {
+    const user = await openBoardPage();
+    const settingsDialog = await openBoardSettings(user);
+    const doneLength = within(settingsDialog).getByLabelText(/^Done/);
+
+    await user.type(doneLength, '7d{Enter}');
+
+    expect(await within(column('Done')).findByText('Archives after 1w')).toBeInTheDocument();
+    const savedLength = within(settingsDialog).getByLabelText(/^Done/);
+    expect(savedLength).toHaveValue('1w');
+    await user.clear(savedLength);
+    await user.type(savedLength, '3x{Enter}');
+
+    expect(
+      await within(settingsDialog).findByText('Use days, weeks or months, like 3d, 2w or 1m.'),
+    ).toBeInTheDocument();
+    expect(within(settingsDialog).getByLabelText(/^Done/)).toHaveValue('1w');
   });
 });

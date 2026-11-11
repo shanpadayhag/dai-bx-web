@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse, type JsonBodyType } from 'msw';
 import { expect, test } from 'vitest';
 import backendCardSource from '@/features/board/data_sources/backend/card-source';
 import type BoardRecord from '@/features/board/entities/board-record';
@@ -68,8 +68,57 @@ test("reads a card's detail", async () => {
     linkedTasks: [],
     trackedEventCount: 0,
     schedules: [],
+    triggers: { started: null, finished: null },
+    archived: null,
   };
   backendServer.use(http.get('/backend/cards/c1', () => HttpResponse.json(cardDetailRecord)));
 
   await expect(backendCardSource.find('c1')).resolves.toEqual(cardDetailRecord);
+});
+
+test('sends the workflow writes and reads to their routes', async () => {
+  const receivedRequests: { method: string; path: string; body: unknown }[] = [];
+  const recordRequest =
+    (answer: JsonBodyType) =>
+    async ({ request }: { request: Request }) => {
+      const requestUrl = new URL(request.url);
+      receivedRequests.push({
+        method: request.method,
+        path: `${requestUrl.pathname}${requestUrl.search}`,
+        body: await request.json().catch(() => undefined),
+      });
+      return HttpResponse.json(answer);
+    };
+  const triggers = { started: { listId: 'l2', listName: 'Doing' }, finished: null };
+  backendServer.use(
+    http.put('/backend/cards/c1/triggers', recordRequest({ triggers })),
+    http.get('/backend/cards/c1/history', recordRequest({ moves: [], hasMore: false })),
+    http.post('/backend/cards/c1/archive', recordRequest({ status: 'archived' })),
+    http.post('/backend/cards/c1/restore', recordRequest(boardRecord)),
+    http.get('/backend/boards/b1/archived-cards', recordRequest({ cards: [], hasMore: false })),
+  );
+
+  await expect(
+    backendCardSource.saveTriggers('c1', { startedListId: 'l2', finishedListId: null }),
+  ).resolves.toEqual({ triggers });
+  await backendCardSource.findHistory('c1', null);
+  await backendCardSource.findHistory('c1', 'm9');
+  await backendCardSource.archive('c1');
+  await expect(backendCardSource.restore('c1')).resolves.toEqual(boardRecord);
+  await backendCardSource.listArchived('b1', null);
+  await backendCardSource.listArchived('b1', 'c7');
+
+  expect(receivedRequests).toEqual([
+    {
+      method: 'PUT',
+      path: '/backend/cards/c1/triggers',
+      body: { startedListId: 'l2', finishedListId: null },
+    },
+    { method: 'GET', path: '/backend/cards/c1/history', body: undefined },
+    { method: 'GET', path: '/backend/cards/c1/history?before=m9', body: undefined },
+    { method: 'POST', path: '/backend/cards/c1/archive', body: {} },
+    { method: 'POST', path: '/backend/cards/c1/restore', body: {} },
+    { method: 'GET', path: '/backend/boards/b1/archived-cards', body: undefined },
+    { method: 'GET', path: '/backend/boards/b1/archived-cards?before=c7', body: undefined },
+  ]);
 });

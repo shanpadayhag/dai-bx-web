@@ -2,11 +2,14 @@ import { useState } from 'react';
 import type AppError from '@/core/app-error';
 import type { Category } from '@/core/category';
 import type Board from '@/features/board/entities/board';
+import type { ArchivedCardsPage } from '@/features/board/entities/card-archive';
 import type CardDetailRecord from '@/features/board/entities/card-detail-record';
+import type CardHistoryPage from '@/features/board/entities/card-history-page';
 import type CardSchedule from '@/features/board/entities/card-schedule';
 import type { OptimisticBoard } from '@/features/board/entities/optimistic-board';
 import type PendingCardRename from '@/features/board/entities/pending-card-rename';
 import type ScheduleRunsPage from '@/features/board/entities/schedule-runs-page';
+import type CardTriggers from '@/features/board/entities/card-triggers';
 
 const useBoardStates = () => {
   const [boards, setBoards] = useState<readonly Board[] | null>(null);
@@ -31,10 +34,10 @@ const useBoardStates = () => {
     Readonly<Record<string, ScheduleRunsPage>>
   >({});
   const [scheduleCategories, setScheduleCategories] = useState<readonly Category[] | null>(null);
-  const [archiveAfterByListId, setArchiveAfterByListId] = useState<
-    Readonly<Record<string, string>>
-  >({});
-  const [archivedCardIds, setArchivedCardIds] = useState<ReadonlySet<string>>(new Set());
+  const [openCardTriggers, setOpenCardTriggers] = useState<CardTriggers | null>(null);
+  const [cardHistoryPage, setCardHistoryPage] = useState<CardHistoryPage | null>(null);
+  const [archivedCardsPage, setArchivedCardsPage] = useState<ArchivedCardsPage | null>(null);
+  const [deleteTargetArchivedCardId, setDeleteTargetArchivedCardId] = useState<string | null>(null);
 
   return {
     boards,
@@ -77,10 +80,14 @@ const useBoardStates = () => {
     setScheduleRunsPages,
     scheduleCategories,
     setScheduleCategories,
-    archiveAfterByListId,
-    setArchiveAfterByListId,
-    archivedCardIds,
-    setArchivedCardIds,
+    openCardTriggers,
+    setOpenCardTriggers,
+    cardHistoryPage,
+    setCardHistoryPage,
+    archivedCardsPage,
+    setArchivedCardsPage,
+    deleteTargetArchivedCardId,
+    setDeleteTargetArchivedCardId,
   };
 };
 

@@ -9,6 +9,8 @@ const backendBoardListSource = {
     apiClient.post<BoardRecord>(`/boards/${boardId}/lists`, { name: listName }),
   rename: (listId: BoardListRecord['id'], listName: string) =>
     apiClient.patch<BoardRecord>(`/lists/${listId}`, { name: listName }),
+  setArchiveAfter: (listId: BoardListRecord['id'], archiveAfter: string | null) =>
+    apiClient.patch<BoardRecord>(`/lists/${listId}`, { archiveAfter }),
   move: (listId: BoardListRecord['id'], position: number) =>
     apiClient.post<BoardRecord>(`/lists/${listId}/move`, { position }),
   delete: (listId: BoardListRecord['id']) => apiClient.delete<BoardRecord>(`/lists/${listId}`),

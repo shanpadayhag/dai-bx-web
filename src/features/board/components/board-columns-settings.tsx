@@ -2,12 +2,11 @@ import { useState } from 'react';
 import Input from '@/core/components/atoms/input';
 import type BoardList from '@/features/board/entities/board-list';
 
-type ArchiveAfterSaving = { isSaved: true } | { isSaved: false; hint: string };
+type ArchiveAfterSaving = { hint: string | null };
 
 type BoardColumnsSettingsProps = {
   headingId: string;
   lists: readonly BoardList[];
-  archiveAfterByListId: Readonly<Record<string, string>>;
   onSaveArchiveAfter: (listId: string, enteredText: string) => Promise<ArchiveAfterSaving>;
 };
 
@@ -30,7 +29,7 @@ const ColumnArchiveRow = ({
   const saveEnteredText = async (enteredText: string) => {
     if (enteredText.trim() === archiveAfter) return;
     const archiveAfterSaving = await onSaveArchiveAfter(boardList.id, enteredText);
-    setRefusedHint(archiveAfterSaving.isSaved ? null : archiveAfterSaving.hint);
+    setRefusedHint(archiveAfterSaving.hint);
     setResetCount((currentResetCount) => currentResetCount + 1);
   };
 
@@ -76,7 +75,6 @@ const ColumnArchiveRow = ({
 const BoardColumnsSettings = ({
   headingId,
   lists,
-  archiveAfterByListId,
   onSaveArchiveAfter,
 }: BoardColumnsSettingsProps) => (
   <section className="grid gap-3" aria-labelledby={headingId}>
@@ -98,7 +96,7 @@ const BoardColumnsSettings = ({
           <ColumnArchiveRow
             key={boardList.id}
             boardList={boardList}
-            archiveAfter={archiveAfterByListId[boardList.id] ?? ''}
+            archiveAfter={boardList.archiveAfter ?? ''}
             onSaveArchiveAfter={onSaveArchiveAfter}
           />
         ))}

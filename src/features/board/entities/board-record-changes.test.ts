@@ -20,9 +20,9 @@ const cardRecord = (id: string, listId: string, position: number): BoardCardReco
 const boardRecord: BoardRecord = {
   board: { id: 'board', name: 'Personal' },
   lists: [
-    { id: 'backlog', name: 'Backlog', position: 0 },
-    { id: 'doing', name: 'Doing', position: 1 },
-    { id: 'done', name: 'Done', position: 2 },
+    { id: 'backlog', name: 'Backlog', position: 0, archiveAfter: null },
+    { id: 'doing', name: 'Doing', position: 1, archiveAfter: null },
+    { id: 'done', name: 'Done', position: 2, archiveAfter: null },
   ],
   cards: [
     {
@@ -82,7 +82,7 @@ describe('applyBoardChange', () => {
   test('adds a list last whatever position it arrives with', () => {
     const changedBoard = applyBoardChange(boardRecord, {
       kind: 'addList',
-      listRecord: { id: 'ideas', name: 'Ideas', position: 0 },
+      listRecord: { id: 'ideas', name: 'Ideas', position: 0, archiveAfter: null },
     });
 
     expect(listOrder(changedBoard)).toEqual(['backlog@0', 'doing@1', 'done@2', 'ideas@3']);

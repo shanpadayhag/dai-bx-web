@@ -11,7 +11,9 @@ type Positioned = { position: number };
 const byPosition = (firstItem: Positioned, secondItem: Positioned) =>
   firstItem.position - secondItem.position;
 
-const toBoardCard = (cardRecord: BoardCardRecord): BoardCard => ({
+const ARCHIVED_LIST_NAME = 'Archived';
+
+const toBoardCard = (cardRecord: Omit<BoardCardRecord, 'listId' | 'position'>): BoardCard => ({
   id: cardRecord.id,
   title: cardRecord.title,
   dueDate: cardRecord.dueDate,
@@ -34,6 +36,7 @@ export const arrangeBoard = (boardRecord: BoardRecord): BoardContents => {
     lists: [...boardRecord.lists].sort(byPosition).map((listRecord) => ({
       id: listRecord.id,
       name: listRecord.name,
+      archiveAfter: listRecord.archiveAfter,
       cards: (cardsByListId.get(listRecord.id) ?? []).sort(byPosition).map(toBoardCard),
     })),
     properties: [...boardRecord.properties].sort(byPosition).map((propertyRecord) => ({
@@ -48,16 +51,17 @@ export const arrangeBoard = (boardRecord: BoardRecord): BoardContents => {
 };
 
 export const arrangeCardDetail = (
-  cardDetailRecord: Omit<CardDetailRecord, 'trackedEventCount' | 'schedules'>,
+  cardDetailRecord: Pick<CardDetailRecord, 'card' | 'notes' | 'linkedTasks'>,
   boardRecord: BoardRecord,
 ): CardDetail | null => {
   const cardList = boardRecord.lists.find(
     (listRecord) => listRecord.id === cardDetailRecord.card.listId,
   );
-  if (cardList === undefined) return null;
+  const isArchived = cardDetailRecord.card.listId === null;
+  if (cardList === undefined && !isArchived) return null;
   return {
     card: toBoardCard(cardDetailRecord.card),
-    listName: cardList.name,
+    listName: cardList?.name ?? ARCHIVED_LIST_NAME,
     notes: cardDetailRecord.notes,
     linkedTasks: cardDetailRecord.linkedTasks,
   };

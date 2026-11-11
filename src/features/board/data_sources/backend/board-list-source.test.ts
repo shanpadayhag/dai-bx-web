@@ -9,7 +9,7 @@ const backendServer = startBackendServer();
 
 const boardRecord: BoardRecord = {
   board: { id: 'b1', name: 'Personal' },
-  lists: [{ id: 'l1', name: 'Backlog', position: 0 }],
+  lists: [{ id: 'l1', name: 'Backlog', position: 0, archiveAfter: null }],
   cards: [],
   properties: [],
 };
@@ -33,12 +33,16 @@ test('sends each list write to its route with its body', async () => {
 
   await backendBoardListSource.create('b1', 'Backlog');
   await backendBoardListSource.rename('l1', 'Ideas');
+  await backendBoardListSource.setArchiveAfter('l1', '1w');
+  await backendBoardListSource.setArchiveAfter('l1', null);
   await backendBoardListSource.move('l1', 2);
   await expect(backendBoardListSource.delete('l1')).resolves.toEqual(boardRecord);
 
   expect(receivedRequests).toEqual([
     { method: 'POST', path: '/backend/boards/b1/lists', body: { name: 'Backlog' } },
     { method: 'PATCH', path: '/backend/lists/l1', body: { name: 'Ideas' } },
+    { method: 'PATCH', path: '/backend/lists/l1', body: { archiveAfter: '1w' } },
+    { method: 'PATCH', path: '/backend/lists/l1', body: { archiveAfter: null } },
     { method: 'POST', path: '/backend/lists/l1/move', body: { position: 2 } },
     { method: 'DELETE', path: '/backend/lists/l1', body: {} },
   ]);

@@ -7,6 +7,7 @@ export type BoardListRecord = {
   id: string;
   name: string;
   position: number;
+  archiveAfter: string | null;
 };
 
 export type BoardCardRecord = {

@@ -21,8 +21,8 @@ const cardRecord = (id: string, listId: string, position: number): BoardCardReco
 const boardRecord: BoardRecord = {
   board: { id: 'board', name: 'Personal' },
   lists: [
-    { id: 'doing', name: 'Doing', position: 1 },
-    { id: 'backlog', name: 'Backlog', position: 0 },
+    { id: 'doing', name: 'Doing', position: 1, archiveAfter: null },
+    { id: 'backlog', name: 'Backlog', position: 0, archiveAfter: null },
   ],
   cards: [
     cardRecord('second', 'backlog', 1),
@@ -65,10 +65,15 @@ describe('arrangeBoard', () => {
   test('keeps a list with no cards, and drops the record-only fields from cards', () => {
     const boardContents = arrangeBoard({
       ...boardRecord,
-      lists: [...boardRecord.lists, { id: 'done', name: 'Done', position: 2 }],
+      lists: [...boardRecord.lists, { id: 'done', name: 'Done', position: 2, archiveAfter: null }],
     });
 
-    expect(boardContents.lists[2]).toEqual({ id: 'done', name: 'Done', cards: [] });
+    expect(boardContents.lists[2]).toEqual({
+      id: 'done',
+      name: 'Done',
+      archiveAfter: null,
+      cards: [],
+    });
     expect(boardContents.lists[0]?.cards[0]).not.toHaveProperty('listId');
     expect(boardContents.lists[0]?.cards[0]).not.toHaveProperty('position');
   });
@@ -81,6 +86,8 @@ describe('arrangeCardDetail', () => {
     linkedTasks: [],
     trackedEventCount: 0,
     schedules: [],
+    triggers: { started: null, finished: null },
+    archived: null,
   };
 
   test('names the list the card sits in', () => {

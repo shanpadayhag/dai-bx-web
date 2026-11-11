@@ -10,6 +10,18 @@ type CardMove = {
   taskTitle: string | null;
 };
 
+type CardMoveRecord = Omit<CardMove, 'movedAt'> & { movedAt: string };
+
+type CardHistoryRecord = {
+  moves: CardMoveRecord[];
+  hasMore: boolean;
+};
+
+const cardMoveFromRecord = (cardMoveRecord: CardMoveRecord): CardMove => ({
+  ...cardMoveRecord,
+  movedAt: new Date(cardMoveRecord.movedAt),
+});
+
 const describeCardMoveReason = (cardMove: CardMove): string => {
   switch (cardMove.reason) {
     case 'byHand':
@@ -29,6 +41,6 @@ const describeCardMoveReason = (cardMove: CardMove): string => {
   }
 };
 
-export type { CardMoveReason };
-export { describeCardMoveReason };
+export type { CardHistoryRecord, CardMoveReason, CardMoveRecord };
+export { cardMoveFromRecord, describeCardMoveReason };
 export default CardMove;
