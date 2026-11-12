@@ -69,7 +69,7 @@ type PlannedFormChanges = {
   startsAt: Date;
   endsAt: Date;
   timeZone?: string;
-  repeat?: RepeatRule;
+  repeat?: RepeatRule | null;
 };
 
 const calendarZoneOf = (timeTrackingSettings: TimeTrackingSettings | null): string =>
@@ -424,7 +424,7 @@ const useCalendarEvents = (states: ReturnType<typeof useCalendarStates>) => {
         ),
         endsAt: readFormMoment(plannedForm, `${PLANNED_EVENT_FIELD_PREFIX}-ends`, calendarTimeZone),
         ...(pickedZone === '' || pickedZone === shownZone ? {} : { timeZone: pickedZone }),
-        ...(repeatRule === null || isSameRule(repeatRule, eventRecord?.series?.repeat ?? null)
+        ...(isSameRule(repeatRule, eventRecord?.series?.repeat ?? null)
           ? {}
           : { repeat: repeatRule }),
       };
@@ -475,8 +475,13 @@ const useCalendarEvents = (states: ReturnType<typeof useCalendarStates>) => {
       const eventRecord = shownEventRecords.find((shownRecord) => shownRecord.id === eventId);
       const plannedChanges = readPlannedForm(eventRecord, new FormData(submitEvent.currentTarget));
       if (eventRecord?.series != null) {
-        askOccurrenceScope({ action: 'change', eventTitle: eventRecord.title }, (occurrenceScope) =>
-          changeOccurrences(eventRecord, occurrenceScope, plannedChanges),
+        askOccurrenceScope(
+          {
+            action: 'change',
+            eventTitle: eventRecord.title,
+            isRepeatChange: plannedChanges.repeat !== undefined,
+          },
+          (occurrenceScope) => changeOccurrences(eventRecord, occurrenceScope, plannedChanges),
         );
         return;
       }

@@ -6,6 +6,7 @@ import {
 } from '@/core/api/api-error';
 import UnauthorizedHandling from '@/core/api/unauthorized-handling';
 import appConfig from '@/core/config/app-config';
+import { deviceTimeZone } from '@/core/time-zone';
 
 type RequestMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -22,6 +23,7 @@ type ApiRequest = {
 
 const UNAUTHORIZED_STATUS = 401;
 const REFRESH_PATH = '/auth/refresh';
+const TIME_ZONE_HEADER_NAME = 'X-Time-Zone';
 const FALLBACK_ERROR_MESSAGE = 'try again in a moment';
 const UNREACHABLE_MESSAGE = 'check your connection and try again';
 
@@ -34,7 +36,10 @@ const sendRequest = async (apiRequest: Pick<ApiRequest, 'method' | 'path' | 'bod
     return await fetch(buildBackendUrl(apiRequest.path), {
       method: apiRequest.method,
       credentials: 'same-origin',
-      headers: hasJsonBody ? { 'Content-Type': 'application/json' } : undefined,
+      headers: {
+        [TIME_ZONE_HEADER_NAME]: deviceTimeZone(),
+        ...(hasJsonBody ? { 'Content-Type': 'application/json' } : {}),
+      },
       body: hasJsonBody ? JSON.stringify(apiRequest.body ?? {}) : undefined,
     });
   } catch {

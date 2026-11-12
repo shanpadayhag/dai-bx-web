@@ -553,6 +553,22 @@ test('saving a repeating event asks which events change and sends that scope', a
   ]);
 });
 
+test('making a repeating event not repeat offers only following or all, and sends repeat null', async () => {
+  const user = await renderCalendar();
+
+  const plannedPanel = await openMorningRun(user);
+  await user.selectOptions(within(plannedPanel).getByRole('combobox', { name: 'Repeat' }), 'none');
+  await user.click(within(plannedPanel).getByRole('button', { name: 'Save' }));
+  const scopeDialog = screen.getByRole('dialog', { name: 'Change repeating event' });
+
+  expect(within(scopeDialog).queryByRole('radio', { name: 'This event' })).not.toBeInTheDocument();
+  await user.click(within(scopeDialog).getByRole('radio', { name: 'All events' }));
+  await user.click(within(scopeDialog).getByRole('button', { name: 'Save' }));
+
+  await waitFor(() => expect(receivedOccurrenceWrites).toHaveLength(1));
+  expect(receivedOccurrenceWrites[0]?.body).toMatchObject({ scope: 'all', repeat: null });
+});
+
 test('cancelling the question changes nothing', async () => {
   const user = await renderCalendar();
 

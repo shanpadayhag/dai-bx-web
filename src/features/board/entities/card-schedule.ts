@@ -48,7 +48,7 @@ const cardScheduleFromRecord = (scheduleRecord: CardScheduleRecord): CardSchedul
     scheduleRecord.block === null
       ? null
       : {
-          startTime: scheduleRecord.block.time ?? null,
+          startTime: scheduleRecord.block.time,
           lengthMinutes: scheduleRecord.block.minutes,
           categoryId: scheduleRecord.block.categoryId,
         },

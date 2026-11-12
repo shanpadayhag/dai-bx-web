@@ -20,7 +20,7 @@ describe('cardScheduleFromRecord', () => {
         startsAt: '2026-11-09T10:00:00.000Z',
         timeZone: 'Asia/Manila',
         repeat: { frequency: 'weekly', interval: 1, weekdays: ['mon'], ends: { never: true } },
-        block: { minutes: 60, categoryId: 'category-1' },
+        block: { time: null, minutes: 60, categoryId: 'category-1' },
         paused: false,
         nextRunAt: '2026-11-16T10:00:00.000Z',
       }),

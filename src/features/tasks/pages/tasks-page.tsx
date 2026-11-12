@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus, RotateCw, Settings2, WifiOff } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import Badge from '@/core/components/atoms/badge';
 import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
@@ -20,7 +20,6 @@ import NoGroupsState from '@/features/tasks/components/no-groups-state';
 import TaskActionsMenu from '@/features/tasks/components/task-actions-menu';
 import TaskGroupList from '@/features/tasks/components/task-group-list';
 import TaskTree from '@/features/tasks/components/task-tree';
-import sampleGroupScheduleSource from '@/features/tasks/data_sources/sample/group-schedule-source';
 import { describeGroupAvailability } from '@/features/tasks/entities/group-schedule';
 import { visibleGroupTasks } from '@/features/tasks/entities/optimistic-group-tasks';
 import { collectSubtreeIds } from '@/features/tasks/entities/task-record-changes';
@@ -35,6 +34,7 @@ import useTasksEvents, {
   RENAME_TASK_EVENTS_DIALOG_ID,
   TASK_ACTIONS_MENU_ID,
 } from '@/features/tasks/events/use-tasks-events';
+import useTimetableRefresh from '@/features/tasks/events/use-timetable-refresh';
 import useTasksStates from '@/features/tasks/states/use-tasks-states';
 import { RUNNING_LIST_ID } from '@/features/tracking/events/use-tracking-events';
 import { useTracking } from '@/features/tracking/states/tracking-context';
@@ -49,9 +49,11 @@ const TasksPage = () => {
   const { handleLoadPage } = events;
 
   const { runningSourceIds, lastFinishedItem, handleStartTask, calendarTimeZone } = useTracking();
-  const [now] = useState(() => new Date());
+  const { now } = states;
   const todayDate = partsInZone(now, calendarTimeZone).calendarDate;
-  const { handleApplyFinishedGroupTasks } = events;
+  const { handleApplyFinishedGroupTasks, handleRefreshTimetables } = events;
+
+  useTimetableRefresh(states.taskGroups, now, handleRefreshTimetables);
 
   useEffect(() => {
     void handleLoadPage();
@@ -77,16 +79,9 @@ const TasksPage = () => {
     return buildTaskTree(shownRecords, states.collapsedTaskIds, runningSourceIds);
   }, [runningSourceIds, shownGroupTasks, states.collapsedTaskIds, states.taskView]);
 
-  const scheduledTaskGroups = useMemo(
-    () =>
-      (states.taskGroups ?? []).map((taskGroup, groupIndex) => ({
-        ...taskGroup,
-        ...sampleGroupScheduleSource.findGroupSchedule(groupIndex, now),
-      })),
-    [now, states.taskGroups],
-  );
   const selectedTaskGroup =
-    scheduledTaskGroups.find((taskGroup) => taskGroup.id === states.selectedTaskGroupId) ?? null;
+    (states.taskGroups ?? []).find((taskGroup) => taskGroup.id === states.selectedTaskGroupId) ??
+    null;
   const selectedGroupAvailability =
     selectedTaskGroup === null
       ? null
@@ -178,7 +173,7 @@ const TasksPage = () => {
   return (
     <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-8">
       <TaskGroupList
-        taskGroups={scheduledTaskGroups}
+        taskGroups={states.taskGroups}
         selectedTaskGroupId={states.selectedTaskGroupId}
         newGroupDialogId={NEW_GROUP_DIALOG_ID}
         groupView={states.groupView}

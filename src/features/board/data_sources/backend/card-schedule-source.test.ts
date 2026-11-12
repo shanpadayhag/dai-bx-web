@@ -16,7 +16,7 @@ const weeklySchedule: CardScheduleRecord = {
   startsAt: '2026-11-09T10:00:00.000Z',
   timeZone: 'Asia/Manila',
   repeat: { frequency: 'weekly', interval: 1, weekdays: ['mon'], ends: { never: true } },
-  block: { minutes: 60, categoryId: null },
+  block: { time: null, minutes: 60, categoryId: null },
   paused: false,
   nextRunAt: '2026-11-09T10:00:00.000Z',
 };
@@ -53,7 +53,7 @@ test('sends each schedule write to its route with its body', async () => {
     inputZone: 'Asia/Manila',
     timeZone: 'Asia/Manila',
     repeat: weeklySchedule.repeat ?? undefined,
-    block: { minutes: 60, categoryId: null },
+    block: { time: null, minutes: 60, categoryId: null },
   };
 
   expect(await backendCardScheduleSource.create('c1', scheduleWrite)).toEqual({

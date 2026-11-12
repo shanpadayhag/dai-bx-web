@@ -45,13 +45,13 @@ const readScheduleForm = (
     timeZone: readFormText(submittedForm, 'timeZone'),
     repeatRule: kind === 'repeating' ? readFormRepeatRule(submittedForm, 'repeat') : null,
     calendarBlock:
-      kind === 'repeating' && blockMinutesText !== ''
-        ? {
+      blockMinutesText === ''
+        ? null
+        : {
             startTime: readFormText(submittedForm, 'blockTime').slice(0, 5) || null,
             lengthMinutes: Number(blockMinutesText),
             categoryId: readFormCategoryId(submittedForm, blockCategoryField),
-          }
-        : null,
+          },
   };
 };
 
@@ -89,6 +89,7 @@ const saveCardSchedule = async (params: SaveCardScheduleParams): Promise<CardSch
       scheduleInput.calendarBlock === null
         ? null
         : {
+            time: scheduleInput.calendarBlock.startTime,
             minutes: scheduleInput.calendarBlock.lengthMinutes,
             categoryId: scheduleInput.calendarBlock.categoryId,
           },

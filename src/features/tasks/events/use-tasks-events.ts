@@ -2,12 +2,12 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useRef, type FormEvent } from 'react';
 import { ApiError } from '@/core/api/api-error';
 import AppError from '@/core/app-error';
-import readFormText from '@/core/form-text';
+import readFormText, { readFormRepeatRule } from '@/core/form-text';
 import hidePopover, { showPopover } from '@/core/popover';
 import { trackedEventCountOf, type RenameEventsAnswer } from '@/core/rename-events';
 import reportAppError from '@/core/report-app-error';
 import addTask from '@/features/tasks/actions/add-task';
-import createTaskGroup from '@/features/tasks/actions/create-task-group';
+import createTaskGroup, { type GroupFormEntry } from '@/features/tasks/actions/create-task-group';
 import deleteTask from '@/features/tasks/actions/delete-task';
 import deleteTaskGroup from '@/features/tasks/actions/delete-task-group';
 import findGroupTasks from '@/features/tasks/actions/find-group-tasks';
@@ -21,7 +21,7 @@ import localStorageTaskViewSource, {
   type TaskView,
 } from '@/features/tasks/data_sources/local_storage/task-view-source';
 import { readGroupImport } from '@/features/tasks/entities/group-import-preview';
-import type { GroupView } from '@/features/tasks/entities/group-schedule';
+import { ALWAYS_DUE_TIMETABLE, type GroupView } from '@/features/tasks/entities/group-schedule';
 import type {
   AffectedGroup,
   GroupTasks,
@@ -56,10 +56,15 @@ const TASKS_PATH = '/tasks';
 const GROUP_QUERY_NAME = 'group';
 const PENDING_TASK_ID_PREFIX = 'pending-task-';
 
-const readGroupForm = (submittedForm: HTMLFormElement) => {
+const readGroupForm = (submittedForm: HTMLFormElement): GroupFormEntry => {
   const groupFormData = new FormData(submittedForm);
   return {
     taskGroupName: readFormText(groupFormData, 'groupName'),
+    showRule: readFormRepeatRule(groupFormData, 'showRule'),
+    windowStart: readFormText(groupFormData, 'windowStart'),
+    windowEnd: readFormText(groupFormData, 'windowEnd'),
+    uncheckRule: readFormRepeatRule(groupFormData, 'uncheckRule'),
+    uncheckTime: readFormText(groupFormData, 'uncheckTime'),
   };
 };
 
@@ -111,6 +116,7 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
     setMoveDialogRecords,
     setMoveDialogTargets,
     setGroupImportReading,
+    setNow,
   } = states;
   const router = useRouter();
   const lastWriteIdRef = useRef(0);
@@ -162,7 +168,9 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
 
   const handleLoadPage = useCallback(async () => {
     setPageLoadError(null);
+    setNow(new Date());
     setTaskView(localStorageTaskViewSource.findTaskView());
+    setGroupView(localStorageTaskViewSource.findGroupView());
     try {
       const loadedTaskGroups = await findTaskGroups();
       setTaskGroups(loadedTaskGroups);
@@ -171,7 +179,7 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
       if (!(pageError instanceof AppError)) throw pageError;
       setPageLoadError(pageError);
     }
-  }, [openTaskGroup, setPageLoadError, setTaskGroups, setTaskView]);
+  }, [openTaskGroup, setGroupView, setNow, setPageLoadError, setTaskGroups, setTaskView]);
 
   const handleSelectTaskGroup = useCallback(
     (taskGroupId: string) => {
@@ -377,6 +385,7 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
   const handleChooseGroupView = useCallback(
     (chosenGroupView: GroupView) => {
       setGroupView(chosenGroupView);
+      localStorageTaskViewSource.saveGroupView(chosenGroupView);
     },
     [setGroupView],
   );
@@ -640,6 +649,9 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
         const importedGroupTasks = await importGroup(groupImportReading.importFile);
         const importedTaskGroup: TaskGroup = {
           ...importedGroupTasks.group,
+          shows: null,
+          unchecks: null,
+          timetable: ALWAYS_DUE_TIMETABLE,
           openTaskCount: importedGroupTasks.openCount,
           taskCount: importedGroupTasks.tasks.length,
         };
@@ -698,7 +710,22 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
     [refreshSidebarCounts, setOptimisticGroupTasks],
   );
 
+  const handleRefreshTimetables = useCallback(async () => {
+    setNow(new Date());
+    try {
+      const [refreshedTaskGroups, refreshedGroupTasks] = await Promise.all([
+        findTaskGroups(),
+        selectedTaskGroupId === null ? null : findGroupTasks(selectedTaskGroupId),
+      ]);
+      setTaskGroups(refreshedTaskGroups);
+      if (refreshedGroupTasks !== null) handleApplyFinishedGroupTasks(refreshedGroupTasks);
+    } catch (refreshError) {
+      reportAppError(refreshError);
+    }
+  }, [handleApplyFinishedGroupTasks, selectedTaskGroupId, setNow, setTaskGroups]);
+
   return {
+    handleRefreshTimetables,
     handleApplyFinishedGroupTasks,
     handleOpenTaskActions,
     handleMoveTaskBy,

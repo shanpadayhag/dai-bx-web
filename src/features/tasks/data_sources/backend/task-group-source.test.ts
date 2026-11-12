@@ -1,11 +1,32 @@
 import { http, HttpResponse } from 'msw';
 import { expect, test } from 'vitest';
+import type { RepeatRule } from '@/core/repeat-rule';
 import backendTaskGroupSource from '@/features/tasks/data_sources/backend/task-group-source';
 import startBackendServer from '@/test-support/backend-server';
 
 const backendServer = startBackendServer();
 
-const todayGroup = { id: 'g1', name: 'Today', openTaskCount: 0, taskCount: 0 };
+const todayGroup = {
+  id: 'g1',
+  name: 'Today',
+  openTaskCount: 0,
+  taskCount: 0,
+  shows: null,
+  unchecks: null,
+  timetable: {
+    dueNow: true,
+    dueUntil: null,
+    nextShowsAt: null,
+    lastUncheckAt: null,
+    nextUncheckAt: null,
+  },
+};
+const weekendRepeat: RepeatRule = {
+  frequency: 'weekly',
+  interval: 1,
+  weekdays: ['sat', 'sun'],
+  ends: { never: true },
+};
 
 const captureBody = (
   requestMethod: 'post' | 'patch',
@@ -28,20 +49,25 @@ test('lists groups from GET /task-groups', async () => {
   await expect(backendTaskGroupSource.findAll()).resolves.toEqual([todayGroup]);
 });
 
-test('creates a group with its name', async () => {
+test('creates a group with its name and rules', async () => {
   const readBody = captureBody('post', '/backend/task-groups', todayGroup);
+  const taskGroupDraft = {
+    name: 'Today',
+    shows: { repeat: weekendRepeat, windowStart: '06:00', windowEnd: '12:00' },
+    unchecks: { repeat: weekendRepeat, time: '04:00' },
+  };
 
-  await backendTaskGroupSource.create({ name: 'Today' });
+  await backendTaskGroupSource.create(taskGroupDraft);
 
-  expect(readBody()).toEqual({ name: 'Today' });
+  expect(readBody()).toEqual(taskGroupDraft);
 });
 
-test('renames a group with PATCH /task-groups/{id}', async () => {
+test('saves a group with PATCH /task-groups/{id}, sending null to clear a rule', async () => {
   const readBody = captureBody('patch', '/backend/task-groups/g1', todayGroup);
 
-  await backendTaskGroupSource.update('g1', { name: 'Monday' });
+  await backendTaskGroupSource.update('g1', { name: 'Monday', shows: null, unchecks: null });
 
-  expect(readBody()).toEqual({ name: 'Monday' });
+  expect(readBody()).toEqual({ name: 'Monday', shows: null, unchecks: null });
 });
 
 test('deletes a group with DELETE /task-groups/{id}', async () => {

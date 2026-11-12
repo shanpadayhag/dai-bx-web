@@ -3,17 +3,14 @@ import joinClassNames from '@/core/class-names';
 import SegmentedControl from '@/core/components/molecules/segmented-control';
 import {
   describeGroupAvailability,
-  type GroupSchedule,
   type GroupView,
 } from '@/features/tasks/entities/group-schedule';
 import TaskGroup from '@/features/tasks/entities/task-group';
 
 const GROUP_VIEW_LABELS: Record<GroupView, string> = { due: 'Due now', all: 'All groups' };
 
-type ScheduledTaskGroup = TaskGroup & GroupSchedule;
-
 type TaskGroupListProps = {
-  taskGroups: readonly ScheduledTaskGroup[];
+  taskGroups: readonly TaskGroup[];
   selectedTaskGroupId: TaskGroup['id'] | null;
   newGroupDialogId: string;
   groupView: GroupView;
@@ -143,5 +140,4 @@ const TaskGroupList = ({
   );
 };
 
-export type { ScheduledTaskGroup };
 export default TaskGroupList;

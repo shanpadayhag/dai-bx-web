@@ -69,5 +69,21 @@ const describeGroupAvailability = (
   return nextShowsAt === null ? null : `Next: ${describeNextShow(nextShowsAt, now, timeZone)}`;
 };
 
+const nextTimetableChangeAt = (
+  groupSchedules: readonly GroupSchedule[],
+  now: Date,
+): Date | null => {
+  const futureChangeMillis = groupSchedules
+    .flatMap(({ timetable }) => [
+      timetable.dueUntil,
+      timetable.nextShowsAt,
+      timetable.nextUncheckAt,
+    ])
+    .filter((changeAt): changeAt is string => changeAt !== null)
+    .map((changeAt) => new Date(changeAt).getTime())
+    .filter((changeMillis) => changeMillis > now.getTime());
+  return futureChangeMillis.length === 0 ? null : new Date(Math.min(...futureChangeMillis));
+};
+
 export type { GroupSchedule, GroupShows, GroupTimetable, GroupUnchecks, GroupView };
-export { ALWAYS_DUE_TIMETABLE, describeGroupAvailability, hasShowRuleEnded };
+export { ALWAYS_DUE_TIMETABLE, describeGroupAvailability, hasShowRuleEnded, nextTimetableChangeAt };

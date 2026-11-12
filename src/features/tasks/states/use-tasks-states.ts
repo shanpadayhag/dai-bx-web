@@ -30,8 +30,11 @@ const useTasksStates = () => {
   const [moveDialogRecords, setMoveDialogRecords] = useState<readonly TaskRecord[] | null>(null);
   const [moveDialogTargets, setMoveDialogTargets] = useState<readonly MoveTarget[] | null>(null);
   const [groupImportReading, setGroupImportReading] = useState<GroupImportReading | null>(null);
+  const [now, setNow] = useState(() => new Date());
 
   return {
+    now,
+    setNow,
     taskGroups,
     setTaskGroups,
     pageLoadError,

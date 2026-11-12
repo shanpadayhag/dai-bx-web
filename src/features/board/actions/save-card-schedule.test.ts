@@ -32,7 +32,7 @@ const answeredSchedules = {
       startsAt: '2026-11-09T10:00:00.000Z',
       timeZone: 'Asia/Manila',
       repeat: weeklyInput.repeatRule,
-      block: { minutes: 60, categoryId: 'category-1' },
+      block: { time: null, minutes: 60, categoryId: 'category-1' },
       paused: false,
       nextRunAt: '2026-11-09T10:00:00.000Z',
     },
@@ -62,7 +62,7 @@ test('a new schedule is sent in its own zone and comes back as schedules', async
     inputZone: 'Asia/Manila',
     timeZone: 'Asia/Manila',
     repeat: weeklyInput.repeatRule,
-    block: { minutes: 60, categoryId: 'category-1' },
+    block: { time: null, minutes: 60, categoryId: 'category-1' },
   });
   expect(savedSchedules.map((schedule) => schedule.nextRunAt)).toEqual([
     new Date('2026-11-09T10:00:00.000Z'),
@@ -88,6 +88,36 @@ test('an edit goes to the schedule and clears a block that was switched off', as
   expect(receivedBody).toMatchObject({ block: null });
 });
 
+test('a once schedule sends its block with its own start time', async () => {
+  let receivedBody: unknown;
+  backendServer.use(
+    http.post('/backend/cards/card-1/schedules', async ({ request }) => {
+      receivedBody = await request.json();
+      return HttpResponse.json(answeredSchedules, { status: 201 });
+    }),
+  );
+
+  await saveCardSchedule({
+    cardId: 'card-1',
+    scheduleId: null,
+    scheduleInput: {
+      ...weeklyInput,
+      kind: 'once',
+      repeatRule: null,
+      date: '2026-11-10',
+      time: '08:00',
+      calendarBlock: { startTime: '10:00', lengthMinutes: 60, categoryId: null },
+    },
+    now,
+  });
+
+  expect(receivedBody).toMatchObject({
+    kind: 'once',
+    block: { time: '10:00', minutes: 60, categoryId: null },
+  });
+  expect(receivedBody).not.toHaveProperty('repeat');
+});
+
 test('refuses a missing column, a missing time and a past one-time move without a request', async () => {
   for (const [scheduleInput, expectedTitle] of [
     [{ ...weeklyInput, targetListId: '' }, 'Pick a column'],
@@ -106,7 +136,7 @@ test('refuses a missing column, a missing time and a past one-time move without 
   }
 });
 
-test('reads the form, taking the block only when it is switched on for a repeat', () => {
+test('reads the form, taking the block whenever it is switched on', () => {
   const scheduleForm = new FormData();
   for (const [fieldName, fieldValue] of Object.entries({
     kind: 'repeating',
@@ -127,9 +157,15 @@ test('reads the form, taking the block only when it is switched on for a repeat'
   });
 
   scheduleForm.set('kind', 'once');
+  scheduleForm.set('blockTime', '10:00');
   expect(readScheduleForm(scheduleForm, 'schedule-block-category')).toMatchObject({
     kind: 'once',
     repeatRule: null,
+    calendarBlock: { startTime: '10:00', lengthMinutes: 60, categoryId: null },
+  });
+
+  scheduleForm.delete('blockMinutes');
+  expect(readScheduleForm(scheduleForm, 'schedule-block-category')).toMatchObject({
     calendarBlock: null,
   });
 });

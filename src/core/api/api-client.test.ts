@@ -163,6 +163,20 @@ test('posts JSON to the same-origin backend path with the cookies', async () => 
   expect(await receivedRequest?.json()).toEqual({ token: 'abc' });
 });
 
+test('every request names the device time zone', async () => {
+  let receivedTimeZone: string | null = null;
+  server.use(
+    http.get('/backend/task-groups', ({ request }) => {
+      receivedTimeZone = request.headers.get('x-time-zone');
+      return HttpResponse.json([]);
+    }),
+  );
+
+  await createApiClient().get('/task-groups');
+
+  expect(receivedTimeZone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+});
+
 test('a post without a body still sends an empty JSON object', async () => {
   let receivedBody: unknown;
   server.use(

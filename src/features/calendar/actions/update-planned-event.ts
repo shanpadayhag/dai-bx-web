@@ -15,7 +15,7 @@ type UpdatePlannedEventParams = {
   endsAt: Date;
   inputZone: string;
   timeZone?: string;
-  repeat?: RepeatRule;
+  repeat?: RepeatRule | null;
 };
 
 const updatePlannedEvent = async (

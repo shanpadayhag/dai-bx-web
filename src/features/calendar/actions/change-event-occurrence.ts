@@ -22,7 +22,7 @@ type ChangeEventOccurrenceParams = {
   categoryId?: string | null;
   times?: OccurrenceTimes;
   timeZone?: string;
-  repeat?: RepeatRule;
+  repeat?: RepeatRule | null;
 };
 
 const changeEventOccurrence = async (

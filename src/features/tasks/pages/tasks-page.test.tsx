@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { ALWAYS_DUE_TIMETABLE } from '@/features/tasks/entities/group-schedule';
 import type { GroupTasks } from '@/features/tasks/entities/group-tasks';
 import type TaskGroup from '@/features/tasks/entities/task-group';
 import type TaskRecord from '@/features/tasks/entities/task-record';
@@ -36,13 +37,17 @@ const taskRecord = (
   ...overrides,
 });
 
+const NO_GROUP_RULES = { shows: null, unchecks: null, timetable: ALWAYS_DUE_TIMETABLE } as const;
+
 const todayGroup: TaskGroup = {
+  ...NO_GROUP_RULES,
   id: 'group-today',
   name: 'Today',
   openTaskCount: 3,
   taskCount: 3,
 };
 const daibxGroup: TaskGroup = {
+  ...NO_GROUP_RULES,
   id: 'group-daibx',
   name: 'DaiBX',
   openTaskCount: 1,
@@ -98,7 +103,6 @@ const openTasksPage = async () => {
   const user = userEvent.setup();
   renderWithToaster(<TasksPage />);
   await screen.findByText('Plan the backend');
-  await user.click(screen.getByRole('radio', { name: 'All groups' }));
   return user;
 };
 
@@ -462,6 +466,7 @@ test('creating a group sends its name and opens it', async () => {
     http.post('/backend/task-groups', async ({ request }) => {
       receivedBody = await request.json();
       const createdGroup: TaskGroup = {
+        ...NO_GROUP_RULES,
         id: 'group-chinese',
         name: 'Chinese',
         openTaskCount: 0,
@@ -486,7 +491,7 @@ test('creating a group sends its name and opens it', async () => {
   );
 
   expect(await screen.findByRole('heading', { level: 1, name: 'Chinese' })).toBeInTheDocument();
-  expect(receivedBody).toEqual({ name: 'Chinese' });
+  expect(receivedBody).toEqual({ name: 'Chinese', shows: null, unchecks: null });
   expect(screen.getByText(/has no tasks yet/)).toBeInTheDocument();
 });
 
@@ -508,7 +513,7 @@ test('group settings rename the group', async () => {
   await user.click(within(settingsDialog).getByRole('button', { name: 'Save', hidden: true }));
 
   expect(await screen.findByRole('heading', { level: 1, name: 'Monday' })).toBeInTheDocument();
-  expect(receivedBody).toEqual({ name: 'Monday' });
+  expect(receivedBody).toEqual({ name: 'Monday', shows: null, unchecks: null });
 });
 
 test('deleting a group asks first, then opens the next one', async () => {
@@ -678,6 +683,7 @@ test('importing a plan file previews it, sends it as it is and opens the new gro
     http.post('/backend/task-groups/import', async ({ request }) => {
       receivedBody = await request.json();
       const importedGroup: TaskGroup = {
+        ...NO_GROUP_RULES,
         id: 'group-imported',
         name: 'Today',
         openTaskCount: 3,
@@ -739,4 +745,160 @@ test('a file that is not JSON is refused before anything is sent', async () => {
   expect(
     within(importDialog).getByRole('button', { name: 'Import group', hidden: true }),
   ).toBeDisabled();
+});
+
+describe('group schedules', () => {
+  const EVERY_DAY = { frequency: 'daily', interval: 1, ends: { never: true } } as const;
+  const inMillis = (millis: number) => new Date(Date.now() + millis).toISOString();
+  const notDueDaibxGroup = (): TaskGroup => ({
+    ...daibxGroup,
+    shows: { repeat: { ...EVERY_DAY }, windowStart: '06:00', windowEnd: '12:00' },
+    timetable: { ...ALWAYS_DUE_TIMETABLE, dueNow: false, nextShowsAt: inMillis(86_400_000) },
+  });
+
+  test('Due now hides a group that is not due, All groups shows when it is next', async () => {
+    currentGroups = [structuredClone(todayGroup), notDueDaibxGroup()];
+    const user = await openTasksPage();
+
+    expect(screen.queryByRole('button', { name: /DaiBX/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'All groups' }));
+
+    const daibxButton = screen.getByRole('button', { name: /DaiBX/ });
+    expect(within(daibxButton).getByText(/^Next: /)).toBeInTheDocument();
+    expect(window.localStorage.getItem('daibx:group-view')).toBe('all');
+  });
+
+  test('the group view is remembered on this device', async () => {
+    window.localStorage.setItem('daibx:group-view', 'all');
+    currentGroups = [structuredClone(todayGroup), notDueDaibxGroup()];
+    await openTasksPage();
+
+    expect(screen.getByRole('radio', { name: 'All groups' })).toBeChecked();
+    expect(screen.getByRole('button', { name: /DaiBX/ })).toBeInTheDocument();
+  });
+
+  test('with nothing due it offers to show all groups, and the open group says it is not due', async () => {
+    currentGroups = [{ ...notDueDaibxGroup(), id: 'group-today', name: 'Today' }];
+    const user = await openTasksPage();
+
+    expect(screen.getByText('Nothing due now')).toBeInTheDocument();
+    expect(screen.getByText('Not due now')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show all groups' }));
+
+    expect(screen.getByRole('radio', { name: 'All groups' })).toBeChecked();
+  });
+
+  test('the list refreshes itself when a group stops being due', async () => {
+    currentGroups = [
+      {
+        ...todayGroup,
+        shows: { repeat: { ...EVERY_DAY }, windowStart: '06:00', windowEnd: '12:00' },
+        timetable: { ...ALWAYS_DUE_TIMETABLE, dueUntil: inMillis(100) },
+      },
+    ];
+    await openTasksPage();
+    expect(screen.queryByText('Not due now')).not.toBeInTheDocument();
+
+    currentGroups = [{ ...notDueDaibxGroup(), id: 'group-today', name: 'Today' }];
+
+    expect(await screen.findByText('Not due now', {}, { timeout: 3_000 })).toBeInTheDocument();
+  });
+
+  test('coming back to the tab shows tasks the server has unchecked', async () => {
+    currentTasksByGroupId['group-today'] = todayTasks.map((task) =>
+      task.id === 'task-review' ? { ...task, isDone: true } : task,
+    );
+    await openTasksPage();
+    const reviewCheckbox = () =>
+      within(taskRow('Review the check-in flow')).getByRole('checkbox', {
+        name: /Review the check-in flow/,
+      });
+    expect(reviewCheckbox()).toBeChecked();
+
+    currentTasksByGroupId['group-today'] = structuredClone(todayTasks);
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await waitFor(() => expect(reviewCheckbox()).not.toBeChecked());
+  });
+
+  const openNewGroupDialog = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getAllByRole('button', { name: 'New group' })[0] as HTMLElement);
+    const newGroupDialog = screen.getByRole('dialog', { name: 'New group', hidden: true });
+    await user.type(
+      within(newGroupDialog).getByRole('textbox', { name: 'Name', hidden: true }),
+      'Practice',
+    );
+    await user.selectOptions(
+      within(newGroupDialog).getByRole('combobox', { name: 'Shows', hidden: true }),
+      'daily',
+    );
+    return newGroupDialog;
+  };
+
+  test('the group dialog sends when the group shows and unchecks', async () => {
+    let receivedBody: unknown;
+    backendServer.use(
+      http.post('/backend/task-groups', async ({ request }) => {
+        receivedBody = await request.json();
+        const createdGroup: TaskGroup = {
+          ...NO_GROUP_RULES,
+          id: 'group-practice',
+          name: 'Practice',
+          openTaskCount: 0,
+          taskCount: 0,
+        };
+        currentGroups = [createdGroup, ...currentGroups];
+        currentTasksByGroupId['group-practice'] = [];
+        return HttpResponse.json(createdGroup, { status: 201 });
+      }),
+    );
+    const user = await openTasksPage();
+
+    const newGroupDialog = await openNewGroupDialog(user);
+    fireEvent.change(within(newGroupDialog).getByLabelText('Shows from'), {
+      target: { value: '06:00' },
+    });
+    fireEvent.change(within(newGroupDialog).getByLabelText('Shows until'), {
+      target: { value: '12:00' },
+    });
+    await user.selectOptions(
+      within(newGroupDialog).getByRole('combobox', { name: 'Unchecks', hidden: true }),
+      'daily',
+    );
+    fireEvent.change(within(newGroupDialog).getByLabelText('At'), {
+      target: { value: '04:00' },
+    });
+    await user.click(
+      within(newGroupDialog).getByRole('button', { name: 'Create group', hidden: true }),
+    );
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Practice' })).toBeInTheDocument();
+    expect(receivedBody).toEqual({
+      name: 'Practice',
+      shows: { repeat: EVERY_DAY, windowStart: '06:00', windowEnd: '12:00' },
+      unchecks: { repeat: EVERY_DAY, time: '04:00' },
+    });
+  });
+
+  test('a window with only a start is refused before anything is sent', async () => {
+    let isSent = false;
+    backendServer.use(
+      http.post('/backend/task-groups', () => {
+        isSent = true;
+        return HttpResponse.json({}, { status: 201 });
+      }),
+    );
+    const user = await openTasksPage();
+
+    const newGroupDialog = await openNewGroupDialog(user);
+    fireEvent.change(within(newGroupDialog).getByLabelText('Shows from'), {
+      target: { value: '06:00' },
+    });
+    await user.click(
+      within(newGroupDialog).getByRole('button', { name: 'Create group', hidden: true }),
+    );
+
+    expect(await screen.findByText('Finish the window')).toBeInTheDocument();
+    expect(isSent).toBe(false);
+  });
 });
