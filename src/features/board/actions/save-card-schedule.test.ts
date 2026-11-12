@@ -18,7 +18,7 @@ const weeklyInput: ScheduleFormInput = {
   time: '18:00',
   timeZone: 'Asia/Manila',
   repeatRule: { frequency: 'weekly', interval: 1, weekdays: ['mon'], ends: { never: true } },
-  calendarBlock: { lengthMinutes: 60, categoryId: 'category-1' },
+  calendarBlock: { startTime: null, lengthMinutes: 60, categoryId: 'category-1' },
 };
 
 const answeredSchedules = {
@@ -123,7 +123,7 @@ test('reads the form, taking the block only when it is switched on for a repeat'
 
   expect(readScheduleForm(scheduleForm, 'schedule-block-category')).toEqual({
     ...weeklyInput,
-    calendarBlock: { lengthMinutes: 60, categoryId: null },
+    calendarBlock: { startTime: null, lengthMinutes: 60, categoryId: null },
   });
 
   scheduleForm.set('kind', 'once');

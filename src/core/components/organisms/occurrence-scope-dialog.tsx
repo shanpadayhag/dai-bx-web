@@ -22,22 +22,28 @@ const SCOPE_CHOICES: readonly { scope: OccurrenceScope; label: string }[] = [
   { scope: 'all', label: 'All events' },
 ];
 
+const REPEAT_CHANGE_SCOPES: ReadonlySet<OccurrenceScope> = new Set(['following', 'all']);
+
 const OccurrenceScopeDialog = ({ id, scopeRequest, onAnswer }: OccurrenceScopeDialogProps) => {
-  const [pickedScope, setPickedScope] = useState<OccurrenceScope>('this');
+  const isRepeatChange = scopeRequest?.isRepeatChange === true;
+  const firstScope: OccurrenceScope = isRepeatChange ? 'following' : 'this';
+  const [pickedScope, setPickedScope] = useState<OccurrenceScope>(firstScope);
+  const firstScopeRef = useRef(firstScope);
   const chosenAnswerRef = useRef<OccurrenceScopeAnswer>('cancel');
   const firstChoiceRef = useRef<HTMLInputElement>(null);
   const onAnswerRef = useRef(onAnswer);
 
   useEffect(() => {
     onAnswerRef.current = onAnswer;
-  }, [onAnswer]);
+    firstScopeRef.current = firstScope;
+  }, [firstScope, onAnswer]);
 
   useEffect(() => {
     const dialogElement = document.getElementById(id);
     const answerOnToggle = (toggleEvent: Event) => {
       if ((toggleEvent as ToggleEvent).newState === 'open') {
         chosenAnswerRef.current = 'cancel';
-        setPickedScope('this');
+        setPickedScope(firstScopeRef.current);
         firstChoiceRef.current?.focus();
         return;
       }
@@ -49,6 +55,9 @@ const OccurrenceScopeDialog = ({ id, scopeRequest, onAnswer }: OccurrenceScopeDi
 
   const isDelete = scopeRequest?.action === 'delete';
   const heading = isDelete ? 'Delete repeating event' : 'Change repeating event';
+  const shownScopeChoices = isRepeatChange
+    ? SCOPE_CHOICES.filter((scopeChoice) => REPEAT_CHANGE_SCOPES.has(scopeChoice.scope))
+    : SCOPE_CHOICES;
 
   return (
     <PopoverPanel id={id} label={heading} className="w-[min(380px,calc(100vw-2rem))]">
@@ -61,11 +70,12 @@ const OccurrenceScopeDialog = ({ id, scopeRequest, onAnswer }: OccurrenceScopeDi
           <p className="text-[13px] text-muted-foreground">
             <span className="font-medium text-foreground">“{scopeRequest?.eventTitle}”</span>{' '}
             repeats. Which of its events should {isDelete ? 'go' : 'change'}?
+            {isRepeatChange ? ' A new repeat can’t apply to one event alone.' : null}
           </p>
         </div>
         <fieldset className="grid gap-0.5">
           <legend className="sr-only">Events to {isDelete ? 'delete' : 'change'}</legend>
-          {SCOPE_CHOICES.map((scopeChoice, choiceIndex) => (
+          {shownScopeChoices.map((scopeChoice, choiceIndex) => (
             <label
               key={scopeChoice.scope}
               className="flex min-h-10 cursor-pointer items-center gap-3 rounded-lg px-2 text-sm text-foreground transition-colors duration-150 hover:bg-surface has-checked:bg-primary-soft has-checked:text-primary-soft-foreground [&_input]:size-4 [&_input]:accent-primary"

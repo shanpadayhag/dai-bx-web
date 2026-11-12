@@ -167,56 +167,71 @@ const ScheduleForm = ({
         </Field>
       </div>
       {isRepeating ? (
-        <>
-          <RepeatPicker
-            idPrefix={`${fieldPrefix}-repeat`}
-            name="repeat"
-            firstDate={pickedDate}
-            initialRule={editedSchedule?.repeatRule ?? weeklyRule}
-            isRepeatRequired
-          />
-          <div className="grid gap-3 rounded-xl bg-surface p-3.5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="grid gap-0.5">
-                <span className="text-[13px] font-medium text-foreground">Block calendar time</span>
-                <span className="text-xs text-muted-foreground">
-                  Each run adds a planned event named after the card.
-                </span>
-              </div>
-              <Switch
-                isOn={isBlockingTime}
-                label="Block calendar time"
-                onToggle={() => setIsBlockingTime((wasBlocking) => !wasBlocking)}
-              />
-            </div>
-            {isBlockingTime ? (
-              <>
-                <Field label="Length" htmlFor={`${fieldPrefix}-block-length`}>
-                  <Select
-                    id={`${fieldPrefix}-block-length`}
-                    name="blockMinutes"
-                    defaultValue={
-                      editedSchedule?.calendarBlock?.lengthMinutes ?? DEFAULT_BLOCK_MINUTES
-                    }
-                  >
-                    {BLOCK_LENGTH_MINUTES.map((lengthMinutes) => (
-                      <option key={lengthMinutes} value={lengthMinutes}>
-                        {blockLengthLabel(lengthMinutes)}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-                <CategoryPicker
-                  name={`${fieldPrefix}-block-category`}
-                  legend="Category"
-                  categories={categories}
-                  selectedCategoryId={editedSchedule?.calendarBlock?.categoryId ?? null}
-                />
-              </>
-            ) : null}
-          </div>
-        </>
+        <RepeatPicker
+          idPrefix={`${fieldPrefix}-repeat`}
+          name="repeat"
+          firstDate={pickedDate}
+          initialRule={editedSchedule?.repeatRule ?? weeklyRule}
+          isRepeatRequired
+        />
       ) : null}
+      <div className="grid gap-3 rounded-xl bg-surface p-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="grid gap-0.5">
+            <span className="text-[13px] font-medium text-foreground">Block calendar time</span>
+            <span className="text-xs text-muted-foreground">
+              {isRepeating
+                ? 'Each run adds a planned event named after the card.'
+                : 'Adds a planned event named after the card.'}
+            </span>
+          </div>
+          <Switch
+            isOn={isBlockingTime}
+            label="Block calendar time"
+            onToggle={() => setIsBlockingTime((wasBlocking) => !wasBlocking)}
+          />
+        </div>
+        {isBlockingTime ? (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Starts at" htmlFor={`${fieldPrefix}-block-time`}>
+                <Input
+                  id={`${fieldPrefix}-block-time`}
+                  name="blockTime"
+                  type="time"
+                  step={300}
+                  defaultValue={editedSchedule?.calendarBlock?.startTime ?? ''}
+                  className="tabular-nums"
+                />
+              </Field>
+              <Field label="Length" htmlFor={`${fieldPrefix}-block-length`}>
+                <Select
+                  id={`${fieldPrefix}-block-length`}
+                  name="blockMinutes"
+                  defaultValue={
+                    editedSchedule?.calendarBlock?.lengthMinutes ?? DEFAULT_BLOCK_MINUTES
+                  }
+                >
+                  {BLOCK_LENGTH_MINUTES.map((lengthMinutes) => (
+                    <option key={lengthMinutes} value={lengthMinutes}>
+                      {blockLengthLabel(lengthMinutes)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            <p className="-mt-1 text-xs text-muted-foreground">
+              Leave Starts at empty to start at the run time.
+            </p>
+            <CategoryPicker
+              name={`${fieldPrefix}-block-category`}
+              legend="Category"
+              categories={categories}
+              selectedCategoryId={editedSchedule?.calendarBlock?.categoryId ?? null}
+            />
+          </>
+        ) : null}
+      </div>
       <MoreOptions>
         <TimeZoneField
           id={`${fieldPrefix}-time-zone`}

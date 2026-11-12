@@ -18,6 +18,9 @@ type RepeatPickerProps = {
   firstDate: string;
   initialRule: RepeatRule | null;
   isRepeatRequired?: boolean;
+  label?: string;
+  noRepeatLabel?: string;
+  onChooseRule?: (chosenRule: RepeatRule | null) => void;
 };
 
 const CHOSEN_CUSTOM_VALUE = 'chosen-custom';
@@ -28,6 +31,9 @@ const RepeatPicker = ({
   firstDate,
   initialRule,
   isRepeatRequired = false,
+  label = 'Repeat',
+  noRepeatLabel,
+  onChooseRule,
 }: RepeatPickerProps) => {
   const [chosenRule, setChosenRule] = useState<RepeatRule | null>(initialRule);
   const [shownFirstDate, setShownFirstDate] = useState(firstDate);
@@ -41,19 +47,24 @@ const RepeatPicker = ({
     }
   }
   const customDialogId = `${idPrefix}-custom-repeat`;
-  const repeatPresets = repeatPresetsFor(firstDate).filter(
-    (repeatPreset) => !isRepeatRequired || repeatPreset.key !== 'none',
-  );
+  const repeatPresets = repeatPresetsFor(firstDate)
+    .filter((repeatPreset) => !isRepeatRequired || repeatPreset.key !== 'none')
+    .map((repeatPreset) =>
+      repeatPreset.key === 'none' && noRepeatLabel !== undefined
+        ? { ...repeatPreset, label: noRepeatLabel }
+        : repeatPreset,
+    );
   const chosenPresetKey = repeatPresetKeyOf(chosenRule, firstDate);
   const isCustomRule = chosenRule !== null && chosenPresetKey === 'custom';
 
   const chooseRule = (nextRule: RepeatRule | null) => {
     setChosenRule(nextRule);
+    onChooseRule?.(nextRule);
   };
 
   return (
     <>
-      <Field label="Repeat" htmlFor={`${idPrefix}-repeat`}>
+      <Field label={label} htmlFor={`${idPrefix}-repeat`}>
         <Select
           id={`${idPrefix}-repeat`}
           value={isCustomRule ? CHOSEN_CUSTOM_VALUE : chosenPresetKey}

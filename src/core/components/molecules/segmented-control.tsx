@@ -5,6 +5,7 @@ type SegmentedControlProps = {
   options: readonly string[];
   selectedOption: string;
   onSelectOption?: (option: string) => void;
+  className?: string;
 };
 
 const SegmentedControl = ({
@@ -12,11 +13,15 @@ const SegmentedControl = ({
   options,
   selectedOption,
   onSelectOption,
+  className,
 }: SegmentedControlProps) => (
   <div
     role="radiogroup"
     aria-label={label}
-    className="inline-flex h-9 items-center gap-0.5 rounded-[10px] bg-surface-strong p-0.5"
+    className={joinClassNames(
+      'inline-flex h-9 items-center gap-0.5 rounded-[10px] bg-surface-strong p-0.5',
+      className,
+    )}
   >
     {options.map((option) => {
       const isSelected = option === selectedOption;

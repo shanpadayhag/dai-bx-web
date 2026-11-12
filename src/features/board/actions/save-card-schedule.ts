@@ -47,6 +47,7 @@ const readScheduleForm = (
     calendarBlock:
       kind === 'repeating' && blockMinutesText !== ''
         ? {
+            startTime: readFormText(submittedForm, 'blockTime').slice(0, 5) || null,
             lengthMinutes: Number(blockMinutesText),
             categoryId: readFormCategoryId(submittedForm, blockCategoryField),
           }

@@ -21,6 +21,7 @@ import localStorageTaskViewSource, {
   type TaskView,
 } from '@/features/tasks/data_sources/local_storage/task-view-source';
 import { readGroupImport } from '@/features/tasks/entities/group-import-preview';
+import type { GroupView } from '@/features/tasks/entities/group-schedule';
 import type {
   AffectedGroup,
   GroupTasks,
@@ -96,6 +97,7 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
     setSelectedTaskGroupId,
     setOptimisticGroupTasks,
     setTaskView,
+    setGroupView,
     setCollapsedTaskIds,
     setEditingTaskId,
     pendingTaskRename,
@@ -370,6 +372,13 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
       localStorageTaskViewSource.saveTaskView(chosenTaskView);
     },
     [setTaskView],
+  );
+
+  const handleChooseGroupView = useCallback(
+    (chosenGroupView: GroupView) => {
+      setGroupView(chosenGroupView);
+    },
+    [setGroupView],
   );
 
   const handleStartEditingTask = useCallback(
@@ -709,6 +718,7 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
     handleConfirmDeleteTask,
     handleToggleTaskExpanded,
     handleChooseTaskView,
+    handleChooseGroupView,
     handleStartEditingTask,
     handleStartAddingSubtask,
     handleCancelTaskEditor,

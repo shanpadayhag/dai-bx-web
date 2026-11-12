@@ -16,6 +16,7 @@ type ScheduleRun = {
 };
 
 type CalendarBlock = {
+  startTime: string | null;
   lengthMinutes: number;
   categoryId: string | null;
 };
@@ -47,6 +48,7 @@ const cardScheduleFromRecord = (scheduleRecord: CardScheduleRecord): CardSchedul
     scheduleRecord.block === null
       ? null
       : {
+          startTime: scheduleRecord.block.time ?? null,
           lengthMinutes: scheduleRecord.block.minutes,
           categoryId: scheduleRecord.block.categoryId,
         },

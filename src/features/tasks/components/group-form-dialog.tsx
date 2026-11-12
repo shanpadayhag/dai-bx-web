@@ -4,6 +4,8 @@ import Button from '@/core/components/atoms/button';
 import Input from '@/core/components/atoms/input';
 import Field from '@/core/components/molecules/field';
 import PopoverPanel from '@/core/components/molecules/popover-panel';
+import GroupScheduleFields from '@/features/tasks/components/group-schedule-fields';
+import type { GroupShows, GroupUnchecks } from '@/features/tasks/entities/group-schedule';
 
 type GroupFormDialogProps = {
   dialogId: string;
@@ -11,6 +13,9 @@ type GroupFormDialogProps = {
   description: string;
   submitLabel: string;
   initialName: string;
+  initialShows: GroupShows | null;
+  initialUnchecks: GroupUnchecks | null;
+  firstDate: string;
   isSubmitting: boolean;
   deleteDialogId?: string;
   onSubmit: (submitEvent: FormEvent<HTMLFormElement>) => void;
@@ -22,6 +27,9 @@ const GroupFormDialog = ({
   description,
   submitLabel,
   initialName,
+  initialShows,
+  initialUnchecks,
+  firstDate,
   isSubmitting,
   deleteDialogId,
   onSubmit,
@@ -42,7 +50,10 @@ const GroupFormDialog = ({
 
   return (
     <PopoverPanel id={dialogId} label={title}>
-      <form className="grid gap-5 p-5 sm:p-6" onSubmit={onSubmit}>
+      <form
+        className="grid max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-5 sm:p-6"
+        onSubmit={onSubmit}
+      >
         <div className="flex items-start gap-3">
           <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
             {deleteDialogId === undefined ? (
@@ -65,6 +76,12 @@ const GroupFormDialog = ({
             placeholder="Like a project or a day"
           />
         </Field>
+        <GroupScheduleFields
+          idPrefix={`${dialogId}-schedule`}
+          firstDate={firstDate}
+          initialShows={initialShows}
+          initialUnchecks={initialUnchecks}
+        />
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
           {deleteDialogId === undefined ? (
             <span />

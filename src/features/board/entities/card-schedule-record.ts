@@ -2,6 +2,7 @@ import type { RepeatRule } from '@/core/repeat-rule';
 import type { CardScheduleKind, ScheduleRunTiming } from '@/features/board/entities/card-schedule';
 
 type ScheduleBlockRecord = {
+  time?: string | null;
   minutes: number;
   categoryId: string | null;
 };

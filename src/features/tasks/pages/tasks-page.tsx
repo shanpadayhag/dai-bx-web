@@ -1,7 +1,8 @@
 'use client';
 
 import { Plus, RotateCw, Settings2, WifiOff } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Badge from '@/core/components/atoms/badge';
 import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
 import Input from '@/core/components/atoms/input';
@@ -19,6 +20,8 @@ import NoGroupsState from '@/features/tasks/components/no-groups-state';
 import TaskActionsMenu from '@/features/tasks/components/task-actions-menu';
 import TaskGroupList from '@/features/tasks/components/task-group-list';
 import TaskTree from '@/features/tasks/components/task-tree';
+import sampleGroupScheduleSource from '@/features/tasks/data_sources/sample/group-schedule-source';
+import { describeGroupAvailability } from '@/features/tasks/entities/group-schedule';
 import { visibleGroupTasks } from '@/features/tasks/entities/optimistic-group-tasks';
 import { collectSubtreeIds } from '@/features/tasks/entities/task-record-changes';
 import { buildTaskTree } from '@/features/tasks/entities/task-tree';
@@ -35,6 +38,7 @@ import useTasksEvents, {
 import useTasksStates from '@/features/tasks/states/use-tasks-states';
 import { RUNNING_LIST_ID } from '@/features/tracking/events/use-tracking-events';
 import { useTracking } from '@/features/tracking/states/tracking-context';
+import { partsInZone } from '@/core/zoned-time';
 
 const TASK_VIEW_LABELS = { open: 'Open', all: 'All' } as const;
 const NEW_TASK_INPUT_ID = 'new-task-name';
@@ -44,7 +48,9 @@ const TasksPage = () => {
   const events = useTasksEvents(states);
   const { handleLoadPage } = events;
 
-  const { runningSourceIds, lastFinishedItem, handleStartTask } = useTracking();
+  const { runningSourceIds, lastFinishedItem, handleStartTask, calendarTimeZone } = useTracking();
+  const [now] = useState(() => new Date());
+  const todayDate = partsInZone(now, calendarTimeZone).calendarDate;
   const { handleApplyFinishedGroupTasks } = events;
 
   useEffect(() => {
@@ -71,8 +77,20 @@ const TasksPage = () => {
     return buildTaskTree(shownRecords, states.collapsedTaskIds, runningSourceIds);
   }, [runningSourceIds, shownGroupTasks, states.collapsedTaskIds, states.taskView]);
 
+  const scheduledTaskGroups = useMemo(
+    () =>
+      (states.taskGroups ?? []).map((taskGroup, groupIndex) => ({
+        ...taskGroup,
+        ...sampleGroupScheduleSource.findGroupSchedule(groupIndex, now),
+      })),
+    [now, states.taskGroups],
+  );
   const selectedTaskGroup =
-    states.taskGroups?.find((taskGroup) => taskGroup.id === states.selectedTaskGroupId) ?? null;
+    scheduledTaskGroups.find((taskGroup) => taskGroup.id === states.selectedTaskGroupId) ?? null;
+  const selectedGroupAvailability =
+    selectedTaskGroup === null
+      ? null
+      : describeGroupAvailability(selectedTaskGroup, now, calendarTimeZone);
   const deleteTargetRecord =
     shownGroupTasks?.tasks.find((taskRecord) => taskRecord.id === states.deleteTargetTaskId) ??
     null;
@@ -88,6 +106,9 @@ const TasksPage = () => {
       description="A list of tasks, like a project or a day."
       submitLabel="Create group"
       initialName=""
+      initialShows={null}
+      initialUnchecks={null}
+      firstDate={todayDate}
       isSubmitting={states.submittingDialogId === NEW_GROUP_DIALOG_ID}
       onSubmit={(submitEvent) => void events.handleSubmitNewGroup(submitEvent)}
     />
@@ -157,16 +178,28 @@ const TasksPage = () => {
   return (
     <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-8">
       <TaskGroupList
-        taskGroups={states.taskGroups}
+        taskGroups={scheduledTaskGroups}
         selectedTaskGroupId={states.selectedTaskGroupId}
         newGroupDialogId={NEW_GROUP_DIALOG_ID}
+        groupView={states.groupView}
+        now={now}
+        timeZone={calendarTimeZone}
         onSelectTaskGroup={events.handleSelectTaskGroup}
+        onChooseGroupView={events.handleChooseGroupView}
       />
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">
         <PageHeader
           title={shownGroupName}
           titleAddon={
             <span className="flex items-center gap-1">
+              {selectedTaskGroup !== null && !selectedTaskGroup.timetable.dueNow ? (
+                <Badge tone="warning" className="mr-1">
+                  Not due now
+                  {selectedGroupAvailability === null ? null : (
+                    <span className="font-normal opacity-80">· {selectedGroupAvailability}</span>
+                  )}
+                </Badge>
+              ) : null}
               <IconButton label="Group settings" popoverTarget={GROUP_SETTINGS_DIALOG_ID}>
                 <Settings2 />
               </IconButton>
@@ -313,9 +346,12 @@ const TasksPage = () => {
         key={`${selectedTaskGroup?.id ?? 'none'}-${selectedTaskGroup?.name ?? ''}`}
         dialogId={GROUP_SETTINGS_DIALOG_ID}
         title="Group settings"
-        description="Rename the group."
+        description="Rename it, and choose when it shows and unchecks."
         submitLabel="Save"
         initialName={selectedTaskGroup?.name ?? ''}
+        initialShows={selectedTaskGroup?.shows ?? null}
+        initialUnchecks={selectedTaskGroup?.unchecks ?? null}
+        firstDate={todayDate}
         isSubmitting={states.submittingDialogId === GROUP_SETTINGS_DIALOG_ID}
         deleteDialogId={DELETE_GROUP_DIALOG_ID}
         onSubmit={(submitEvent) => void events.handleSubmitGroupSettings(submitEvent)}

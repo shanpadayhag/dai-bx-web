@@ -98,6 +98,7 @@ const openTasksPage = async () => {
   const user = userEvent.setup();
   renderWithToaster(<TasksPage />);
   await screen.findByText('Plan the backend');
+  await user.click(screen.getByRole('radio', { name: 'All groups' }));
   return user;
 };
 

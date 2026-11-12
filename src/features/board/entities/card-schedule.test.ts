@@ -32,7 +32,7 @@ describe('cardScheduleFromRecord', () => {
       localStart: '2026-11-09T18:00',
       repeatRule: { frequency: 'weekly', interval: 1, weekdays: ['mon'], ends: { never: true } },
       timeZone: 'Asia/Manila',
-      calendarBlock: { lengthMinutes: 60, categoryId: 'category-1' },
+      calendarBlock: { startTime: null, lengthMinutes: 60, categoryId: 'category-1' },
       nextRunAt: new Date('2026-11-16T10:00:00.000Z'),
       isPaused: false,
     });

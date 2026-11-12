@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type AppError from '@/core/app-error';
 import type { TaskView } from '@/features/tasks/data_sources/local_storage/task-view-source';
+import type { GroupView } from '@/features/tasks/entities/group-schedule';
 import type { GroupImportReading } from '@/features/tasks/entities/group-import-preview';
 import type MoveTarget from '@/features/tasks/entities/move-target';
 import type { OptimisticGroupTasks } from '@/features/tasks/entities/optimistic-group-tasks';
@@ -16,6 +17,7 @@ const useTasksStates = () => {
     null,
   );
   const [taskView, setTaskView] = useState<TaskView>('all');
+  const [groupView, setGroupView] = useState<GroupView>('due');
   const [collapsedTaskIds, setCollapsedTaskIds] = useState<ReadonlySet<string>>(new Set());
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [pendingTaskRename, setPendingTaskRename] = useState<PendingTaskRename | null>(null);
@@ -39,6 +41,8 @@ const useTasksStates = () => {
     optimisticGroupTasks,
     setOptimisticGroupTasks,
     taskView,
+    groupView,
+    setGroupView,
     setTaskView,
     collapsedTaskIds,
     setCollapsedTaskIds,
