@@ -25,9 +25,9 @@ Live at [dai-bx.vercel.app](https://dai-bx.vercel.app). Accounts, tasks, the boa
 
 ## Backend
 
-Next.js is frontend only: there are no route handlers, server actions or `proxy.ts`. The browser calls the Axum API at `/backend/...` on this app's own origin, and a rewrite in `next.config.ts` forwards it to `API_ORIGIN` with the `/backend` prefix removed. The page and the API share one origin, so the API's HttpOnly cookies are first-party.
+Next.js is frontend only: there are no route handlers or server actions. The browser calls the Axum API at `/backend/...` on this app's own origin, and `src/proxy.ts` forwards it to `API_ORIGIN` with the `/backend` prefix removed, adding the `ORIGIN_SECRET` the API requires. The proxy runs for `/backend` only, never for pages. The page and the API share one origin, so the API's HttpOnly cookies are first-party.
 
-Set `API_ORIGIN` before `dev` or `build` (see `.env.example`). Locally it's the API's `cargo lambda watch` on `http://localhost:9000`; on Vercel each environment points at its own Lambda Function URL.
+Set `API_ORIGIN` and `ORIGIN_SECRET` before `dev` (see `.env.example`). Locally `API_ORIGIN` is the API's `cargo lambda watch` on `http://localhost:9000`, and `ORIGIN_SECRET` matches the API's `.env`. On Vercel, Production points at the production Lambda's Function URL and uses that Lambda's secret.
 
 ## Changelog
 

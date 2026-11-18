@@ -109,3 +109,30 @@ test('an expired or used link says so on the page', async () => {
   expect(screen.getByText('This link is invalid or has expired.')).toBeInTheDocument();
   expect(routerReplace).not.toHaveBeenCalled();
 });
+
+test.each([
+  ['the part after #', '/verify-email#token=abc123'],
+  ['an older emailed link', '/verify-email?token=abc123'],
+])('a token in %s is used once and leaves the address bar', async (_linkKind, linkAddress) => {
+  window.history.pushState({}, '', linkAddress);
+  let verifyRequestCount = 0;
+  let receivedVerify: unknown;
+  backendServer.use(
+    http.post('/backend/auth/verify-email', async ({ request }) => {
+      verifyRequestCount += 1;
+      receivedVerify = await request.json();
+      return HttpResponse.json({ next: 'set_up_authenticator' });
+    }),
+  );
+
+  renderWithToaster(
+    <StrictMode>
+      <VerifyEmailPage />
+    </StrictMode>,
+  );
+
+  await vi.waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/set-up-authenticator'));
+  expect(receivedVerify).toEqual({ token: 'abc123' });
+  expect(verifyRequestCount).toBe(1);
+  expect(window.location.href).not.toContain('abc123');
+});

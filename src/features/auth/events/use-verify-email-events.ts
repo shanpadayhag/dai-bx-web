@@ -6,6 +6,10 @@ import reportAppError from '@/core/report-app-error';
 import findPendingEmail from '@/features/auth/actions/find-pending-email';
 import resendVerificationEmail from '@/features/auth/actions/resend-verification-email';
 import verifyEmail from '@/features/auth/actions/verify-email';
+import {
+  readEmailLinkToken,
+  removeEmailLinkTokenFromAddress,
+} from '@/features/auth/entities/email-link-token';
 import nextStepPath from '@/features/auth/entities/next-step';
 import { APP_HOME_PATH } from '@/features/auth/entities/return-path';
 import type useVerifyEmailStates from '@/features/auth/states/use-verify-email-states';
@@ -16,13 +20,14 @@ const useVerifyEmailEvents = (states: ReturnType<typeof useVerifyEmailStates>) =
   const hasSubmittedLinkRef = useRef(false);
 
   const handleOpenPage = useCallback(async () => {
-    const linkToken = new URLSearchParams(window.location.search).get('token');
+    if (hasSubmittedLinkRef.current) return;
+    const linkToken = readEmailLinkToken(window.location);
     if (linkToken === null) {
       setPendingEmail(findPendingEmail());
       return;
     }
-    if (hasSubmittedLinkRef.current) return;
     hasSubmittedLinkRef.current = true;
+    removeEmailLinkTokenFromAddress();
     setLinkStatus('verifying');
     try {
       const nextStep = await verifyEmail({ linkToken });

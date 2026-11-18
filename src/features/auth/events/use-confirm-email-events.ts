@@ -1,6 +1,10 @@
 import { useCallback, useRef } from 'react';
 import AppError from '@/core/app-error';
 import confirmEmailChange from '@/features/auth/actions/confirm-email-change';
+import {
+  readEmailLinkToken,
+  removeEmailLinkTokenFromAddress,
+} from '@/features/auth/entities/email-link-token';
 import type useConfirmEmailStates from '@/features/auth/states/use-confirm-email-states';
 
 const useConfirmEmailEvents = (states: ReturnType<typeof useConfirmEmailStates>) => {
@@ -8,13 +12,14 @@ const useConfirmEmailEvents = (states: ReturnType<typeof useConfirmEmailStates>)
   const hasSubmittedLinkRef = useRef(false);
 
   const handleOpenLink = useCallback(async () => {
-    const linkToken = new URLSearchParams(window.location.search).get('token');
+    if (hasSubmittedLinkRef.current) return;
+    const linkToken = readEmailLinkToken(window.location);
     if (linkToken === null || linkToken.trim() === '') {
       setConfirmEmailStatus('missing_token');
       return;
     }
-    if (hasSubmittedLinkRef.current) return;
     hasSubmittedLinkRef.current = true;
+    removeEmailLinkTokenFromAddress();
     try {
       await confirmEmailChange({ linkToken });
       setConfirmEmailStatus('confirmed');

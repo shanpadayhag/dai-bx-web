@@ -1,0 +1,7 @@
+[
+  {
+    "id": "GHSA-fc5q-39xc-vjpf",
+    "reason": "No patched picomatch exists yet. It is only installed for lint, test and build tools, which match glob patterns written in this repository, and it is absent from production packages.",
+    "reviewBy": "2027-02-18"
+  }
+]

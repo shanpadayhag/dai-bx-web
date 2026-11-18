@@ -67,3 +67,30 @@ test('a link without a token says so', async () => {
     await screen.findByRole('heading', { name: 'This link is incomplete' }),
   ).toBeInTheDocument();
 });
+
+test.each([
+  ['the part after #', '/confirm-email#token=change123'],
+  ['an older emailed link', '/confirm-email?token=change123'],
+])('a token in %s is used once and leaves the address bar', async (_linkKind, linkAddress) => {
+  window.history.pushState({}, '', linkAddress);
+  let confirmRequestCount = 0;
+  let receivedConfirm: unknown;
+  backendServer.use(
+    http.post('/backend/account/email/confirm', async ({ request }) => {
+      confirmRequestCount += 1;
+      receivedConfirm = await request.json();
+      return HttpResponse.json({ status: 'email_changed' });
+    }),
+  );
+
+  renderWithToaster(
+    <StrictMode>
+      <ConfirmEmailPage />
+    </StrictMode>,
+  );
+
+  expect(await screen.findByRole('heading', { name: 'Email changed' })).toBeInTheDocument();
+  expect(receivedConfirm).toEqual({ token: 'change123' });
+  expect(confirmRequestCount).toBe(1);
+  expect(window.location.href).not.toContain('change123');
+});

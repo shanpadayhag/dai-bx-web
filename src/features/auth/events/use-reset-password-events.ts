@@ -1,8 +1,12 @@
 import { useRouter } from 'next/navigation';
-import { useCallback, type FormEvent } from 'react';
+import { useCallback, useRef, type FormEvent } from 'react';
 import readFormText from '@/core/form-text';
 import reportAppError from '@/core/report-app-error';
 import completePasswordReset from '@/features/auth/actions/complete-password-reset';
+import {
+  readEmailLinkToken,
+  removeEmailLinkTokenFromAddress,
+} from '@/features/auth/entities/email-link-token';
 import nextStepPath from '@/features/auth/entities/next-step';
 import { APP_HOME_PATH } from '@/features/auth/entities/return-path';
 import type useResetPasswordStates from '@/features/auth/states/use-reset-password-states';
@@ -10,13 +14,17 @@ import type useResetPasswordStates from '@/features/auth/states/use-reset-passwo
 const useResetPasswordEvents = (states: ReturnType<typeof useResetPasswordStates>) => {
   const { linkToken, setResetLinkStatus, setLinkToken, setIsSubmitting } = states;
   const router = useRouter();
+  const hasReadLinkRef = useRef(false);
 
   const handleReadLink = useCallback(() => {
-    const presentedLinkToken = new URLSearchParams(window.location.search).get('token');
+    if (hasReadLinkRef.current) return;
+    hasReadLinkRef.current = true;
+    const presentedLinkToken = readEmailLinkToken(window.location);
     if (presentedLinkToken === null || presentedLinkToken.trim() === '') {
       setResetLinkStatus('missing_token');
       return;
     }
+    removeEmailLinkTokenFromAddress();
     setLinkToken(presentedLinkToken);
     setResetLinkStatus('ready');
   }, [setResetLinkStatus, setLinkToken]);

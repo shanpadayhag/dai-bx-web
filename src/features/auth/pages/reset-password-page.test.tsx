@@ -1,6 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import { StrictMode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import ResetPasswordPage from '@/features/auth/pages/reset-password-page';
 import startBackendServer from '@/test-support/backend-server';
@@ -63,3 +64,33 @@ test('a link without a token says so instead of showing the form', async () => {
   ).toBeInTheDocument();
   expect(screen.queryByLabelText('New password')).not.toBeInTheDocument();
 });
+
+test.each([
+  ['the part after #', '/reset-password#token=reset123'],
+  ['an older emailed link', '/reset-password?token=reset123'],
+])(
+  'a token in %s is kept for saving and leaves the address bar',
+  async (_linkKind, linkAddress) => {
+    window.history.pushState({}, '', linkAddress);
+    let receivedComplete: unknown;
+    backendServer.use(
+      http.post('/backend/auth/password-reset/complete', async ({ request }) => {
+        receivedComplete = await request.json();
+        return HttpResponse.json({ next: 'enter_code' });
+      }),
+    );
+    const user = userEvent.setup();
+
+    renderWithToaster(
+      <StrictMode>
+        <ResetPasswordPage />
+      </StrictMode>,
+    );
+    await user.type(await screen.findByLabelText('New password'), NEW_PASSWORD);
+    expect(window.location.href).not.toContain('reset123');
+    await user.click(screen.getByRole('button', { name: 'Save new password' }));
+
+    await vi.waitFor(() => expect(routerPush).toHaveBeenCalledWith('/enter-code'));
+    expect(receivedComplete).toEqual({ token: 'reset123', password: NEW_PASSWORD });
+  },
+);
