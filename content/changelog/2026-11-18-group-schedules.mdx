@@ -1,0 +1,42 @@
+export const metadata = {
+  title: 'Group schedules and repeat follow-ups',
+  version: 'v3.5.0',
+  date: '2026-11-18',
+  summary: 'Groups show when they are due and untick themselves on a schedule, card schedules block calendar time at their own hour, and a repeating event can stop repeating.',
+};
+
+A group can now keep its own rhythm. It shows up when it's due and starts fresh on the days you choose, so a routine can stay in one group instead of being imported again.
+
+## When a group shows
+
+- **Group settings** have a **Shows** row, **Always** by default. Pick a repeat to limit the group to those days.
+- **Between** narrows it to part of the day. Leave both times empty for all day. An end before the start runs past midnight and belongs to the day it started.
+- The Tasks page has a **Due now / All groups** toggle, and this device remembers your choice.
+- In **All groups**, a group that isn't due shows when it's next due, like "Next: Mon 06:00", or **Ended** once its repeat has finished.
+- A group you have open stays open when it stops being due, marked **Not due now**.
+- Finishing a group's tasks doesn't hide it. It stays in **Due now** until its day or window ends.
+
+## When a group unchecks
+
+- An **Unchecks** row, **Never** by default, sets its own repeat and an **At** time, 00:00 unless you change it.
+- From that time, every task in the group shows unticked again, even if the app was closed.
+- Group times follow your calendar's time zone.
+- The page updates by itself when a group's window starts or ends or an uncheck passes, and when you come back to the tab.
+
+## Card schedule blocks
+
+- **Block calendar time** now works on one-time schedules too.
+- An optional **Starts at** gives the block its own time: the card moves at 08:00 and its block runs 10:00–11:00. Leave it empty to start at the run time.
+
+## Repeating events
+
+- Choosing **Does not repeat** on a repeating event now works. **This and following** ends the series and keeps this event on its own. **All events** leaves just this one event.
+- Changing an event's repeat asks only **This and following events** or **All events**, because a new repeat can't apply to one event alone.
+
+## Fixes
+
+- Tapping an input on an iPhone or iPad no longer zooms the page.
+
+## Coming next
+
+- **Security catch-up:** a full check of what's already live against the security bar, with rate limits on account emails and an alert when your account signs in on a new device.
