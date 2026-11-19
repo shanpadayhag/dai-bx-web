@@ -4,6 +4,7 @@ import { SignedOutError } from '@/core/api/api-error';
 import UnauthorizedHandling from '@/core/api/unauthorized-handling';
 import AppError from '@/core/app-error';
 import { applyAppearance } from '@/core/appearance';
+import clearBrowserData from '@/core/browser-data';
 import { readProfileChange } from '@/core/profile-change';
 import findSignedInUser from '@/features/auth/actions/find-signed-in-user';
 import { buildSignInPath } from '@/features/auth/entities/return-path';
@@ -14,6 +15,7 @@ const useSessionGateEvents = (states: ReturnType<typeof useSessionGateStates>) =
   const router = useRouter();
 
   const handleSignedOut = useCallback(() => {
+    clearBrowserData();
     const requestedPath = `${window.location.pathname}${window.location.search}`;
     router.replace(buildSignInPath(requestedPath));
   }, [router]);

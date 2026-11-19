@@ -17,6 +17,8 @@ beforeEach(() => window.history.pushState({}, '', '/tasks?view=open'));
 afterEach(() => {
   server.resetHandlers();
   routerReplace.mockReset();
+  window.localStorage.clear();
+  window.sessionStorage.clear();
 });
 afterAll(() => server.close());
 
@@ -106,4 +108,17 @@ test('being signed out later, by any request, sends the visitor to sign in', asy
   window.dispatchEvent(new Event('daibx:signed-out'));
 
   expect(routerReplace).toHaveBeenCalledWith('/sign-in?next=%2Ftasks%3Fview%3Dopen');
+});
+
+test('a session ending clears DaiBX data but keeps the appearance choice', async () => {
+  server.use(http.get('/backend/auth/session', () => HttpResponse.json(signedInSession)));
+  renderGate();
+  await screen.findByText('Your tasks');
+  window.localStorage.setItem('daibx:last-board-id', 'board-1');
+  window.sessionStorage.setItem('daibx:task-view', 'list');
+
+  window.dispatchEvent(new Event('daibx:signed-out'));
+
+  expect(Object.keys(window.localStorage)).toEqual(['daibx:appearance']);
+  expect(Object.keys(window.sessionStorage)).toEqual([]);
 });

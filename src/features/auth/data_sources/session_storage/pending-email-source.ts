@@ -8,6 +8,13 @@ const sessionStoragePendingEmailSource = {
       return;
     }
   },
+  remove: () => {
+    try {
+      window.sessionStorage.removeItem(PENDING_EMAIL_KEY);
+    } catch {
+      return;
+    }
+  },
   find: () => {
     try {
       return window.sessionStorage.getItem(PENDING_EMAIL_KEY);

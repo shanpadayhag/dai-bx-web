@@ -75,6 +75,21 @@ test('opening the emailed link confirms the address and moves on to the authenti
   expect(receivedVerify).toEqual({ token: 'abc123' });
 });
 
+test('a confirmed address is no longer kept in the browser', async () => {
+  window.history.pushState({}, '', '/verify-email?token=abc123');
+  window.sessionStorage.setItem(PENDING_EMAIL_KEY, 'shan@daibx.test');
+  backendServer.use(
+    http.post('/backend/auth/verify-email', () =>
+      HttpResponse.json({ next: 'set_up_authenticator' }),
+    ),
+  );
+
+  renderWithToaster(<VerifyEmailPage />);
+
+  await vi.waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/set-up-authenticator'));
+  expect(window.sessionStorage.getItem(PENDING_EMAIL_KEY)).toBeNull();
+});
+
 test('the link is sent once, even when React runs effects twice', async () => {
   window.history.pushState({}, '', '/verify-email?token=once');
   let verifyRequestCount = 0;

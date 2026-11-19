@@ -29,7 +29,11 @@ beforeEach(() => {
     ),
   );
 });
-afterEach(() => routerReplace.mockReset());
+afterEach(() => {
+  routerReplace.mockReset();
+  window.localStorage.clear();
+  window.sessionStorage.clear();
+});
 
 const renderSignedInSidebar = () =>
   renderWithToaster(
@@ -61,6 +65,24 @@ test('signing out from the sidebar ends the session and goes to sign in', async 
 
   await vi.waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/sign-in'));
   expect(signOutRequestCount).toBe(1);
+});
+
+test('signing out leaves no DaiBX data in the browser', async () => {
+  backendServer.use(
+    http.post('/backend/auth/sign-out', () => HttpResponse.json({ status: 'signed_out' })),
+  );
+  const user = userEvent.setup();
+  renderSignedInSidebar();
+  await screen.findByText('Shan Padayhag');
+  window.localStorage.setItem('daibx:last-board-id', 'board-1');
+  window.localStorage.setItem('daibx:last-task-group-id', 'group-1');
+  window.sessionStorage.setItem('daibx:calendar-view', 'week');
+
+  await user.click(screen.getByRole('button', { name: 'Sign out' }));
+
+  await vi.waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/sign-in'));
+  expect(Object.keys(window.localStorage)).toEqual([]);
+  expect(Object.keys(window.sessionStorage)).toEqual([]);
 });
 
 test('a name changed in settings shows in the sidebar straight away', async () => {

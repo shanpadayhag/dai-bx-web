@@ -1,6 +1,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import { forgetAppearance } from '@/core/appearance';
+import clearBrowserData from '@/core/browser-data';
 import reportAppError from '@/core/report-app-error';
 import signOut from '@/features/auth/actions/sign-out';
 import type useSidebarAccountStates from '@/features/auth/states/use-sidebar-account-states';
@@ -15,6 +16,7 @@ const useSidebarAccountEvents = (states: ReturnType<typeof useSidebarAccountStat
     setIsSigningOut(true);
     try {
       await signOut();
+      clearBrowserData();
       forgetAppearance();
       router.replace(SIGN_IN_PATH);
     } catch (signOutError) {
