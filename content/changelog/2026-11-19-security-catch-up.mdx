@@ -1,0 +1,37 @@
+export const metadata = {
+  title: 'Security catch-up',
+  version: 'v3.6.0',
+  date: '2026-11-19',
+  summary: 'An email when your account signs in from a new browser, limits on account emails, and everything already live checked against the security bar.',
+};
+
+DaiBX holds your days: tasks, notes, your calendar and where your time went. This release brings everything already live up to the security bar set for it, before more features land on top.
+
+## Sign-in alerts
+
+- Signing in from a browser that hasn't signed in to your account before sends you an email within a minute or two, with the time, the browser and how you signed in.
+- Signing in again from that browser sends nothing. A browser is remembered for a year after its last sign-in.
+- If the sign-in wasn't you, the email links straight to a password reset, which signs out every device, and asks you to replace your authenticator in **Settings**.
+
+## Emails and links
+
+- Account emails have limits per address, per network and overall, so nobody can use DaiBX to flood an inbox.
+- Verification, password reset and email change links keep their code after the `#` in the address, so it never reaches a server log. Links already in your inbox still work.
+
+## Your data
+
+- Nightly encrypted database backups, kept for 30 days, are built and switch on once their account setup is finished.
+- Signing out, or a session ending, clears what DaiBX kept in this browser, except your theme and accent colour.
+- Pages now tell the browser to run only DaiBX's own code, never to show DaiBX inside another site, and not to pass the page address on to other sites.
+- Only this website can call the DaiBX API.
+
+## Behind the scenes
+
+- The app connects to its database with an account that can read and write data but can't change the database's structure or the security log.
+- Database connections check the server's certificate.
+- Every refused request is logged, without your data, and logs are kept for 90 days.
+- Both code bases fail their checks on a known-vulnerable dependency.
+
+## Coming next
+
+- **Automatic scheduling:** DaiBX places your planned work into free time on your calendar.
