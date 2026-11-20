@@ -19,6 +19,7 @@ import MoveTaskDialog from '@/features/tasks/components/move-task-dialog';
 import NoGroupsState from '@/features/tasks/components/no-groups-state';
 import TaskActionsMenu from '@/features/tasks/components/task-actions-menu';
 import TaskGroupList from '@/features/tasks/components/task-group-list';
+import TaskPlanningDialog from '@/features/tasks/components/task-planning-dialog';
 import TaskTree from '@/features/tasks/components/task-tree';
 import { describeGroupAvailability } from '@/features/tasks/entities/group-schedule';
 import { visibleGroupTasks } from '@/features/tasks/entities/optimistic-group-tasks';
@@ -33,6 +34,7 @@ import useTasksEvents, {
   NEW_GROUP_DIALOG_ID,
   RENAME_TASK_EVENTS_DIALOG_ID,
   TASK_ACTIONS_MENU_ID,
+  TASK_PLANNING_DIALOG_ID,
 } from '@/features/tasks/events/use-tasks-events';
 import useTimetableRefresh from '@/features/tasks/events/use-timetable-refresh';
 import useTasksStates from '@/features/tasks/states/use-tasks-states';
@@ -128,6 +130,8 @@ const TasksPage = () => {
         ).length;
   const movingRecord =
     shownGroupTasks?.tasks.find((taskRecord) => taskRecord.id === states.movingTaskId) ?? null;
+  const planningRecord =
+    shownGroupTasks?.tasks.find((taskRecord) => taskRecord.id === states.planningTaskId) ?? null;
 
   if (states.taskGroups === null) {
     return (
@@ -300,6 +304,7 @@ const TasksPage = () => {
           actionsTargetRecord === null ||
           actionsTargetRecord.position >= actionsTargetSiblingCount - 1
         }
+        isTopLevel={actionsTargetRecord?.parentId === null}
         onAddSubtask={() => {
           if (actionsTargetRecord !== null) {
             events.handleStartAddingSubtask(actionsTargetRecord.id);
@@ -317,9 +322,19 @@ const TasksPage = () => {
         onMoveTo={() => {
           if (actionsTargetRecord !== null) events.handleOpenMoveDialog(actionsTargetRecord.id);
         }}
+        onPlan={() => {
+          if (actionsTargetRecord !== null) events.handleOpenPlanningDialog(actionsTargetRecord.id);
+        }}
         onDelete={() => {
           if (actionsTargetRecord !== null) events.handleRequestDeleteTask(actionsTargetRecord.id);
         }}
+      />
+      <TaskPlanningDialog
+        dialogId={TASK_PLANNING_DIALOG_ID}
+        taskName={planningRecord?.name ?? 'this task'}
+        taskId={planningRecord?.id ?? null}
+        taskPlanning={planningRecord}
+        onSubmit={events.handleSubmitTaskPlanning}
       />
       <MoveTaskDialog
         dialogId={MOVE_TASK_DIALOG_ID}

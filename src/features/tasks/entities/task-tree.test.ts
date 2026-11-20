@@ -16,6 +16,9 @@ const taskRecord = (
   estimateMinutes: null,
   card: null,
   trackedEventCount: 0,
+  priority: 'normal',
+  due: null,
+  planBetween: null,
   ...overrides,
 });
 

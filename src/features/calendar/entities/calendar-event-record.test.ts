@@ -17,6 +17,8 @@ const trackedRecord: CalendarEventRecord = {
   lastAnsweredAt: '2026-11-05T02:30:00.000Z',
   timeZone: null,
   series: null,
+  task: null,
+  isScheduleBlock: false,
   source: { kind: 'task', id: 'task-1', groupId: 'group-1' },
 };
 

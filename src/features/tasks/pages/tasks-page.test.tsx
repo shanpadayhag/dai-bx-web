@@ -34,6 +34,9 @@ const taskRecord = (
   estimateMinutes: null,
   card: null,
   trackedEventCount: 0,
+  priority: 'normal',
+  due: null,
+  planBetween: null,
   ...overrides,
 });
 
@@ -410,6 +413,8 @@ test('Start runs a task, and finishing it with Mark it done completes it and its
         lastAnsweredAt: null,
         timeZone: null,
         series: null,
+        task: null,
+        isScheduleBlock: false,
         source: { kind: 'task', id: String(params.taskId), groupId: 'group-today' },
         estimateMinutes: null,
         sourceName: 'Today',
@@ -593,6 +598,76 @@ test('Move down in the task menu moves the task one place down', async () => {
     expect(topLevelNames()).toEqual(['Review the check-in flow', 'Plan the backend']),
   );
   expect(readMoveBody()).toEqual({ groupId: 'group-today', parentId: null, position: 1 });
+});
+
+test('Planning in the task menu saves priority, due and window and shows them on the row', async () => {
+  let receivedBody: unknown;
+  backendServer.use(
+    http.patch('/backend/tasks/task-review', async ({ request }) => {
+      receivedBody = await request.json();
+      return answerWith(
+        todayTasks.map((task) =>
+          task.id === 'task-review'
+            ? {
+                ...task,
+                priority: 'high',
+                due: { date: '2030-01-08', time: '17:00' },
+                planBetween: { start: '22:00', end: '02:00' },
+              }
+            : task,
+        ),
+      );
+    }),
+  );
+  const user = await openTasksPage();
+
+  const taskMenu = await openTaskMenu(user, 'Review the check-in flow');
+  await user.click(within(taskMenu).getByRole('menuitem', { name: 'Planning…', hidden: true }));
+  const planningDialog = screen.getByRole('dialog', {
+    name: 'Planning for Review the check-in flow',
+    hidden: true,
+  });
+  await user.click(within(planningDialog).getByRole('radio', { name: 'High', hidden: true }));
+  fireEvent.change(within(planningDialog).getByLabelText('Due'), {
+    target: { value: '2030-01-08' },
+  });
+  fireEvent.change(within(planningDialog).getByLabelText('Time'), { target: { value: '17:00' } });
+  fireEvent.change(within(planningDialog).getByLabelText('Plan between start'), {
+    target: { value: '22:00' },
+  });
+  fireEvent.change(within(planningDialog).getByLabelText('Plan between end'), {
+    target: { value: '02:00' },
+  });
+  await user.click(within(planningDialog).getByRole('button', { name: 'Save', hidden: true }));
+
+  const reviewRow = taskRow('Review the check-in flow');
+  await waitFor(() => expect(within(reviewRow).getByText('High')).toBeInTheDocument());
+  expect(within(reviewRow).getByText('22:00–02:00')).toBeInTheDocument();
+  expect(within(reviewRow).getByText(/17:00/)).toBeInTheDocument();
+  expect(receivedBody).toEqual({
+    priority: 'high',
+    due: { date: '2030-01-08', time: '17:00' },
+    planBetween: { start: '22:00', end: '02:00' },
+  });
+});
+
+test('a due time without a date is refused, and subtasks offer no Planning', async () => {
+  const user = await openTasksPage();
+
+  const taskMenu = await openTaskMenu(user, 'Review the check-in flow');
+  await user.click(within(taskMenu).getByRole('menuitem', { name: 'Planning…', hidden: true }));
+  const planningDialog = screen.getByRole('dialog', {
+    name: 'Planning for Review the check-in flow',
+    hidden: true,
+  });
+  fireEvent.change(within(planningDialog).getByLabelText('Time'), { target: { value: '09:00' } });
+  await user.click(within(planningDialog).getByRole('button', { name: 'Save', hidden: true }));
+  expect(await screen.findByText('Pick a due date')).toBeInTheDocument();
+
+  const subtaskMenu = await openTaskMenu(user, 'Create the Supabase project');
+  expect(
+    within(subtaskMenu).queryByRole('menuitem', { name: 'Planning…', hidden: true }),
+  ).toBeNull();
 });
 
 test('Move up is off for the first task in its list', async () => {

@@ -1,11 +1,13 @@
 import {
   CalendarClock,
+  CheckCircle2,
   Clock3,
   Globe2,
   History,
   KanbanSquare,
   ListChecks,
   PencilLine,
+  Play,
   Square,
   Trash2,
 } from 'lucide-react';
@@ -22,8 +24,17 @@ import RepeatPicker from '@/core/components/organisms/repeat-picker';
 import { formatClockInZone, timeZonePlaceName } from '@/core/time-zone';
 import { formatInZone, partsInZone } from '@/core/zoned-time';
 import DateTimeField from '@/features/calendar/components/date-time-field';
+import EventTaskField, {
+  type TaskGroupChoice,
+} from '@/features/calendar/components/event-task-field';
 import type CalendarEvent from '@/features/calendar/entities/calendar-event';
-import { isEventRunning, trimmedEventMinutes } from '@/features/calendar/entities/calendar-event';
+import type { LinkedTask } from '@/features/calendar/entities/calendar-event';
+import {
+  canLinkTask,
+  isEventRunning,
+  trimmedEventMinutes,
+} from '@/features/calendar/entities/calendar-event';
+import type { TaskChoice } from '@/features/calendar/entities/task-choice';
 import {
   eventDurationMinutes,
   formatClock,
@@ -43,6 +54,11 @@ type EventDetailPanelProps = {
   onSelectCategory: (eventId: string, categoryId: string | null) => void;
   onDeleteEvent: (eventId: string) => void;
   onFinishEvent: (eventId: string) => void;
+  runningSourceIds: ReadonlySet<string>;
+  taskGroups: readonly TaskGroupChoice[] | null;
+  taskChoicesByGroupId: Readonly<Record<string, readonly TaskChoice[]>>;
+  onLoadGroupTasks: (groupId: string) => void;
+  onStartTask: (taskId: string) => void;
 };
 
 const panelClassName = 'grid gap-4 rounded-2xl border border-border bg-background p-4 shadow-soft';
@@ -74,6 +90,53 @@ const OtherZoneTimes = ({
   </p>
 );
 
+const LinkedTaskCard = ({
+  linkedTask,
+  isRunning,
+  onStartTask,
+}: {
+  linkedTask: LinkedTask;
+  isRunning: boolean;
+  onStartTask: (taskId: string) => void;
+}) => (
+  <div
+    role="group"
+    aria-label="Linked task"
+    className="flex items-center gap-3 rounded-xl bg-surface px-3 py-2.5"
+  >
+    {linkedTask.isDone ? (
+      <CheckCircle2 aria-hidden="true" className="size-4 shrink-0 text-success" />
+    ) : (
+      <ListChecks aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+    )}
+    <span className="grid min-w-0 flex-1">
+      <span
+        className={
+          linkedTask.isDone
+            ? 'truncate text-sm text-muted-foreground line-through decoration-border-strong'
+            : 'truncate text-sm font-medium text-foreground'
+        }
+      >
+        {linkedTask.name}
+      </span>
+      <span className="truncate text-xs text-muted-foreground">
+        {linkedTask.isDone ? `Done · ${linkedTask.groupName}` : linkedTask.groupName}
+      </span>
+    </span>
+    {linkedTask.isDone ? null : isRunning ? (
+      <Badge tone="primary">
+        <span className="size-1.5 animate-pulse-dot rounded-full bg-primary" />
+        Running
+      </Badge>
+    ) : (
+      <Button size="sm" onClick={() => onStartTask(linkedTask.id)}>
+        <Play className="fill-current" />
+        Start
+      </Button>
+    )}
+  </div>
+);
+
 const PlannedEventPanel = ({
   calendarEvent,
   categories,
@@ -82,7 +145,13 @@ const PlannedEventPanel = ({
   plannedFieldPrefix,
   onSubmitPlannedEvent,
   onDeleteEvent,
+  runningSourceIds,
+  taskGroups,
+  taskChoicesByGroupId,
+  onLoadGroupTasks,
+  onStartTask,
 }: EventDetailPanelProps) => {
+  const linkedTask = calendarEvent.linkedTask ?? null;
   const eventTimeZone = calendarEvent.timeZone ?? calendarTimeZone;
   const [typedStartDate, setTypedStartDate] = useState('');
   const repeatFirstDate =
@@ -102,6 +171,13 @@ const PlannedEventPanel = ({
           <CalendarClock />
           {calendarEvent.series === undefined ? 'Planned' : 'Planned, repeats'}
         </Badge>
+        {linkedTask === null ? null : (
+          <LinkedTaskCard
+            linkedTask={linkedTask}
+            isRunning={runningSourceIds.has(linkedTask.id)}
+            onStartTask={onStartTask}
+          />
+        )}
         {eventTimeZone === calendarTimeZone ? null : (
           <OtherZoneTimes
             calendarEvent={calendarEvent}
@@ -123,6 +199,15 @@ const PlannedEventPanel = ({
           categories={categories}
           selectedCategoryId={calendarEvent.category?.id ?? null}
         />
+        {canLinkTask(calendarEvent) ? (
+          <EventTaskField
+            idPrefix={`${plannedFieldPrefix}-task`}
+            linkedTask={linkedTask}
+            taskGroups={taskGroups}
+            taskChoicesByGroupId={taskChoicesByGroupId}
+            onLoadGroupTasks={onLoadGroupTasks}
+          />
+        ) : null}
         <DateTimeField
           label="Starts"
           idPrefix={`${plannedFieldPrefix}-starts`}

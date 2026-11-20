@@ -7,6 +7,10 @@ import type { Category } from '@/core/category';
 import type { RepeatRule } from '@/core/repeat-rule';
 import type CalendarEventRecord from '@/features/calendar/entities/calendar-event-record';
 import CalendarPage from '@/features/calendar/pages/calendar-page';
+import type TaskRecord from '@/features/tasks/entities/task-record';
+import TrackingPill from '@/features/tracking/components/tracking-pill';
+import TrackingProvider from '@/features/tracking/components/tracking-provider';
+import type RunningItemRecord from '@/features/tracking/entities/running-item-record';
 import type TimeTrackingSettings from '@/features/tracking/entities/time-tracking-settings';
 import startBackendServer from '@/test-support/backend-server';
 import renderWithToaster from '@/test-support/render-with-toaster';
@@ -30,6 +34,7 @@ const timeTrackingSettings: TimeTrackingSettings = {
   workingHoursEnd: '02:00',
   trackedCategoryId: null,
   calendarTimeZone: null,
+  planningHours: null,
 };
 
 const eventRecord = (
@@ -49,9 +54,51 @@ const eventRecord = (
   lastAnsweredAt: null,
   timeZone: null,
   series: null,
+  task: null,
+  isScheduleBlock: false,
   source: null,
   ...overrides,
 });
+
+const taskRecord = (
+  id: string,
+  name: string,
+  position: number,
+  overrides: Partial<TaskRecord> = {},
+): TaskRecord => ({
+  id,
+  name,
+  parentId: null,
+  position,
+  isDone: false,
+  estimateMinutes: null,
+  card: null,
+  trackedEventCount: 0,
+  priority: 'normal',
+  due: null,
+  planBetween: null,
+  ...overrides,
+});
+
+const workTasks: TaskRecord[] = [
+  taskRecord('task-report', 'Write the report', 0),
+  taskRecord('task-outline', 'Outline the report', 0, { parentId: 'task-report' }),
+  taskRecord('task-shipped', 'Ship the release', 1, { isDone: true }),
+  taskRecord('task-email', 'Answer email', 2),
+];
+
+const linkedTaskOf = (taskId: string | null) => {
+  const linkedTask = workTasks.find((workTask) => workTask.id === taskId);
+  return linkedTask === undefined
+    ? null
+    : {
+        id: linkedTask.id,
+        name: linkedTask.name,
+        groupId: 'group-work',
+        groupName: 'Work',
+        done: linkedTask.isDone,
+      };
+};
 
 const trackedOverrides = (finishedAt: string | null): Partial<CalendarEventRecord> => ({
   kind: 'tracked',
@@ -65,6 +112,7 @@ let deletedRunStarts = new Set<string>();
 let movedRunTimes = new Map<string, { startsAt: string; endsAt: string }>();
 let receivedOccurrenceWrites: { method: string; originalStart: string; body: unknown }[] = [];
 let receivedCreates: unknown[] = [];
+let receivedEventPatches: unknown[] = [];
 
 const RUN_SERIES_ID = 'series-run';
 const WEEKLY_TUESDAY: RepeatRule = {
@@ -154,6 +202,7 @@ beforeEach(() => {
   movedRunTimes = new Map();
   receivedOccurrenceWrites = [];
   receivedCreates = [];
+  receivedEventPatches = [];
   backendServer.use(
     http.get('/backend/categories', () => HttpResponse.json([focusCategory])),
     http.get('/backend/account/time-tracking', () =>
@@ -216,15 +265,39 @@ beforeEach(() => {
       serverEvents.push(createdEvent);
       return HttpResponse.json(createdEvent, { status: 201 });
     }),
+    http.get('/backend/task-groups', () =>
+      HttpResponse.json([
+        { id: 'group-work', name: 'Work' },
+        { id: 'group-home', name: 'Home' },
+      ]),
+    ),
+    http.get('/backend/task-groups/:taskGroupId/tasks', ({ params }) =>
+      HttpResponse.json({
+        group: {
+          id: params.taskGroupId,
+          name: params.taskGroupId === 'group-work' ? 'Work' : 'Home',
+        },
+        tasks: params.taskGroupId === 'group-work' ? workTasks : [],
+        openCount: 3,
+        doneCount: 1,
+      }),
+    ),
     http.patch('/backend/calendar/events/:eventId', async ({ params, request }) => {
-      const { start, end, inputZone, ...eventChanges } = (await request.json()) as Partial<
+      const eventBody = (await request.json()) as Partial<
         Pick<CalendarEventRecord, 'title' | 'categoryId'>
       > &
-        WallClockWrite & { inputZone?: string };
+        WallClockWrite & { inputZone?: string; taskId?: string | null };
+      receivedEventPatches.push(eventBody);
+      const { start, end, inputZone, taskId, ...eventChanges } = eventBody;
       expect(inputZone === undefined || inputZone === 'America/Los_Angeles').toBe(true);
       serverEvents = serverEvents.map((calendarEvent) =>
         calendarEvent.id === params.eventId
-          ? { ...calendarEvent, ...eventChanges, ...instantsOf({ start, end }) }
+          ? {
+              ...calendarEvent,
+              ...eventChanges,
+              ...instantsOf({ start, end }),
+              ...(taskId === undefined ? {} : { task: linkedTaskOf(taskId) }),
+            }
           : calendarEvent,
       );
       return HttpResponse.json(
@@ -698,4 +771,286 @@ test('the calendar shows its days and times in the zone set in Settings', async 
   expect(receivedRanges).toEqual([{ start: '2026-11-02', days: '7', timeZone: 'Asia/Manila' }]);
   expect(screen.getByRole('button', { name: /^Gym 11:00 – 12:00/ })).toBeInTheDocument();
   expect(screen.getByLabelText('Now, 10:02')).toBeInTheDocument();
+});
+
+test('a planned event links to an open top-level task and shows it with Start', async () => {
+  const user = await renderCalendar();
+
+  await user.click(eventButton('Gym'));
+  const plannedPanel = screen.getByRole('region', { name: 'Planned event' });
+  const groupSelect = within(plannedPanel).getByRole('combobox', { name: 'Task group' });
+  await waitFor(() => expect(groupSelect).toBeEnabled());
+  await user.selectOptions(groupSelect, 'group-work');
+  const taskSelect = within(plannedPanel).getByRole('combobox', { name: 'Task' });
+  await waitFor(() => expect(taskSelect).toBeEnabled());
+  expect(
+    within(taskSelect)
+      .getAllByRole('option')
+      .map((taskOption) => taskOption.textContent),
+  ).toEqual(['Write the report', 'Answer email']);
+  await user.selectOptions(taskSelect, 'task-email');
+  await user.click(within(plannedPanel).getByRole('button', { name: 'Save' }));
+
+  const linkedTaskCard = await screen.findByRole('group', { name: 'Linked task' });
+  expect(within(linkedTaskCard).getByText('Answer email')).toBeInTheDocument();
+  expect(within(linkedTaskCard).getByRole('button', { name: 'Start' })).toBeInTheDocument();
+  expect(receivedEventPatches.at(-1)).toMatchObject({ taskId: 'task-email' });
+});
+
+test('choosing No task clears the link', async () => {
+  serverEvents = serverEvents.map((calendarEvent) =>
+    calendarEvent.id === 'event-gym'
+      ? { ...calendarEvent, task: linkedTaskOf('task-report') }
+      : calendarEvent,
+  );
+  const user = await renderCalendar();
+
+  await user.click(eventButton('Gym'));
+  const plannedPanel = screen.getByRole('region', { name: 'Planned event' });
+  const groupSelect = within(plannedPanel).getByRole('combobox', { name: 'Task group' });
+  await waitFor(() => expect(groupSelect).toBeEnabled());
+  expect(groupSelect).toHaveValue('group-work');
+  await user.selectOptions(groupSelect, '');
+  await user.click(within(plannedPanel).getByRole('button', { name: 'Save' }));
+
+  await waitFor(() => expect(receivedEventPatches.at(-1)).toMatchObject({ taskId: null }));
+});
+
+test('Start on a linked block starts tracking the task and the block stays', async () => {
+  serverEvents = serverEvents.map((calendarEvent) =>
+    calendarEvent.id === 'event-gym'
+      ? { ...calendarEvent, task: linkedTaskOf('task-report') }
+      : calendarEvent,
+  );
+  let runningRecords: RunningItemRecord[] = [];
+  const startedTaskIds: string[] = [];
+  backendServer.use(
+    http.get('/backend/tracking/running', () => HttpResponse.json(runningRecords)),
+    http.post('/backend/tasks/:taskId/start', ({ params }) => {
+      startedTaskIds.push(String(params.taskId));
+      const startedRecord: RunningItemRecord = {
+        id: 'event-report',
+        kind: 'tracked',
+        title: 'Write the report',
+        categoryId: null,
+        startsAt: new Date().toISOString(),
+        endsAt: null,
+        finishedAt: null,
+        lastAnsweredAt: null,
+        timeZone: null,
+        series: null,
+        task: null,
+        isScheduleBlock: false,
+        source: { kind: 'task', id: String(params.taskId), groupId: 'group-work' },
+        estimateMinutes: null,
+        sourceName: 'Work',
+      };
+      runningRecords = [startedRecord];
+      return HttpResponse.json(startedRecord, { status: 201 });
+    }),
+  );
+  const user = userEvent.setup();
+  renderWithToaster(
+    <TrackingProvider>
+      <TrackingPill />
+      <CalendarPage />
+    </TrackingProvider>,
+  );
+  await screen.findByRole('heading', { level: 1 });
+
+  await user.click(eventButton('Gym'));
+  const plannedPanel = screen.getByRole('region', { name: 'Planned event' });
+  await user.click(within(plannedPanel).getByRole('button', { name: 'Start' }));
+
+  expect(await screen.findByRole('button', { name: '1 running: show all' })).toBeInTheDocument();
+  expect(startedTaskIds).toEqual(['task-report']);
+  expect(eventButton('Gym')).toBeInTheDocument();
+});
+
+test("a done task's block shows it is done", async () => {
+  serverEvents = serverEvents.map((calendarEvent) =>
+    calendarEvent.id === 'event-gym'
+      ? { ...calendarEvent, task: linkedTaskOf('task-shipped') }
+      : calendarEvent,
+  );
+  const user = await renderCalendar();
+
+  expect(eventButton('Gym')).toHaveAccessibleName(/task done/);
+  await user.click(eventButton('Gym'));
+  const plannedPanel = screen.getByRole('region', { name: 'Planned event' });
+  expect(within(plannedPanel).getByText('Done · Work')).toBeInTheDocument();
+  expect(within(plannedPanel).queryByRole('button', { name: 'Start' })).toBeNull();
+});
+
+test('repeating events and schedule blocks offer no Task field', async () => {
+  serverEvents = serverEvents.map((calendarEvent) =>
+    calendarEvent.id === 'event-gym' ? { ...calendarEvent, isScheduleBlock: true } : calendarEvent,
+  );
+  const user = await renderCalendar();
+
+  await user.click(eventButton('Gym'));
+  expect(
+    within(screen.getByRole('region', { name: 'Planned event' })).queryByRole('combobox', {
+      name: 'Task group',
+    }),
+  ).toBeNull();
+  await user.click(screen.getAllByRole('button', { name: /^Morning run / })[0] as HTMLElement);
+  expect(
+    within(screen.getByRole('region', { name: 'Planned event' })).queryByRole('combobox', {
+      name: 'Task group',
+    }),
+  ).toBeNull();
+});
+
+const proposedBlocks = [
+  {
+    taskId: 'task-report',
+    taskName: 'Write the report',
+    groupId: 'group-work',
+    groupName: 'Work',
+    startsAt: at(5, 20),
+    endsAt: at(5, 21),
+    due: null,
+    late: false,
+  },
+  {
+    taskId: 'task-email',
+    taskName: 'Answer email',
+    groupId: 'group-work',
+    groupName: 'Work',
+    startsAt: at(5, 21),
+    endsAt: at(5, 21, 30),
+    due: at(5, 21),
+    late: true,
+  },
+];
+
+const answerPlans = () => {
+  const proposalBodies: { excludeTaskIds: string[]; [field: string]: unknown }[] = [];
+  const acceptBodies: unknown[] = [];
+  backendServer.use(
+    http.post('/backend/plans/proposal', async ({ request }) => {
+      const proposalBody = (await request.json()) as { excludeTaskIds: string[] };
+      proposalBodies.push(proposalBody);
+      return HttpResponse.json({
+        planStart: at(5, 18, 15),
+        rangeEnd: at(8, 2),
+        blocks: proposedBlocks.filter(
+          (proposedBlock) => !proposalBody.excludeTaskIds.includes(proposedBlock.taskId),
+        ),
+        unplaced: [
+          {
+            taskId: 'task-later',
+            taskName: 'Sort the photos',
+            groupName: 'Home',
+            reason: 'noEstimate',
+          },
+        ],
+      });
+    }),
+    http.post('/backend/plans/accept', async ({ request }) => {
+      const acceptBody = (await request.json()) as {
+        blocks: { taskId: string; startsAt: string; endsAt: string }[];
+      };
+      acceptBodies.push(acceptBody);
+      const acceptedEvents = acceptBody.blocks.map((acceptedBlock) =>
+        eventRecord(
+          `event-${acceptedBlock.taskId}`,
+          linkedTaskOf(acceptedBlock.taskId)?.name ?? acceptedBlock.taskId,
+          acceptedBlock.startsAt,
+          acceptedBlock.endsAt,
+          { task: linkedTaskOf(acceptedBlock.taskId) },
+        ),
+      );
+      serverEvents.push(...acceptedEvents);
+      return HttpResponse.json({ events: acceptedEvents }, { status: 201 });
+    }),
+  );
+  return { proposalBodies, acceptBodies };
+};
+
+const makePlan = async (user: ReturnType<typeof userEvent.setup>, dayLabel: string) => {
+  await user.click(screen.getByRole('button', { name: 'Plan' }));
+  const planDialog = screen.getByRole('dialog', { name: 'Make a plan', hidden: true });
+  await within(planDialog).findByRole('checkbox', { name: 'Work', hidden: true });
+  await user.click(within(planDialog).getByRole('radio', { name: dayLabel, hidden: true }));
+  return planDialog;
+};
+
+const proposedButton = (taskName: string) =>
+  screen.getByRole('button', { name: new RegExp(`^${taskName} .*proposed`) });
+
+test('Plan shows dashed proposed blocks and lists what did not fit', async () => {
+  const { proposalBodies } = answerPlans();
+  const user = await renderCalendar();
+
+  const planDialog = await makePlan(user, 'Next 7 days');
+  await user.click(within(planDialog).getByRole('button', { name: 'Make plan', hidden: true }));
+
+  const planPanel = await screen.findByRole('region', { name: 'Plan' });
+  expect(proposalBodies).toEqual([{ days: 7, excludeTaskIds: [], pinned: [] }]);
+  expect(proposedButton('Write the report')).toBeInTheDocument();
+  expect(proposedButton('Answer email')).toHaveAccessibleName(/late/);
+  expect(within(planPanel).getByText('Late')).toBeInTheDocument();
+  expect(
+    within(within(planPanel).getByRole('list', { name: 'Not planned' })).getByText('No estimate'),
+  ).toBeInTheDocument();
+});
+
+test('Reject asks again without the task, and Accept all saves the rest and reloads', async () => {
+  const { proposalBodies, acceptBodies } = answerPlans();
+  const user = await renderCalendar();
+  const planDialog = await makePlan(user, 'Today');
+  await user.click(within(planDialog).getByRole('button', { name: 'Make plan', hidden: true }));
+  const planPanel = await screen.findByRole('region', { name: 'Plan' });
+
+  await user.click(within(planPanel).getByRole('button', { name: 'Reject Answer email' }));
+  await waitFor(() => expect(proposalBodies).toHaveLength(2));
+  expect(proposalBodies[1]).toEqual({ days: 1, excludeTaskIds: ['task-email'], pinned: [] });
+  await waitFor(() =>
+    expect(within(planPanel).queryByRole('button', { name: 'Reject Answer email' })).toBeNull(),
+  );
+
+  const rangeLoadsBefore = receivedRanges.length;
+  await user.click(within(planPanel).getByRole('button', { name: 'Accept all' }));
+
+  await waitFor(() => expect(screen.queryByRole('region', { name: 'Plan' })).toBeNull());
+  expect(acceptBodies).toEqual([
+    { blocks: [{ taskId: 'task-report', startsAt: at(5, 20), endsAt: at(5, 21) }] },
+  ]);
+  expect(receivedRanges.length).toBeGreaterThan(rangeLoadsBefore);
+  expect(
+    await screen.findByRole('button', { name: /^Write the report / }),
+  ).not.toHaveAccessibleName(/proposed/);
+});
+
+test('Discard drops the plan, and the group choice is remembered', async () => {
+  const { proposalBodies } = answerPlans();
+  const user = await renderCalendar();
+  const planDialog = await makePlan(user, 'Today');
+  await user.click(within(planDialog).getByRole('checkbox', { name: 'Home', hidden: true }));
+  await user.click(within(planDialog).getByRole('button', { name: 'Make plan', hidden: true }));
+  const planPanel = await screen.findByRole('region', { name: 'Plan' });
+
+  await user.click(within(planPanel).getByRole('button', { name: 'Discard' }));
+
+  expect(screen.queryByRole('region', { name: 'Plan' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /proposed/ })).toBeNull();
+  expect(proposalBodies[0]).toMatchObject({ groupIds: ['group-work'] });
+  expect(JSON.parse(window.localStorage.getItem('daibx:plan-choice') ?? '{}')).toEqual({
+    dayCount: 1,
+    groupIds: ['group-work'],
+  });
+});
+
+test('a plan with no group picked is refused before anything is sent', async () => {
+  const { proposalBodies } = answerPlans();
+  const user = await renderCalendar();
+  const planDialog = await makePlan(user, 'Today');
+  await user.click(within(planDialog).getByRole('checkbox', { name: 'Home', hidden: true }));
+  await user.click(within(planDialog).getByRole('checkbox', { name: 'Work', hidden: true }));
+  await user.click(within(planDialog).getByRole('button', { name: 'Make plan', hidden: true }));
+
+  expect(await screen.findByText('Pick a group')).toBeInTheDocument();
+  expect(proposalBodies).toEqual([]);
 });

@@ -23,6 +23,8 @@ const plannedRecord: CalendarEventRecord = {
   lastAnsweredAt: null,
   timeZone: null,
   series: null,
+  task: null,
+  isScheduleBlock: false,
   source: null,
 };
 

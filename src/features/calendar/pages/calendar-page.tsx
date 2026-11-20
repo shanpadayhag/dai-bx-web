@@ -16,6 +16,8 @@ import {
   clockTextMinute,
   shownRangeOf,
 } from '@/features/calendar/entities/calendar-days';
+import type CalendarEvent from '@/features/calendar/entities/calendar-event';
+import { canLinkTask } from '@/features/calendar/entities/calendar-event';
 import { calendarEventFromRecord } from '@/features/calendar/entities/calendar-event-record';
 import { calendarDatesOf } from '@/features/calendar/entities/calendar-range';
 import useCalendarEvents, {
@@ -26,6 +28,11 @@ import useCalendarEvents, {
   TRACKED_EVENT_FIELD_PREFIX,
 } from '@/features/calendar/events/use-calendar-events';
 import useCalendarStates from '@/features/calendar/states/use-calendar-states';
+import PlanPanel from '@/features/planning/components/plan-panel';
+import PlanPopover from '@/features/planning/components/plan-popover';
+import { proposedEventId, proposedTaskIdOf } from '@/features/planning/entities/plan';
+import usePlanEvents, { PLAN_POPOVER_ID } from '@/features/planning/events/use-plan-events';
+import usePlanStates from '@/features/planning/states/use-plan-states';
 import { useTracking } from '@/features/tracking/states/tracking-context';
 
 const NOW_TICK_MILLIS = 30_000;
@@ -38,8 +45,19 @@ const CalendarPage = () => {
   const { handleLoadPage, handleTick, shownEventRecords, calendarTimeZone, now } = events;
   const { calendarView, anchorDate, categories, selectedEventId } = states;
 
-  const { trackingRevision, handleOpenFinish } = useTracking();
-  const { handleReloadRange } = events;
+  const { trackingRevision, handleOpenFinish, handleStartTask, runningSourceIds } = useTracking();
+  const { handleReloadRange, handleLoadTaskGroups } = events;
+  const planStates = usePlanStates();
+  const allGroupIds = useMemo(
+    () => (states.taskGroupChoices ?? []).map((taskGroup) => taskGroup.id),
+    [states.taskGroupChoices],
+  );
+  const planEvents = usePlanEvents(planStates, {
+    allGroupIds,
+    onShowPlanDays: events.handleShowPlanDays,
+    onPlanAccepted: handleReloadRange,
+  });
+  const { plan } = planStates;
   const shownTrackingRevisionRef = useRef(trackingRevision);
 
   useEffect(() => {
@@ -80,9 +98,35 @@ const CalendarPage = () => {
     );
   }, [categories, shownEventRecords]);
 
+  const selectedEvent =
+    calendarEvents.find((calendarEvent) => calendarEvent.id === selectedEventId) ?? null;
+  const isTaskFieldShown = selectedEvent !== null && canLinkTask(selectedEvent);
+
+  useEffect(() => {
+    if (isTaskFieldShown) void handleLoadTaskGroups();
+  }, [handleLoadTaskGroups, isTaskFieldShown]);
+
+  const shownEvents = useMemo(
+    () => [
+      ...calendarEvents,
+      ...(plan?.blocks ?? []).map((proposedBlock): CalendarEvent => ({
+        id: proposedEventId(proposedBlock.taskId),
+        kind: 'planned',
+        title: proposedBlock.taskName,
+        category: null,
+        startsAt: proposedBlock.startsAt,
+        endsAt: proposedBlock.endsAt,
+        finishedAt: null,
+        source: null,
+        proposal: { isLate: proposedBlock.isLate },
+      })),
+    ],
+    [calendarEvents, plan],
+  );
+
   const calendarDays = useMemo(
-    () => arrangeCalendarDays(calendarDates, calendarEvents, now, calendarTimeZone),
-    [calendarEvents, calendarTimeZone, calendarDates, now],
+    () => arrangeCalendarDays(calendarDates, shownEvents, now, calendarTimeZone),
+    [shownEvents, calendarTimeZone, calendarDates, now],
   );
 
   if (states.optimisticCalendar === null || anchorDate === null) {
@@ -110,8 +154,6 @@ const CalendarPage = () => {
   }
 
   const isDayView = calendarView === 'day';
-  const selectedEvent =
-    calendarEvents.find((calendarEvent) => calendarEvent.id === selectedEventId) ?? null;
 
   return (
     <div className="grid gap-6">
@@ -137,6 +179,14 @@ const CalendarPage = () => {
           </Button>
         </div>
         <div className="flex items-center gap-2">
+          <PlanPopover
+            popoverId={PLAN_POPOVER_ID}
+            planChoice={planStates.planChoice}
+            taskGroups={states.taskGroupChoices}
+            isAskingPlan={planStates.isAskingPlan}
+            onOpen={() => void handleLoadTaskGroups()}
+            onMakePlan={planEvents.handleMakePlan}
+          />
           <CalendarViewSwitch selectedView={calendarView} onSelectView={events.handleSelectView} />
           <Button onClick={() => events.handleOpenNewEvent(null)}>
             <Plus />
@@ -154,9 +204,15 @@ const CalendarPage = () => {
           onDraftEvent={events.handleOpenNewEvent}
           scheduledMoves={states.scheduledMoves}
           timeZone={calendarTimeZone}
-          onRetimeEvent={(eventId, eventTimes) =>
-            void events.handleRetimePlannedEvent(eventId, eventTimes)
-          }
+          onRetimeEvent={(eventId, eventTimes) => {
+            const proposedTaskId = proposedTaskIdOf(eventId);
+            if (proposedTaskId === null) {
+              void events.handleRetimePlannedEvent(eventId, eventTimes);
+              return;
+            }
+            events.handleSelectEvent(eventId);
+            planEvents.handlePinBlock(proposedTaskId, eventTimes);
+          }}
         />
         <CalendarAside
           panelId={EVENT_PANEL_ID}
@@ -177,6 +233,27 @@ const CalendarPage = () => {
           }
           onDeleteEvent={(eventId) => void events.handleDeleteEvent(eventId)}
           onFinishEvent={handleOpenFinish}
+          runningSourceIds={runningSourceIds}
+          taskGroups={states.taskGroupChoices}
+          taskChoicesByGroupId={states.taskChoicesByGroupId}
+          onLoadGroupTasks={events.handleLoadGroupTasks}
+          onStartTask={handleStartTask}
+          planPanel={
+            plan === null ? null : (
+              <PlanPanel
+                plan={plan}
+                timeZone={calendarTimeZone}
+                selectedTaskId={selectedEventId === null ? null : proposedTaskIdOf(selectedEventId)}
+                isAskingPlan={planStates.isAskingPlan}
+                isAcceptingPlan={planStates.isAcceptingPlan}
+                onSelectBlock={(taskId) => events.handleSelectEvent(proposedEventId(taskId))}
+                onAcceptBlock={planEvents.handleAcceptBlock}
+                onRejectBlock={planEvents.handleRejectBlock}
+                onAcceptAll={planEvents.handleAcceptAll}
+                onDiscard={planEvents.handleDiscardPlan}
+              />
+            )
+          }
         />
       </div>
       <NewEventDialog

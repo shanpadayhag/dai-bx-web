@@ -1,3 +1,5 @@
+import type { PlanningWeek } from '@/features/tracking/entities/planning-hours';
+
 type TimeTrackingSettings = {
   checkInsEnabled: boolean;
   checkInIntervalMinutes: number;
@@ -6,6 +8,7 @@ type TimeTrackingSettings = {
   workingHoursEnd: string;
   trackedCategoryId: string | null;
   calendarTimeZone: string | null;
+  planningHours: PlanningWeek | null;
 };
 
 type TimeTrackingChanges = Partial<TimeTrackingSettings>;

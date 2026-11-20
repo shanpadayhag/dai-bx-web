@@ -1,5 +1,9 @@
 import {
+  ArrowDown,
+  CalendarDays,
   ChevronRight,
+  Clock,
+  Flag,
   GripVertical,
   KanbanSquare,
   MoreHorizontal,
@@ -14,8 +18,11 @@ import Badge from '@/core/components/atoms/badge';
 import CompletionCircle from '@/core/components/atoms/completion-circle';
 import IconButton from '@/core/components/atoms/icon-button';
 import joinClassNames from '@/core/class-names';
+import { partsInZone } from '@/core/zoned-time';
 import { formatEstimate } from '@/features/tasks/entities/estimate';
 import Task from '@/features/tasks/entities/task';
+import { formatDue, formatPlanBetween, isDuePast } from '@/features/tasks/entities/task-planning';
+import { useTracking } from '@/features/tracking/states/tracking-context';
 
 export const DRAGGED_TASK_DATA_TYPE = 'application/x-daibx-task';
 
@@ -50,6 +57,9 @@ const TaskRow = ({
   const [isDropTarget, setIsDropTarget] = useState(false);
   const hasSubtasks = task.tasks.length > 0;
   const doneSubtaskCount = task.tasks.filter((subtask) => subtask.isDone).length;
+  const { calendarTimeZone } = useTracking();
+  const todayDate = partsInZone(new Date(), calendarTimeZone).calendarDate;
+  const isOverdue = task.due !== null && !task.isDone && isDuePast(task.due, todayDate);
 
   return (
     <div
@@ -127,6 +137,32 @@ const TaskRow = ({
             <KanbanSquare aria-hidden="true" className="size-3 shrink-0" />
             <span className="truncate">{task.card.title}</span>
           </Link>
+        )}
+        {task.due === null ? null : (
+          <Badge tone={isOverdue ? 'warning' : 'neutral'} className="shrink-0">
+            <CalendarDays aria-hidden="true" />
+            <span className="sr-only">Due </span>
+            {formatDue(task.due, todayDate)}
+          </Badge>
+        )}
+        {task.priority === 'high' ? (
+          <Badge tone="danger" className="shrink-0">
+            <Flag aria-hidden="true" />
+            High
+          </Badge>
+        ) : null}
+        {task.priority === 'low' ? (
+          <Badge className="shrink-0">
+            <ArrowDown aria-hidden="true" />
+            Low
+          </Badge>
+        ) : null}
+        {task.planBetween === null ? null : (
+          <Badge className="hidden shrink-0 font-mono tabular-nums sm:inline-flex">
+            <Clock aria-hidden="true" />
+            <span className="sr-only">Plan between </span>
+            {formatPlanBetween(task.planBetween)}
+          </Badge>
         )}
       </span>
       <span className="flex items-center gap-1.5">

@@ -68,6 +68,7 @@ const storedTimeTrackingSettings: TimeTrackingSettings = {
   workingHoursEnd: '02:00',
   trackedCategoryId: null,
   calendarTimeZone: null,
+  planningHours: null,
 };
 
 let currentAccount = storedAccount;
@@ -592,6 +593,53 @@ test('the time tracking settings show what is saved, and each change saves', asy
       { workingHoursStart: '09:30' },
     ]),
   );
+});
+
+test('planning hours start as the working hours, take a custom week with a day off, and go back', async () => {
+  const user = await openSettings();
+  const sameHoursSwitch = screen.getByRole('switch', { name: 'Plan in my working hours' });
+  expect(sameHoursSwitch).toHaveAttribute('aria-checked', 'true');
+  expect(screen.queryByRole('list', { name: 'Planning hours' })).toBeNull();
+
+  await user.click(sameHoursSwitch);
+  const sundaySwitch = await screen.findByRole('switch', { name: 'Plan on Sunday' });
+  await user.click(sundaySwitch);
+  await waitFor(() => expect(sundaySwitch).toHaveAttribute('aria-checked', 'false'));
+  fireEvent.change(screen.getByLabelText('Monday starts'), { target: { value: '10:00' } });
+  fireEvent.blur(screen.getByLabelText('Monday starts'));
+  await waitFor(() => expect(timeTrackingPatches).toHaveLength(3));
+  await user.click(screen.getByRole('switch', { name: 'Plan in my working hours' }));
+
+  const workingDay = {
+    start: '16:00',
+    end: '02:00',
+  };
+  const customWeek = Array.from({ length: 7 }, () => workingDay);
+  const withSundayOff = [...customWeek.slice(0, 6), null];
+  await waitFor(() =>
+    expect(timeTrackingPatches).toEqual([
+      { planningHours: customWeek },
+      { planningHours: withSundayOff },
+      { planningHours: [{ ...workingDay, start: '10:00' }, ...withSundayOff.slice(1)] },
+      { planningHours: null },
+    ]),
+  );
+  expect(screen.queryByRole('list', { name: 'Planning hours' })).toBeNull();
+});
+
+test('a planning day that starts when it ends is refused', async () => {
+  currentTimeTrackingSettings = {
+    ...currentTimeTrackingSettings,
+    planningHours: Array.from({ length: 7 }, () => ({ start: '09:00', end: '17:00' })),
+  };
+  await openSettings();
+
+  fireEvent.change(screen.getByLabelText('Tuesday ends'), { target: { value: '09:00' } });
+  fireEvent.blur(screen.getByLabelText('Tuesday ends'));
+
+  expect(await screen.findByText('Check the hours')).toBeInTheDocument();
+  expect(screen.getByLabelText('Tuesday ends')).toHaveValue('17:00');
+  expect(timeTrackingPatches).toEqual([]);
 });
 
 test('a check-in gap outside 5 to 240 minutes is refused and put back', async () => {

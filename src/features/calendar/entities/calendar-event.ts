@@ -11,6 +11,14 @@ type CalendarEventSeries = {
   repeatRule: RepeatRule;
 };
 
+type LinkedTask = {
+  id: string;
+  name: string;
+  groupId: string;
+  groupName: string;
+  isDone: boolean;
+};
+
 type CalendarEvent = {
   id: string;
   kind: CalendarEventKind;
@@ -22,7 +30,16 @@ type CalendarEvent = {
   source: CalendarEventSource | null;
   series?: CalendarEventSeries;
   timeZone?: string;
+  linkedTask?: LinkedTask;
+  isScheduleBlock?: true;
+  proposal?: { isLate: boolean };
 };
+
+const canLinkTask = (calendarEvent: CalendarEvent): boolean =>
+  calendarEvent.kind === 'planned' &&
+  calendarEvent.proposal === undefined &&
+  calendarEvent.series === undefined &&
+  calendarEvent.isScheduleBlock !== true;
 
 const isEventRunning = (calendarEvent: CalendarEvent): boolean =>
   calendarEvent.kind === 'tracked' && calendarEvent.endsAt === null;
@@ -35,6 +52,6 @@ const trimmedEventMinutes = (calendarEvent: CalendarEvent): number =>
         Math.round((calendarEvent.finishedAt.getTime() - calendarEvent.endsAt.getTime()) / 60_000),
       );
 
-export type { CalendarEventKind, CalendarEventSeries };
-export { isEventRunning, trimmedEventMinutes };
+export type { CalendarEventKind, CalendarEventSeries, LinkedTask };
+export { canLinkTask, isEventRunning, trimmedEventMinutes };
 export default CalendarEvent;

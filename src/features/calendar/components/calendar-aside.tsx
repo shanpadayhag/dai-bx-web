@@ -1,5 +1,5 @@
 import { Layers } from 'lucide-react';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { categoryColorStyle, type Category } from '@/core/category';
 import EventDetailPanel from '@/features/calendar/components/event-detail-panel';
 import type CalendarEvent from '@/features/calendar/entities/calendar-event';
@@ -30,6 +30,7 @@ type CalendarAsideProps = PanelHandlers & {
   selectedEvent: CalendarEvent | null;
   now: Date;
   calendarTimeZone: string;
+  planPanel: ReactNode;
 };
 
 const CalendarAside = ({
@@ -38,9 +39,11 @@ const CalendarAside = ({
   selectedEvent,
   now,
   calendarTimeZone,
+  planPanel,
   ...panelHandlers
 }: CalendarAsideProps) => (
   <aside className="grid content-start gap-4">
+    {planPanel}
     <div id={panelId} className="grid scroll-mt-20">
       {selectedEvent === null ? (
         <p className="rounded-2xl border border-dashed border-border-strong p-4 text-[13px] text-muted-foreground">

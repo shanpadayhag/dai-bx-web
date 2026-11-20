@@ -26,6 +26,7 @@ type CalendarEventWrite = {
   inputZone?: string;
   timeZone?: string | null;
   repeat?: RepeatRule | null;
+  taskId?: string | null;
 };
 
 type DeletedAnswer = {

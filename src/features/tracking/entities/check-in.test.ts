@@ -24,6 +24,7 @@ const timeTrackingSettings: TimeTrackingSettings = {
   workingHoursEnd: '02:00',
   trackedCategoryId: null,
   calendarTimeZone: null,
+  planningHours: null,
 };
 
 describe('checkInDueAt', () => {

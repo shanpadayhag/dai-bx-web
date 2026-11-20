@@ -7,6 +7,14 @@ import type ScheduledMove from '@/features/calendar/entities/scheduled-move';
 type TrackedSourceRecord =
   { kind: 'task'; id: string; groupId: string } | { kind: 'card'; id: string; boardId: string };
 
+type LinkedTaskRecord = {
+  id: string;
+  name: string;
+  groupId: string;
+  groupName: string;
+  done: boolean;
+};
+
 type CalendarEventRecord = {
   id: string;
   kind: CalendarEventKind;
@@ -19,6 +27,8 @@ type CalendarEventRecord = {
   source: TrackedSourceRecord | null;
   timeZone: string | null;
   series: SeriesOccurrenceRecord | null;
+  task: LinkedTaskRecord | null;
+  isScheduleBlock: boolean;
 };
 
 type SeriesOccurrenceRecord = {
@@ -72,6 +82,18 @@ const calendarEventFromRecord = (
           repeatRule: eventRecord.series.repeat,
         },
       }),
+  ...(eventRecord.task === null
+    ? {}
+    : {
+        linkedTask: {
+          id: eventRecord.task.id,
+          name: eventRecord.task.name,
+          groupId: eventRecord.task.groupId,
+          groupName: eventRecord.task.groupName,
+          isDone: eventRecord.task.done,
+        },
+      }),
+  ...(eventRecord.isScheduleBlock ? { isScheduleBlock: true } : {}),
 });
 
 const seriesOccurrenceKeyOf = (eventRecord: CalendarEventRecord): SeriesOccurrenceKey | null =>
@@ -86,6 +108,7 @@ const scheduledMoveFromRecord = (moveRecord: ScheduledMoveRecord): ScheduledMove
 
 export type {
   CalendarRangeRecord,
+  LinkedTaskRecord,
   ScheduledMoveRecord,
   SeriesOccurrenceKey,
   SeriesOccurrenceRecord,

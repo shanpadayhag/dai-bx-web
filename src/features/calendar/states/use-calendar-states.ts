@@ -6,6 +6,8 @@ import type { CalendarView } from '@/features/calendar/entities/calendar-address
 import type { EventTimes } from '@/features/calendar/entities/calendar-drag';
 import type { OptimisticCalendar } from '@/features/calendar/entities/optimistic-calendar';
 import type ScheduledMove from '@/features/calendar/entities/scheduled-move';
+import type { TaskChoice } from '@/features/calendar/entities/task-choice';
+import type { TaskGroupChoice } from '@/features/calendar/components/event-task-field';
 import type TimeTrackingSettings from '@/features/tracking/entities/time-tracking-settings';
 
 const useCalendarStates = () => {
@@ -24,6 +26,10 @@ const useCalendarStates = () => {
   const [occurrenceScopeRequest, setOccurrenceScopeRequest] =
     useState<OccurrenceScopeRequest | null>(null);
   const [now, setNow] = useState(() => new Date());
+  const [taskGroupChoices, setTaskGroupChoices] = useState<readonly TaskGroupChoice[] | null>(null);
+  const [taskChoicesByGroupId, setTaskChoicesByGroupId] = useState<
+    Readonly<Record<string, readonly TaskChoice[]>>
+  >({});
 
   return {
     calendarView,
@@ -50,6 +56,10 @@ const useCalendarStates = () => {
     setOccurrenceScopeRequest,
     now,
     setNow,
+    taskGroupChoices,
+    setTaskGroupChoices,
+    taskChoicesByGroupId,
+    setTaskChoicesByGroupId,
   };
 };
 

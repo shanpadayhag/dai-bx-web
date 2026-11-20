@@ -17,6 +17,8 @@ const eventRecord = (
   lastAnsweredAt: null,
   timeZone: null,
   series: null,
+  task: null,
+  isScheduleBlock: false,
   source: null,
 });
 

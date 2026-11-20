@@ -670,6 +670,8 @@ test('Start in the card detail runs the card and turns into Running', async () =
         lastAnsweredAt: null,
         timeZone: null,
         series: null,
+        task: null,
+        isScheduleBlock: false,
         source: { kind: 'card', id: startedCardId, boardId: 'board-personal' },
         estimateMinutes: null,
         sourceName: 'Personal',

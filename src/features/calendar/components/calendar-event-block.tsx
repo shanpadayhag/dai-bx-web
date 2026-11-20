@@ -1,4 +1,4 @@
-import { Repeat } from 'lucide-react';
+import { CheckCircle2, Repeat } from 'lucide-react';
 import type { CSSProperties, PointerEvent } from 'react';
 import { categoryColorStyle } from '@/core/category';
 import joinClassNames from '@/core/class-names';
@@ -39,6 +39,8 @@ const CalendarEventBlock = ({
   const isRoomy = durationMinutes >= 75;
   const timeRangeLabel = formatEventTimeRange(calendarEvent, timeZone);
   const isPlanned = calendarEvent.kind === 'planned';
+  const isTaskDone = calendarEvent.linkedTask?.isDone === true;
+  const proposal = calendarEvent.proposal;
   const canResize = isPlanned && !piece.continuesAfter;
   const blockStyle: CSSProperties = {
     ...(calendarEvent.category === null ? {} : categoryColorStyle(calendarEvent.category)),
@@ -59,6 +61,9 @@ const CalendarEventBlock = ({
         aria-label={[
           `${calendarEvent.title} ${timeRangeLabel}`,
           ...(calendarEvent.series === undefined ? [] : ['repeats']),
+          ...(isTaskDone ? ['task done'] : []),
+          ...(proposal === undefined ? [] : ['proposed']),
+          ...(proposal?.isLate === true ? ['late'] : []),
           ...(trimmedMinutes > 0 ? [`${trimmedMinutes} minutes trimmed off`] : []),
         ].join(', ')}
         aria-current={isSelected ? 'true' : undefined}
@@ -68,13 +73,15 @@ const CalendarEventBlock = ({
         }
         className={joinClassNames(
           'relative size-full rounded-lg text-left transition-[box-shadow,filter] duration-150 hover:brightness-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-          calendarEvent.category === null
-            ? calendarEvent.kind === 'planned'
-              ? 'border border-dashed border-border-strong bg-surface text-foreground'
-              : 'bg-surface-strong text-foreground'
-            : calendarEvent.kind === 'planned'
-              ? 'category-soft'
-              : 'category-solid',
+          proposal !== undefined
+            ? 'border-2 border-dashed border-primary/70 bg-background/60 text-foreground'
+            : calendarEvent.category === null
+              ? calendarEvent.kind === 'planned'
+                ? 'border border-dashed border-border-strong bg-surface text-foreground'
+                : 'bg-surface-strong text-foreground'
+              : calendarEvent.kind === 'planned'
+                ? 'category-soft'
+                : 'category-solid',
           calendarEvent.kind === 'tracked' && 'shadow-soft',
           cascadeLevel === 1 && !isRunning && 'ring-2 ring-background',
           isRunning && 'shadow-lift ring-2 ring-foreground/70 ring-offset-2 ring-offset-background',
@@ -92,10 +99,14 @@ const CalendarEventBlock = ({
             {calendarEvent.series === undefined ? null : (
               <Repeat aria-hidden="true" className="mt-px size-3 shrink-0 opacity-70" />
             )}
+            {isTaskDone ? (
+              <CheckCircle2 aria-hidden="true" className="mt-px size-3 shrink-0" />
+            ) : null}
             <span
               className={joinClassNames(
                 'min-w-0 text-xs leading-tight font-medium',
                 isRoomy ? 'line-clamp-2' : 'truncate',
+                isTaskDone && 'line-through opacity-60',
               )}
             >
               {calendarEvent.title}
@@ -106,6 +117,9 @@ const CalendarEventBlock = ({
               {timeRangeLabel}
             </span>
           )}
+          {proposal?.isLate === true && !isShort ? (
+            <span className="text-[11px] leading-tight font-semibold text-warning">Late</span>
+          ) : null}
         </span>
         {trimmedMinutes > 0 ? (
           <span

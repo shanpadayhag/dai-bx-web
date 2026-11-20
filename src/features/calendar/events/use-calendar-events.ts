@@ -51,7 +51,10 @@ import {
   visibleEventRecords,
 } from '@/features/calendar/entities/optimistic-calendar';
 import type useCalendarStates from '@/features/calendar/states/use-calendar-states';
+import { topLevelTaskChoices } from '@/features/calendar/entities/task-choice';
 import findCategories from '@/features/categories/actions/find-categories';
+import findGroupTasks from '@/features/tasks/actions/find-group-tasks';
+import findTaskGroups from '@/features/tasks/actions/find-task-groups';
 import findTimeTrackingSettings from '@/features/tracking/actions/find-time-tracking-settings';
 import type TimeTrackingSettings from '@/features/tracking/entities/time-tracking-settings';
 
@@ -70,6 +73,13 @@ type PlannedFormChanges = {
   endsAt: Date;
   timeZone?: string;
   repeat?: RepeatRule | null;
+  taskId?: string | null;
+};
+
+const readFormTaskId = (plannedForm: FormData): string | null | undefined => {
+  const taskIdEntry = plannedForm.get('taskId');
+  if (typeof taskIdEntry !== 'string') return undefined;
+  return taskIdEntry === '' ? null : taskIdEntry;
 };
 
 const calendarZoneOf = (timeTrackingSettings: TimeTrackingSettings | null): string =>
@@ -116,6 +126,9 @@ const useCalendarEvents = (states: ReturnType<typeof useCalendarStates>) => {
     setNewEventDraft,
     setIsSavingNewEvent,
     setOccurrenceScopeRequest,
+    taskGroupChoices,
+    setTaskGroupChoices,
+    setTaskChoicesByGroupId,
   } = states;
   const router = useRouter();
   const lastWriteIdRef = useRef(0);
@@ -233,6 +246,39 @@ const useCalendarEvents = (states: ReturnType<typeof useCalendarStates>) => {
   const handleShowToday = useCallback(() => {
     void showRange(calendarView, partsInZone(new Date(), calendarTimeZone).calendarDate);
   }, [calendarTimeZone, calendarView, showRange]);
+
+  const handleShowPlanDays = useCallback(
+    (dayCount: 1 | 7) => {
+      const shownView = dayCount === 7 ? 'week' : calendarView;
+      if (shownView !== calendarView) localStorageCalendarViewSource.saveView(shownView);
+      void showRange(shownView, partsInZone(new Date(), calendarTimeZone).calendarDate);
+    },
+    [calendarTimeZone, calendarView, showRange],
+  );
+
+  const handleLoadTaskGroups = useCallback(async () => {
+    if (taskGroupChoices !== null) return;
+    try {
+      const taskGroups = await findTaskGroups();
+      setTaskGroupChoices(taskGroups.map(({ id, name }) => ({ id, name })));
+    } catch (loadError) {
+      reportAppError(loadError);
+    }
+  }, [setTaskGroupChoices, taskGroupChoices]);
+
+  const handleLoadGroupTasks = useCallback(
+    (groupId: string) => {
+      findGroupTasks(groupId)
+        .then((groupTasks) =>
+          setTaskChoicesByGroupId((currentChoices) => ({
+            ...currentChoices,
+            [groupId]: topLevelTaskChoices(groupTasks),
+          })),
+        )
+        .catch(reportAppError);
+    },
+    [setTaskChoicesByGroupId],
+  );
 
   const handleSelectEvent = useCallback(
     (eventId: string | null) => setSelectedEventId(eventId),
@@ -414,6 +460,7 @@ const useCalendarEvents = (states: ReturnType<typeof useCalendarStates>) => {
       const pickedZone = readFormText(plannedForm, 'timeZone');
       const shownZone = eventRecord?.timeZone ?? calendarTimeZone;
       const repeatRule = readFormRepeatRule(plannedForm, 'repeat');
+      const taskId = readFormTaskId(plannedForm);
       return {
         title: readFormText(plannedForm, 'title'),
         categoryId: readFormCategoryId(plannedForm, `${PLANNED_EVENT_FIELD_PREFIX}-category`),
@@ -427,6 +474,7 @@ const useCalendarEvents = (states: ReturnType<typeof useCalendarStates>) => {
         ...(isSameRule(repeatRule, eventRecord?.series?.repeat ?? null)
           ? {}
           : { repeat: repeatRule }),
+        ...(taskId === undefined || taskId === (eventRecord?.task?.id ?? null) ? {} : { taskId }),
       };
     },
     [calendarTimeZone],
@@ -626,6 +674,9 @@ const useCalendarEvents = (states: ReturnType<typeof useCalendarStates>) => {
     handleSubmitNewEvent,
     handleSubmitPlannedEvent,
     handleRetimePlannedEvent,
+    handleLoadTaskGroups,
+    handleLoadGroupTasks,
+    handleShowPlanDays,
     handleSubmitTrackedTimes,
     handleSelectEventCategory,
     handleDeleteEvent,

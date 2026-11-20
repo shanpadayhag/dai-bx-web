@@ -21,6 +21,7 @@ const timeTrackingSettings: TimeTrackingSettings = {
   workingHoursEnd: '02:00',
   trackedCategoryId: null,
   calendarTimeZone: null,
+  planningHours: null,
 };
 
 const runningRecord = (
@@ -39,6 +40,8 @@ const runningRecord = (
   lastAnsweredAt: null,
   timeZone: null,
   series: null,
+  task: null,
+  isScheduleBlock: false,
   source: { kind: 'task', id: `task-${id}`, groupId: 'group-1' },
   estimateMinutes: null,
   sourceName: 'Today',

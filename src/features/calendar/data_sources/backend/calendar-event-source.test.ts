@@ -19,6 +19,8 @@ const plannedRecord: CalendarEventRecord = {
   source: null,
   timeZone: null,
   series: null,
+  task: null,
+  isScheduleBlock: false,
 };
 
 const runOccurrence: CalendarEventRecord = {

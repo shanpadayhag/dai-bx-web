@@ -1,6 +1,7 @@
 import type TaskCard from '@/features/tasks/entities/task-card';
+import type { TaskPlanning } from '@/features/tasks/entities/task-planning';
 
-type Task = {
+type Task = TaskPlanning & {
   id: string;
   parentId: string | null;
   position: number;

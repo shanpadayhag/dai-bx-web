@@ -28,6 +28,9 @@ export const buildTaskTree = (
         isTracking: taskRecord.parentId === null && trackingTaskIds.has(taskRecord.id),
         estimateMinutes: taskRecord.estimateMinutes,
         card: taskRecord.card,
+        priority: taskRecord.priority,
+        due: taskRecord.due,
+        planBetween: taskRecord.planBetween,
         tasks: buildChildren(taskRecord.id),
       }));
   return buildChildren(TOP_LEVEL_KEY);

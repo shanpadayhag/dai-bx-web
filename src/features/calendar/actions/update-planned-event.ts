@@ -16,6 +16,7 @@ type UpdatePlannedEventParams = {
   inputZone: string;
   timeZone?: string;
   repeat?: RepeatRule | null;
+  taskId?: string | null;
 };
 
 const updatePlannedEvent = async (
@@ -31,6 +32,7 @@ const updatePlannedEvent = async (
     inputZone: params.inputZone,
     ...(params.timeZone === undefined ? {} : { timeZone: params.timeZone }),
     ...(params.repeat === undefined ? {} : { repeat: params.repeat }),
+    ...(params.taskId === undefined ? {} : { taskId: params.taskId }),
   });
 };
 

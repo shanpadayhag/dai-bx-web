@@ -50,6 +50,11 @@ import updateTimeTrackingSettings, {
 } from '@/features/tracking/actions/update-time-tracking-settings';
 import type { TimeTrackingChanges } from '@/features/tracking/entities/time-tracking-settings';
 import { useTracking } from '@/features/tracking/states/tracking-context';
+import {
+  planningWeekFromWorkingHours,
+  withPlanningDay,
+  type PlanningDayField,
+} from '@/features/tracking/entities/planning-hours';
 
 type CheckInMinutesField = 'checkInIntervalMinutes' | 'firstCheckInMinutes';
 type WorkingHoursField = 'workingHoursStart' | 'workingHoursEnd';
@@ -190,6 +195,61 @@ const useSettingsEvents = (states: ReturnType<typeof useSettingsStates>) => {
       }
     },
     [refuseTimeTrackingInput, saveTimeTrackingChanges],
+  );
+
+  const handleToggleSameAsWorkingHours = useCallback(() => {
+    if (timeTrackingSettings === null) return;
+    void saveTimeTrackingChanges({
+      planningHours:
+        timeTrackingSettings.planningHours === null
+          ? planningWeekFromWorkingHours(
+              timeTrackingSettings.workingHoursStart,
+              timeTrackingSettings.workingHoursEnd,
+            )
+          : null,
+    });
+  }, [saveTimeTrackingChanges, timeTrackingSettings]);
+
+  const handleTogglePlanningDayOff = useCallback(
+    (dayIndex: number) => {
+      const planningHours = timeTrackingSettings?.planningHours ?? null;
+      if (timeTrackingSettings === null || planningHours === null) return;
+      const planningDay =
+        planningHours[dayIndex] === null
+          ? {
+              start: timeTrackingSettings.workingHoursStart,
+              end: timeTrackingSettings.workingHoursEnd,
+            }
+          : null;
+      try {
+        void saveTimeTrackingChanges({
+          planningHours: withPlanningDay(planningHours, dayIndex, planningDay),
+        });
+      } catch (planningError) {
+        refuseTimeTrackingInput(planningError);
+      }
+    },
+    [refuseTimeTrackingInput, saveTimeTrackingChanges, timeTrackingSettings],
+  );
+
+  const handleCommitPlanningDayTime = useCallback(
+    (dayIndex: number, dayField: PlanningDayField, clockText: string) => {
+      const planningHours = timeTrackingSettings?.planningHours ?? null;
+      const planningDay = planningHours?.[dayIndex] ?? null;
+      if (planningHours === null || planningDay === null) return;
+      try {
+        const clockTime = readClockTime(clockText);
+        void saveTimeTrackingChanges({
+          planningHours: withPlanningDay(planningHours, dayIndex, {
+            ...planningDay,
+            [dayField]: clockTime,
+          }),
+        });
+      } catch (planningError) {
+        refuseTimeTrackingInput(planningError);
+      }
+    },
+    [refuseTimeTrackingInput, saveTimeTrackingChanges, timeTrackingSettings],
   );
 
   const handleSelectTrackedCategory = useCallback(
@@ -543,6 +603,9 @@ const useSettingsEvents = (states: ReturnType<typeof useSettingsStates>) => {
     handleCommitCheckInMinutes,
     handleChooseCalendarTimeZone,
     handleCommitWorkingHours,
+    handleToggleSameAsWorkingHours,
+    handleTogglePlanningDayOff,
+    handleCommitPlanningDayTime,
     handleSelectTrackedCategory,
     handleRenameCategory,
     handleRecolorCategory,

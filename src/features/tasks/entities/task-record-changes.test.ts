@@ -16,6 +16,9 @@ const taskRecord = (
   estimateMinutes: null,
   card: null,
   trackedEventCount: 0,
+  priority: 'normal',
+  due: null,
+  planBetween: null,
 });
 
 const family: TaskRecord[] = [
@@ -37,7 +40,50 @@ const placeOf = (tasks: readonly TaskRecord[], taskId: string) => {
   return foundTask === undefined ? undefined : [foundTask.parentId, foundTask.position];
 };
 
+const highPlanning = {
+  priority: 'high',
+  due: { date: '2026-11-21', time: '17:00' },
+  planBetween: { start: '22:00', end: '02:00' },
+} as const;
+
 describe('applyTaskChange', () => {
+  test('setting planning fields changes only that task', () => {
+    const changedTasks = applyTaskChange(family, {
+      kind: 'update',
+      taskId: 'neighbour',
+      planning: highPlanning,
+    });
+
+    expect(changedTasks.find((task) => task.id === 'neighbour')).toMatchObject(highPlanning);
+    expect(changedTasks.find((task) => task.id === 'parent')?.priority).toBe('normal');
+  });
+
+  test('moving a task under another clears its planning fields', () => {
+    const plannedFamily = family.map((task) =>
+      task.id === 'neighbour' ? { ...task, ...highPlanning } : task,
+    );
+
+    const movedUnder = applyTaskChange(plannedFamily, {
+      kind: 'move',
+      taskId: 'neighbour',
+      parentId: 'parent',
+      position: 0,
+    });
+    const movedAlong = applyTaskChange(plannedFamily, {
+      kind: 'move',
+      taskId: 'neighbour',
+      parentId: null,
+      position: 0,
+    });
+
+    expect(movedUnder.find((task) => task.id === 'neighbour')).toMatchObject({
+      priority: 'normal',
+      due: null,
+      planBetween: null,
+    });
+    expect(movedAlong.find((task) => task.id === 'neighbour')).toMatchObject(highPlanning);
+  });
+
   test('completing a task completes everything beneath it', () => {
     const changedTasks = applyTaskChange(family, { kind: 'complete', taskId: 'child' });
 

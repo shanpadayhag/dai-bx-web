@@ -1,5 +1,6 @@
 import apiClient from '@/core/api/api-client';
 import type { GroupTasks, MovedGroupTasks } from '@/features/tasks/entities/group-tasks';
+import type { PlanBetween, TaskDue, TaskPriority } from '@/features/tasks/entities/task-planning';
 import type TaskRecord from '@/features/tasks/entities/task-record';
 
 export type NewTask = {
@@ -11,6 +12,9 @@ export type TaskChanges = {
   name?: string;
   estimateMinutes?: number | null;
   renameEvents?: boolean;
+  priority?: TaskPriority;
+  due?: TaskDue | null;
+  planBetween?: PlanBetween | null;
 };
 
 export type MoveTarget = {

@@ -26,6 +26,7 @@ const useTasksStates = () => {
   const [submittingDialogId, setSubmittingDialogId] = useState<string | null>(null);
   const [actionsTargetTaskId, setActionsTargetTaskId] = useState<string | null>(null);
   const [movingTaskId, setMovingTaskId] = useState<string | null>(null);
+  const [planningTaskId, setPlanningTaskId] = useState<string | null>(null);
   const [moveDialogGroupId, setMoveDialogGroupId] = useState<string | null>(null);
   const [moveDialogRecords, setMoveDialogRecords] = useState<readonly TaskRecord[] | null>(null);
   const [moveDialogTargets, setMoveDialogTargets] = useState<readonly MoveTarget[] | null>(null);
@@ -63,6 +64,8 @@ const useTasksStates = () => {
     setActionsTargetTaskId,
     movingTaskId,
     setMovingTaskId,
+    planningTaskId,
+    setPlanningTaskId,
     moveDialogGroupId,
     setMoveDialogGroupId,
     moveDialogRecords,

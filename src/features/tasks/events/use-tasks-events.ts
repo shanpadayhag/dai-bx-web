@@ -16,6 +16,7 @@ import importGroup from '@/features/tasks/actions/import-group';
 import moveTask from '@/features/tasks/actions/move-task';
 import setTaskDone from '@/features/tasks/actions/set-task-done';
 import updateTask, { readTaskEdit } from '@/features/tasks/actions/update-task';
+import updateTaskPlanning from '@/features/tasks/actions/update-task-planning';
 import updateTaskGroup from '@/features/tasks/actions/update-task-group';
 import localStorageTaskViewSource, {
   type TaskView,
@@ -36,6 +37,7 @@ import {
   visibleGroupTasks,
 } from '@/features/tasks/entities/optimistic-group-tasks';
 import type TaskGroup from '@/features/tasks/entities/task-group';
+import { readTaskPlanning } from '@/features/tasks/entities/task-planning';
 import type TaskRecord from '@/features/tasks/entities/task-record';
 import {
   collectSubtreeIds,
@@ -49,6 +51,7 @@ export const DELETE_GROUP_DIALOG_ID = 'delete-group-dialog';
 export const DELETE_TASK_DIALOG_ID = 'delete-task-dialog';
 export const TASK_ACTIONS_MENU_ID = 'task-actions-menu';
 export const MOVE_TASK_DIALOG_ID = 'move-task-dialog';
+export const TASK_PLANNING_DIALOG_ID = 'task-planning-dialog';
 export const IMPORT_GROUP_DIALOG_ID = 'import-group-dialog';
 export const RENAME_TASK_EVENTS_DIALOG_ID = 'rename-task-events-dialog';
 const MAX_IMPORT_FILE_BYTES = 1024 * 1024;
@@ -112,6 +115,8 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
     setSubmittingDialogId,
     setActionsTargetTaskId,
     setMovingTaskId,
+    planningTaskId,
+    setPlanningTaskId,
     setMoveDialogGroupId,
     setMoveDialogRecords,
     setMoveDialogTargets,
@@ -258,6 +263,9 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
             estimateMinutes: null,
             card: null,
             trackedEventCount: 0,
+            priority: 'normal',
+            due: null,
+            planBetween: null,
           },
         },
         () => addTask({ taskGroupId: selectedTaskGroupId, taskName: enteredName, parentTaskId }),
@@ -620,6 +628,40 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
     [moveDialogGroupId, moveDialogRecords, movingTaskId, sendMove, setMovingTaskId],
   );
 
+  const handleOpenPlanningDialog = useCallback(
+    (taskId: string) => {
+      hidePopover(TASK_ACTIONS_MENU_ID);
+      setPlanningTaskId(taskId);
+      showPopover(TASK_PLANNING_DIALOG_ID);
+    },
+    [setPlanningTaskId],
+  );
+
+  const handleSubmitTaskPlanning = useCallback(
+    (submitEvent: FormEvent<HTMLFormElement>) => {
+      submitEvent.preventDefault();
+      if (planningTaskId === null) return;
+      const planningFormData = new FormData(submitEvent.currentTarget);
+      try {
+        const taskPlanning = readTaskPlanning({
+          priority: readFormText(planningFormData, 'priority'),
+          dueDate: readFormText(planningFormData, 'dueDate'),
+          dueTime: readFormText(planningFormData, 'dueTime'),
+          windowStart: readFormText(planningFormData, 'windowStart'),
+          windowEnd: readFormText(planningFormData, 'windowEnd'),
+        });
+        hidePopover(TASK_PLANNING_DIALOG_ID);
+        void runTaskWrite({ kind: 'update', taskId: planningTaskId, planning: taskPlanning }, () =>
+          updateTaskPlanning(planningTaskId, taskPlanning),
+        );
+        setPlanningTaskId(null);
+      } catch (planningError) {
+        reportAppError(planningError);
+      }
+    },
+    [planningTaskId, runTaskWrite, setPlanningTaskId],
+  );
+
   const handleChooseImportFile = useCallback(
     async (chosenFile: File | null) => {
       if (chosenFile === null) return;
@@ -733,6 +775,8 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
     handleOpenMoveDialog,
     handleChooseMoveGroup,
     handleSubmitMove,
+    handleOpenPlanningDialog,
+    handleSubmitTaskPlanning,
     handleChooseImportFile,
     handleSubmitImport,
     handleLoadPage,

@@ -1,8 +1,15 @@
 import type TaskRecord from '@/features/tasks/entities/task-record';
+import { NO_TASK_PLANNING, type TaskPlanning } from '@/features/tasks/entities/task-planning';
 
 export type LocalTaskChange =
   | { kind: 'add'; taskRecord: TaskRecord }
-  | { kind: 'update'; taskId: string; taskName?: string; estimateMinutes?: number | null }
+  | {
+      kind: 'update';
+      taskId: string;
+      taskName?: string;
+      estimateMinutes?: number | null;
+      planning?: TaskPlanning;
+    }
   | { kind: 'complete'; taskId: string }
   | { kind: 'reopen'; taskId: string }
   | { kind: 'delete'; taskId: string }
@@ -103,7 +110,14 @@ const moveTask = (
     countSiblings(withGapClosed, parentId, taskId),
   );
   const placedTasks = withGapClosed.map((taskRecord) => {
-    if (taskRecord.id === taskId) return { ...taskRecord, parentId, position: targetPosition };
+    if (taskRecord.id === taskId) {
+      return {
+        ...taskRecord,
+        ...(parentId === null ? {} : NO_TASK_PLANNING),
+        parentId,
+        position: targetPosition,
+      };
+    }
     if (taskRecord.parentId === parentId && taskRecord.position >= targetPosition) {
       return { ...taskRecord, position: taskRecord.position + 1 };
     }
@@ -142,6 +156,7 @@ export const applyTaskChange = (
               ...(localChange.estimateMinutes === undefined
                 ? {}
                 : { estimateMinutes: localChange.estimateMinutes }),
+              ...localChange.planning,
             }
           : taskRecord,
       );

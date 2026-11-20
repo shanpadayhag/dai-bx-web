@@ -23,6 +23,7 @@ import NewRecoveryCodesDialog from '@/features/settings/components/new-recovery-
 import ReplaceAuthenticatorDialog from '@/features/settings/components/replace-authenticator-dialog';
 import SessionsDialog, { SESSIONS_DIALOG_ID } from '@/features/settings/components/sessions-dialog';
 import MinutesInput from '@/features/settings/components/minutes-input';
+import PlanningHoursSetting from '@/features/settings/components/planning-hours-setting';
 import SettingRow from '@/features/settings/components/setting-row';
 import SettingsSection from '@/features/settings/components/settings-section';
 import { LOW_RECOVERY_CODE_COUNT, RECOVERY_CODE_TOTAL } from '@/features/settings/entities/account';
@@ -304,6 +305,13 @@ const SettingsPage = () => {
               />
             </Field>
           </div>
+          <PlanningHoursSetting
+            planningHours={timeTracking.planningHours}
+            resetCount={timeTrackingResetCount}
+            onToggleSameAsWorkingHours={events.handleToggleSameAsWorkingHours}
+            onToggleDayOff={events.handleTogglePlanningDayOff}
+            onCommitDayTime={events.handleCommitPlanningDayTime}
+          />
         </SettingsSection>
         <SettingsSection
           title="Time zone"
