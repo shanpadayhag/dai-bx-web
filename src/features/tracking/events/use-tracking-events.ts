@@ -167,6 +167,7 @@ const useTrackingEvents = (states: ReturnType<typeof useTrackingStates>) => {
             runningItem.id === eventId ? checkedInItem : runningItem,
           ),
         );
+        setTrackingRevision((currentRevision) => currentRevision + 1);
       } catch (checkInError) {
         setRunningItems((currentItems) =>
           currentItems.map((runningItem) =>
@@ -178,7 +179,7 @@ const useTrackingEvents = (states: ReturnType<typeof useTrackingStates>) => {
         reportAppError(checkInError);
       }
     },
-    [runningItems, setRunningItems],
+    [runningItems, setRunningItems, setTrackingRevision],
   );
 
   const handleSubmitFinish = useCallback(

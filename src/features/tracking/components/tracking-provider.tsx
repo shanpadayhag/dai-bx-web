@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { deviceTimeZone } from '@/core/time-zone';
 import CheckInCard from '@/features/tracking/components/check-in-card';
 import FinishTaskDialog from '@/features/tracking/components/finish-task-dialog';
@@ -31,6 +31,7 @@ const TrackingProvider = ({ children }: TrackingProviderProps) => {
     handleStartTask,
     handleStartCard,
     handleOpenFinish,
+    handleAnswerYes,
     handleApplyTimeTrackingSettings,
   } = events;
   const {
@@ -39,6 +40,7 @@ const TrackingProvider = ({ children }: TrackingProviderProps) => {
     trackingRevision,
     lastFinishedItem,
     timeTrackingSettings,
+    now,
   } = states;
   const calendarTimeZone = timeTrackingSettings?.calendarTimeZone ?? deviceTimeZone();
 
@@ -54,6 +56,11 @@ const TrackingProvider = ({ children }: TrackingProviderProps) => {
     return () => window.clearInterval(tickTimer);
   }, [handleTick]);
 
+  const handleCheckIn = useCallback(
+    (eventId: string) => void handleAnswerYes(eventId),
+    [handleAnswerYes],
+  );
+
   const trackingValue = useMemo<TrackingContextValue>(
     () => ({
       runningItems,
@@ -64,20 +71,26 @@ const TrackingProvider = ({ children }: TrackingProviderProps) => {
       trackingRevision,
       lastFinishedItem,
       calendarTimeZone,
+      timeTrackingSettings,
+      trackingNow: now,
       handleStartTask,
       handleStartCard,
       handleOpenFinish,
+      handleCheckIn,
       handleApplyTimeTrackingSettings,
     }),
     [
       calendarTimeZone,
       handleApplyTimeTrackingSettings,
+      handleCheckIn,
       handleOpenFinish,
       handleStartCard,
       handleStartTask,
       lastFinishedItem,
       runningItems,
+      now,
       startingSourceIds,
+      timeTrackingSettings,
       trackingRevision,
     ],
   );

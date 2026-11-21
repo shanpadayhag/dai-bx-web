@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import AppNavLink from '@/core/components/molecules/app-nav-link';
 
 const primaryLinks = [
-  { href: '/today', label: 'Today', icon: <Sun />, count: 6 },
+  { href: '/today', label: 'Today', icon: <Sun /> },
   { href: '/tasks', label: 'Tasks', icon: <ListTree />, count: 24 },
   { href: '/board', label: 'Board', icon: <KanbanSquare /> },
   { href: '/calendar', label: 'Calendar', icon: <CalendarDays /> },

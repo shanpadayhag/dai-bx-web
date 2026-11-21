@@ -10,9 +10,12 @@ type TrackingContextValue = {
   trackingRevision: number;
   lastFinishedItem: FinishedItemRecord | null;
   calendarTimeZone: string;
+  timeTrackingSettings: TimeTrackingSettings | null;
+  trackingNow: Date;
   handleStartTask: (taskId: string) => void;
   handleStartCard: (cardId: string) => void;
   handleOpenFinish: (eventId: string) => void;
+  handleCheckIn: (eventId: string) => void;
   handleApplyTimeTrackingSettings: (timeTrackingSettings: TimeTrackingSettings) => void;
 };
 
@@ -24,9 +27,12 @@ export const TrackingContext = createContext<TrackingContextValue>({
   trackingRevision: 0,
   lastFinishedItem: null,
   calendarTimeZone: deviceTimeZone(),
+  timeTrackingSettings: null,
+  trackingNow: new Date(),
   handleStartTask: doNothing,
   handleStartCard: doNothing,
   handleOpenFinish: doNothing,
+  handleCheckIn: doNothing,
   handleApplyTimeTrackingSettings: doNothing,
 });
 
