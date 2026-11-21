@@ -1,0 +1,40 @@
+export const metadata = {
+  title: 'Today and activity',
+  version: 'v3.8.0',
+  date: '2026-11-21',
+  summary: 'Today shows what is running, what is on the calendar and what to do next, and a new activity feed keeps a record of what you started, finished, ticked and moved.',
+};
+
+**Today** is now the one screen for right now. It reads your real timers, calendar and tasks, and it keeps a record of your day as you go.
+
+## Running now
+
+- Every running task or card gets its own card, with its timer, when it started, its estimate and the next check-in.
+- **Finish**, **Check in** and **Open in calendar** sit on each card.
+- When nothing is running, Today says so and points you to Up next.
+
+## On the calendar
+
+- Today's planned and tracked events in order, with their category color. Events that already ended are muted.
+- A planned event linked to a task has a **Start** button, or a check once the task is done.
+- **Day view** opens the calendar on today.
+
+## Up next
+
+- Tasks with a block planned for today come first, in block order. A block whose start has passed is marked **Missed** until you start the task.
+- Then the tasks from groups due now, ordered the way the planner orders them: due date, then priority, then their place in the group.
+- Running tasks are left out. Each row shows its due date, priority and estimate, with **Start** and a tick.
+- Five rows show at first. **Show all** lists the rest.
+- The list updates on its own when a group's schedule changes, a planned block starts, or the day ends.
+
+## Activity
+
+- Starting, finishing and checking in, ticking and reopening tasks, moving, archiving and restoring cards, schedule runs and accepted plans each add one line to your activity.
+- A finish says how long you tracked, whether you marked it done, and when it really ended.
+- Today shows today's activity. **See all** opens the **Activity** page, grouped by day, with **Load more** for older entries.
+- An entry keeps its names after the task or card is deleted.
+
+## Also
+
+- The made-up count next to **Today** in the sidebar is gone.
+- Today follows your calendar time zone and moves to the next day at midnight, even in a background tab.
