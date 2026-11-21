@@ -1,4 +1,4 @@
-import { Bell, Menu, Search } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 import IconButton from '@/core/components/atoms/icon-button';
 import Kbd from '@/core/components/atoms/kbd';
@@ -42,12 +42,7 @@ const AppShell = ({ sidebarAccount, topbarEnd, overlays, children }: AppShellPro
         <IconButton label="Search" className="sm:hidden">
           <Search />
         </IconButton>
-        <div className="ml-auto flex items-center gap-2">
-          {topbarEnd}
-          <IconButton label="Notifications">
-            <Bell />
-          </IconButton>
-        </div>
+        <div className="ml-auto flex items-center gap-2">{topbarEnd}</div>
       </header>
       <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
     </div>

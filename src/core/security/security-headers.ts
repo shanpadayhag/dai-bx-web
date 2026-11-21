@@ -13,6 +13,7 @@ export const buildContentSecurityPolicy = (isDevelopment: boolean): string => {
     "img-src 'self' data: blob: https:",
     "font-src 'self'",
     `connect-src ${connectSources.join(' ')}`,
+    "worker-src 'self'",
     "object-src 'none'",
     "base-uri 'none'",
     "form-action 'self'",

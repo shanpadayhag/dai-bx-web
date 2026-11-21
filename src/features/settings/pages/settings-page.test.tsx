@@ -94,6 +94,16 @@ beforeEach(() => {
     http.get('/backend/account', () => HttpResponse.json(currentAccount)),
     http.get('/backend/account/sessions', () => HttpResponse.json({ sessions: currentSessions })),
     http.get('/backend/categories', () => HttpResponse.json(storedCategories)),
+    http.get('/backend/account/notifications', () =>
+      HttpResponse.json({
+        applicationServerKey: 'server-key',
+        checkIns: true,
+        scheduleRuns: true,
+        blocksStarting: true,
+        quietOutsideWorkingHours: true,
+        devices: [],
+      }),
+    ),
   );
 });
 afterEach(() => {
@@ -142,6 +152,18 @@ test('the page shows the account, its recovery codes and its signed-in devices',
   expect(screen.getByLabelText('Name')).toHaveValue('Shan Padayhag');
   expect(screen.getByText('7 of 10 left')).toBeInTheDocument();
   expect(screen.getByText(/signed in on 2 devices/)).toBeInTheDocument();
+});
+
+test('a link to a section brings that section into view once the settings load', async () => {
+  const scrollIntoView = vi.fn();
+  Element.prototype.scrollIntoView = scrollIntoView;
+  window.history.replaceState(null, '', '/settings#notifications');
+
+  await openSettings();
+
+  expect(scrollIntoView).toHaveBeenCalledTimes(1);
+  expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById('notifications'));
+  window.history.replaceState(null, '', '/settings');
 });
 
 test('choosing an accent saves it and recolors the page at once', async () => {

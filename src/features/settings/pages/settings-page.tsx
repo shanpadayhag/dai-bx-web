@@ -24,6 +24,7 @@ import ReplaceAuthenticatorDialog from '@/features/settings/components/replace-a
 import SessionsDialog, { SESSIONS_DIALOG_ID } from '@/features/settings/components/sessions-dialog';
 import MinutesInput from '@/features/settings/components/minutes-input';
 import PlanningHoursSetting from '@/features/settings/components/planning-hours-setting';
+import NotificationsSection from '@/features/notifications/components/notifications-section';
 import SettingRow from '@/features/settings/components/setting-row';
 import SettingsSection from '@/features/settings/components/settings-section';
 import { LOW_RECOVERY_CODE_COUNT, RECOVERY_CODE_TOTAL } from '@/features/settings/entities/account';
@@ -36,6 +37,8 @@ const themeOptions: readonly { label: string; theme: ThemeMode }[] = [
   { label: 'Dark', theme: 'dark' },
 ];
 
+const WORKING_HOURS_SECTION_ID = 'working-hours';
+
 const describeDeviceCount = (activeSessionCount: number) =>
   `${activeSessionCount} device${activeSessionCount === 1 ? '' : 's'}`;
 
@@ -47,6 +50,15 @@ const SettingsPage = () => {
   useEffect(() => {
     void handleLoadAccount();
   }, [handleLoadAccount]);
+
+  const isSettingsLoaded = states.account !== null && states.timeTrackingSettings !== null;
+
+  useEffect(() => {
+    if (!isSettingsLoaded) return;
+    const linkedSectionId = decodeURIComponent(window.location.hash.slice(1));
+    if (linkedSectionId === '') return;
+    document.getElementById(linkedSectionId)?.scrollIntoView();
+  }, [isSettingsLoaded]);
 
   const header = (
     <PageHeader
@@ -269,6 +281,7 @@ const SettingsPage = () => {
           />
         </SettingsSection>
         <SettingsSection
+          id={WORKING_HOURS_SECTION_ID}
           title="Working hours"
           description="The calendar opens on these hours and the planner fills them first."
         >
@@ -323,6 +336,11 @@ const SettingsPage = () => {
             onChooseTimeZone={events.handleChooseCalendarTimeZone}
           />
         </SettingsSection>
+        <NotificationsSection
+          workingHoursStart={timeTracking.workingHoursStart}
+          workingHoursEnd={timeTracking.workingHoursEnd}
+          workingHoursSectionId={WORKING_HOURS_SECTION_ID}
+        />
         <SettingsSection
           title="Account"
           description="Sign out of this device, or erase the account and everything in it."

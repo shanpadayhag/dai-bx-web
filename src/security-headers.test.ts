@@ -13,6 +13,7 @@ const PRODUCTION_CONTENT_SECURITY_POLICY = [
   "img-src 'self' data: blob: https:",
   "font-src 'self'",
   "connect-src 'self'",
+  "worker-src 'self'",
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'self'",
@@ -48,6 +49,13 @@ test('the development policy adds only what the Next dev server needs', () => {
   expect(developmentPolicy.replace(" 'unsafe-eval'", '').replace(' ws:', '')).toBe(
     PRODUCTION_CONTENT_SECURITY_POLICY,
   );
+});
+
+test('the service worker is always fetched fresh so an update reaches every device', async () => {
+  const workerHeaders = await readPageHeaders('/sw.js');
+
+  expect(workerHeaders.get('cache-control')).toBe('no-cache');
+  expect(workerHeaders.get('content-security-policy')).toBe(buildContentSecurityPolicy(false));
 });
 
 test('the site does not say it runs on Next.js', () => {
