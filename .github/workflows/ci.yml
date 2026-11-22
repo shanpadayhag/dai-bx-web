@@ -119,31 +119,38 @@ jobs:
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-
-      - name: Install the Vercel CLI
-        run: npm install --global vercel@${{ env.VERCEL_CLI_VERSION }}
-
       - name: Promote the staged deployment
         env:
           STAGED_URL: ${{ needs.stage-prod.outputs.staged-url }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           if [[ -z "$STAGED_URL" ]]; then
             echo "::error title=Promote::the staged URL did not reach this job"
             exit 1
           fi
-          if ! promote_output=$(vercel promote "$STAGED_URL" --yes --token=${{ secrets.VERCEL_TOKEN }} 2>&1); then
-            echo "$promote_output"
-            promote_output="${promote_output//'%'/'%25'}"
-            promote_output="${promote_output//$'\n'/'%0A'}"
-            echo "::error title=Promote::$promote_output"
+          vercel_api() {
+            curl --silent --show-error --fail-with-body -H "Authorization: Bearer $VERCEL_TOKEN" "$@"
+          }
+          staged_host="${STAGED_URL#https://}"
+          if ! staged_deployment=$(vercel_api "https://api.vercel.com/v13/deployments/${staged_host}?teamId=${VERCEL_ORG_ID}"); then
+            echo "::error title=Promote::could not read the staged deployment: ${staged_deployment//$'\n'/'%0A'}"
             exit 1
           fi
-          echo "$promote_output"
+          staged_deployment_id=$(jq -r .id <<< "$staged_deployment")
+          if ! promote_response=$(vercel_api -X POST "https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/promote/${staged_deployment_id}?teamId=${VERCEL_ORG_ID}"); then
+            echo "::error title=Promote::${promote_response//$'\n'/'%0A'}"
+            exit 1
+          fi
+          for attempt in $(seq 1 24); do
+            live_deployment_id=$(vercel_api "https://api.vercel.com/v13/deployments/${PROD_ORIGIN#https://}?teamId=${VERCEL_ORG_ID}" | jq -r .id || true)
+            if [[ "$live_deployment_id" == "$staged_deployment_id" ]]; then
+              echo "::notice title=Promoted::$STAGED_URL"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error title=Promote::${PROD_ORIGIN} still serves ${live_deployment_id}, not ${staged_deployment_id}"
+          exit 1
 
       - name: Check the API through the rewrite
         run: curl --fail --silent --show-error --retry 12 --retry-delay 10 --retry-all-errors "${PROD_ORIGIN}/backend/health"
