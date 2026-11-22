@@ -26,6 +26,8 @@ import { useTracking } from '@/features/tracking/states/tracking-context';
 
 export const DRAGGED_TASK_DATA_TYPE = 'application/x-daibx-task';
 
+export const taskRowId = (taskId: string) => `task-row-${taskId}`;
+
 export type TaskRowCallbacks = {
   onOpenTaskActions: (taskId: string) => void;
   onDropTask: (draggedTaskId: string, targetTaskId: string) => void;
@@ -36,6 +38,7 @@ export type TaskRowCallbacks = {
   onRequestDeleteTask: (taskId: string) => void;
   onStartTask: (taskId: string) => void;
   runningListId: string;
+  highlightedTaskId: string | null;
 };
 
 type TaskRowProps = TaskRowCallbacks & {
@@ -53,6 +56,7 @@ const TaskRow = ({
   onDropTask,
   onStartTask,
   runningListId,
+  highlightedTaskId,
 }: TaskRowProps) => {
   const [isDropTarget, setIsDropTarget] = useState(false);
   const hasSubtasks = task.tasks.length > 0;
@@ -63,10 +67,14 @@ const TaskRow = ({
 
   return (
     <div
+      id={taskRowId(task.id)}
+      aria-current={task.id === highlightedTaskId ? 'true' : undefined}
       className={joinClassNames(
-        'group/row relative flex min-h-11 items-center gap-1.5 rounded-[10px] pr-1.5 pl-0.5 transition-colors duration-150 focus-within:bg-surface hover:bg-surface',
+        'group/row relative flex min-h-11 items-center gap-1.5 rounded-[10px] pr-1.5 pl-0.5 transition-[background-color,box-shadow] duration-500 focus-within:bg-surface hover:bg-surface',
         task.isTracking && 'bg-primary-soft/60 hover:bg-primary-soft/70',
         isDropTarget && 'bg-primary-soft/50 ring-2 ring-primary/40',
+        task.id === highlightedTaskId &&
+          'bg-primary-soft ring-2 ring-primary/40 hover:bg-primary-soft',
       )}
       onDragOver={(dragEvent) => {
         dragEvent.preventDefault();

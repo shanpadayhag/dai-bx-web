@@ -1039,6 +1039,14 @@ test('a card named in the address opens with the board', async () => {
   expect(routerReplace).toHaveBeenCalledWith('/board?board=board-personal', { scroll: false });
 });
 
+test('a card named in the address that is gone says so', async () => {
+  window.history.replaceState(null, '', '/board?board=board-personal&card=card-gone');
+  renderWithToaster(<BoardPage />);
+
+  expect(await screen.findByText('That card isn’t here any more')).toBeInTheDocument();
+  expect(routerReplace).toHaveBeenCalledWith('/board?board=board-personal', { scroll: false });
+});
+
 describe('card schedules', () => {
   const weeklyOnMonday: RepeatRule = {
     frequency: 'weekly',
@@ -1699,6 +1707,29 @@ describe('card workflow, history and archive', () => {
       expect(within(archivedDialog).getByText('No archived cards.')).toBeInTheDocument(),
     );
     expect(archivedServerCards.size).toBe(0);
+  });
+
+  test('an archived card named in the address opens Archived cards at that card', async () => {
+    archiveOnServer('card-plan', 'idle');
+    window.history.replaceState(null, '', '/board?board=board-personal&archived-card=card-plan');
+    renderWithToaster(<BoardPage />);
+
+    const archivedDialog = await screen.findByRole('dialog', {
+      name: 'Archived cards',
+      hidden: true,
+    });
+    await waitFor(() => expect(archivedDialog).toHaveStyle({ display: 'block' }));
+    const cardRow = await within(archivedDialog).findByText('Plan the week');
+    expect(cardRow.closest('li')).toHaveAttribute('aria-current', 'true');
+    expect(routerReplace).toHaveBeenCalledWith('/board?board=board-personal', { scroll: false });
+  });
+
+  test('an archived card that is gone says so and keeps Archived cards closed', async () => {
+    window.history.replaceState(null, '', '/board?board=board-personal&archived-card=card-gone');
+    renderWithToaster(<BoardPage />);
+
+    expect(await screen.findByText('That card isn’t here any more')).toBeInTheDocument();
+    expect(document.getElementById('archived-cards-dialog')).not.toHaveStyle({ display: 'block' });
   });
 
   test('Archive after saves the tidied length and a bad one shows the hint', async () => {

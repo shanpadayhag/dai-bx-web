@@ -417,6 +417,28 @@ test('the address opens a remembered day', async () => {
   expect(screen.getAllByRole('button', { name: /^Late study / })).toHaveLength(1);
 });
 
+test('an event named in the address opens on its day, selected, and the address drops it', async () => {
+  window.history.replaceState(null, '', '/calendar?view=day&date=2026-11-05&event=event-gym');
+
+  await renderCalendar();
+
+  expect(screen.getByRole('heading', { level: 1, name: 'Thursday, November 5' })).toBeVisible();
+  expect(await screen.findByRole('region', { name: 'Planned event' })).toBeInTheDocument();
+  expect(eventButton('Gym')).toHaveAttribute('aria-current', 'true');
+  expect(routerReplace).toHaveBeenCalledWith('/calendar?view=day&date=2026-11-05', {
+    scroll: false,
+  });
+});
+
+test('an event named in the address that is gone says so', async () => {
+  window.history.replaceState(null, '', '/calendar?view=day&date=2026-11-05&event=event-gone');
+
+  await renderCalendar();
+
+  expect(await screen.findByText('That event isn’t here any more')).toBeInTheDocument();
+  expect(screen.queryByRole('region', { name: 'Planned event' })).not.toBeInTheDocument();
+});
+
 test('New event adds a planned event to the calendar', async () => {
   const user = await renderCalendar();
 

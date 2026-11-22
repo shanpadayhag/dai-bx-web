@@ -19,6 +19,7 @@ const useTasksStates = () => {
   const [taskView, setTaskView] = useState<TaskView>('all');
   const [groupView, setGroupView] = useState<GroupView>('due');
   const [collapsedTaskIds, setCollapsedTaskIds] = useState<ReadonlySet<string>>(new Set());
+  const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [pendingTaskRename, setPendingTaskRename] = useState<PendingTaskRename | null>(null);
   const [addingSubtaskToId, setAddingSubtaskToId] = useState<string | null>(null);
@@ -50,6 +51,8 @@ const useTasksStates = () => {
     setTaskView,
     collapsedTaskIds,
     setCollapsedTaskIds,
+    highlightedTaskId,
+    setHighlightedTaskId,
     editingTaskId,
     setEditingTaskId,
     pendingTaskRename,

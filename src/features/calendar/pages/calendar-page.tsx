@@ -43,7 +43,8 @@ const CalendarPage = () => {
   const states = useCalendarStates();
   const events = useCalendarEvents(states);
   const { handleLoadPage, handleTick, shownEventRecords, calendarTimeZone, now } = events;
-  const { calendarView, anchorDate, categories, selectedEventId } = states;
+  const { calendarView, anchorDate, categories, selectedEventId, jumpedEventId } = states;
+  const { handleClearJumpedEvent } = events;
 
   const { trackingRevision, handleOpenFinish, handleStartTask, runningSourceIds } = useTracking();
   const { handleReloadRange, handleLoadTaskGroups } = events;
@@ -74,6 +75,15 @@ const CalendarPage = () => {
     const tickTimer = window.setInterval(handleTick, NOW_TICK_MILLIS);
     return () => window.clearInterval(tickTimer);
   }, [handleTick]);
+
+  useEffect(() => {
+    if (jumpedEventId === null) return;
+    const eventBlock = [...document.querySelectorAll<HTMLElement>('[data-event-id]')].find(
+      (blockElement) => blockElement.dataset.eventId === jumpedEventId,
+    );
+    eventBlock?.scrollIntoView?.({ block: 'center' });
+    handleClearJumpedEvent();
+  }, [handleClearJumpedEvent, jumpedEventId]);
 
   useEffect(() => {
     if (selectedEventId === null || window.matchMedia(SIDE_BY_SIDE_QUERY).matches) return;

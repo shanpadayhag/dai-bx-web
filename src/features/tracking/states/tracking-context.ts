@@ -12,14 +12,15 @@ type TrackingContextValue = {
   calendarTimeZone: string;
   timeTrackingSettings: TimeTrackingSettings | null;
   trackingNow: Date;
-  handleStartTask: (taskId: string) => void;
-  handleStartCard: (cardId: string) => void;
+  handleStartTask: (taskId: string) => Promise<boolean>;
+  handleStartCard: (cardId: string) => Promise<boolean>;
   handleOpenFinish: (eventId: string) => void;
   handleCheckIn: (eventId: string) => void;
   handleApplyTimeTrackingSettings: (timeTrackingSettings: TimeTrackingSettings) => void;
 };
 
 const doNothing = () => undefined;
+const startNothing = () => Promise.resolve(false);
 
 export const TrackingContext = createContext<TrackingContextValue>({
   runningItems: [],
@@ -29,8 +30,8 @@ export const TrackingContext = createContext<TrackingContextValue>({
   calendarTimeZone: deviceTimeZone(),
   timeTrackingSettings: null,
   trackingNow: new Date(),
-  handleStartTask: doNothing,
-  handleStartCard: doNothing,
+  handleStartTask: startNothing,
+  handleStartCard: startNothing,
   handleOpenFinish: doNothing,
   handleCheckIn: doNothing,
   handleApplyTimeTrackingSettings: doNothing,

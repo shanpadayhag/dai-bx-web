@@ -52,6 +52,7 @@ const CalendarEventBlock = ({
 
   return (
     <div
+      data-event-id={calendarEvent.id}
       className={joinClassNames('group absolute right-1', isDragged && 'opacity-40')}
       style={blockStyle}
     >

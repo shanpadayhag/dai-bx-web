@@ -6,6 +6,7 @@ import readFormText, { readFormRepeatRule } from '@/core/form-text';
 import hidePopover, { showPopover } from '@/core/popover';
 import { trackedEventCountOf, type RenameEventsAnswer } from '@/core/rename-events';
 import reportAppError from '@/core/report-app-error';
+import reportMissingItem from '@/core/report-missing-item';
 import addTask from '@/features/tasks/actions/add-task';
 import createTaskGroup, { type GroupFormEntry } from '@/features/tasks/actions/create-task-group';
 import deleteTask from '@/features/tasks/actions/delete-task';
@@ -57,6 +58,7 @@ export const RENAME_TASK_EVENTS_DIALOG_ID = 'rename-task-events-dialog';
 const MAX_IMPORT_FILE_BYTES = 1024 * 1024;
 const TASKS_PATH = '/tasks';
 const GROUP_QUERY_NAME = 'group';
+const TASK_QUERY_NAME = 'task';
 const PENDING_TASK_ID_PREFIX = 'pending-task-';
 
 const readGroupForm = (submittedForm: HTMLFormElement): GroupFormEntry => {
@@ -107,6 +109,7 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
     setTaskView,
     setGroupView,
     setCollapsedTaskIds,
+    setHighlightedTaskId,
     setEditingTaskId,
     pendingTaskRename,
     setPendingTaskRename,
@@ -151,14 +154,16 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
       setEditingTaskId(null);
       setAddingSubtaskToId(null);
       setCollapsedTaskIds(new Set());
-      if (taskGroupId === null) return;
+      if (taskGroupId === null) return null;
       localStorageTaskViewSource.saveLastTaskGroupId(taskGroupId);
       try {
         const loadedGroupTasks = await findGroupTasks(taskGroupId);
         setOptimisticGroupTasks(startOptimisticGroupTasks(loadedGroupTasks));
         refreshSidebarCounts(loadedGroupTasks);
+        return loadedGroupTasks;
       } catch (loadError) {
         reportAppError(loadError);
+        return null;
       }
     },
     [
@@ -174,17 +179,50 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
   const handleLoadPage = useCallback(async () => {
     setPageLoadError(null);
     setNow(new Date());
-    setTaskView(localStorageTaskViewSource.findTaskView());
+    const rememberedTaskView = localStorageTaskViewSource.findTaskView();
+    setTaskView(rememberedTaskView);
     setGroupView(localStorageTaskViewSource.findGroupView());
+    const addressedTaskId = new URLSearchParams(window.location.search).get(TASK_QUERY_NAME);
     try {
       const loadedTaskGroups = await findTaskGroups();
       setTaskGroups(loadedTaskGroups);
-      await openTaskGroup(pickStartingGroupId(loadedTaskGroups));
+      const startingGroupId = pickStartingGroupId(loadedTaskGroups);
+      const loadedGroupTasks = await openTaskGroup(startingGroupId);
+      if (addressedTaskId === null) return;
+      router.replace(
+        startingGroupId === null
+          ? TASKS_PATH
+          : `${TASKS_PATH}?${GROUP_QUERY_NAME}=${startingGroupId}`,
+        { scroll: false },
+      );
+      const addressedTask = loadedGroupTasks?.tasks.find(
+        (taskRecord) => taskRecord.id === addressedTaskId,
+      );
+      if (addressedTask === undefined) {
+        if (loadedGroupTasks !== null) reportMissingItem('task');
+        return;
+      }
+      if (addressedTask.isDone && rememberedTaskView === 'open') setTaskView('all');
+      setHighlightedTaskId(addressedTask.id);
     } catch (pageError) {
       if (!(pageError instanceof AppError)) throw pageError;
       setPageLoadError(pageError);
     }
-  }, [openTaskGroup, setGroupView, setNow, setPageLoadError, setTaskGroups, setTaskView]);
+  }, [
+    openTaskGroup,
+    router,
+    setGroupView,
+    setHighlightedTaskId,
+    setNow,
+    setPageLoadError,
+    setTaskGroups,
+    setTaskView,
+  ]);
+
+  const handleClearTaskHighlight = useCallback(
+    () => setHighlightedTaskId(null),
+    [setHighlightedTaskId],
+  );
 
   const handleSelectTaskGroup = useCallback(
     (taskGroupId: string) => {
@@ -767,6 +805,7 @@ const useTasksEvents = (states: ReturnType<typeof useTasksStates>) => {
   }, [handleApplyFinishedGroupTasks, selectedTaskGroupId, setNow, setTaskGroups]);
 
   return {
+    handleClearTaskHighlight,
     handleRefreshTimetables,
     handleApplyFinishedGroupTasks,
     handleOpenTaskActions,

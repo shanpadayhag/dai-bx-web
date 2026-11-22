@@ -12,7 +12,19 @@ describe('readCalendarAddress', () => {
     expect(readCalendarAddress('?view=day&date=2026-11-03', null, todayDate)).toEqual({
       view: 'day',
       anchorDate: '2026-11-03',
+      eventId: null,
     });
+  });
+
+  test('reads a jumped-to event, including a repeating occurrence id', () => {
+    const occurrenceId = 'series-1:2026-11-03T10:00:00.000Z';
+    expect(
+      readCalendarAddress(
+        `?view=day&date=2026-11-03&event=${encodeURIComponent(occurrenceId)}`,
+        null,
+        todayDate,
+      ).eventId,
+    ).toBe(occurrenceId);
   });
 
   test('without a view in the address the remembered one is used, then week', () => {

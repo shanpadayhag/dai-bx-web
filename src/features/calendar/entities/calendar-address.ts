@@ -5,6 +5,7 @@ type CalendarView = 'day' | 'week';
 type CalendarAddress = {
   view: CalendarView;
   anchorDate: string;
+  eventId: string | null;
 };
 
 const CALENDAR_PATH = '/calendar';
@@ -31,6 +32,7 @@ const readCalendarAddress = (
   return {
     view: isCalendarView(addressedView) ? addressedView : (rememberedView ?? 'week'),
     anchorDate: readDateText(searchParams.get('date')) ?? todayDate,
+    eventId: searchParams.get('event'),
   };
 };
 

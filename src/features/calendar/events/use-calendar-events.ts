@@ -10,6 +10,7 @@ import type {
 import hidePopover, { showPopover } from '@/core/popover';
 import type { RepeatRule } from '@/core/repeat-rule';
 import reportAppError from '@/core/report-app-error';
+import reportMissingItem from '@/core/report-missing-item';
 import { deviceTimeZone } from '@/core/time-zone';
 import { instantInZone, partsInZone } from '@/core/zoned-time';
 import changeEventCategory from '@/features/calendar/actions/change-event-category';
@@ -123,6 +124,7 @@ const useCalendarEvents = (states: ReturnType<typeof useCalendarStates>) => {
     setScheduledMoves,
     setPageLoadError,
     setSelectedEventId,
+    setJumpedEventId,
     setNewEventDraft,
     setIsSavingNewEvent,
     setOccurrenceScopeRequest,
@@ -210,21 +212,39 @@ const useCalendarEvents = (states: ReturnType<typeof useCalendarStates>) => {
       ]);
       setCategories(loadedCategories);
       setTimeTrackingSettings(loadedRange.loadedSettings);
-      setCalendarView(loadedRange.calendarAddress.view);
-      setAnchorDate(loadedRange.calendarAddress.anchorDate);
+      const {
+        view: loadedView,
+        anchorDate: loadedAnchorDate,
+        eventId,
+      } = loadedRange.calendarAddress;
+      setCalendarView(loadedView);
+      setAnchorDate(loadedAnchorDate);
       showRangeRecord(loadedRange.shownRange, loadedRange.rangeRecord);
+      if (eventId === null) return;
+      router.replace(calendarPath(loadedView, loadedAnchorDate), { scroll: false });
+      if (!loadedRange.rangeRecord.events.some((eventRecord) => eventRecord.id === eventId)) {
+        reportMissingItem('event');
+        return;
+      }
+      setSelectedEventId(eventId);
+      setJumpedEventId(eventId);
     } catch (pageError) {
       if (!(pageError instanceof AppError)) throw pageError;
       setPageLoadError(pageError);
     }
   }, [
+    router,
     setAnchorDate,
     setCalendarView,
     setCategories,
+    setJumpedEventId,
     setPageLoadError,
+    setSelectedEventId,
     setTimeTrackingSettings,
     showRangeRecord,
   ]);
+
+  const handleClearJumpedEvent = useCallback(() => setJumpedEventId(null), [setJumpedEventId]);
 
   const handleSelectView = useCallback(
     (chosenView: CalendarView) => {
@@ -661,6 +681,7 @@ const useCalendarEvents = (states: ReturnType<typeof useCalendarStates>) => {
   const handleTick = useCallback(() => setNow(new Date()), [setNow]);
 
   return {
+    handleClearJumpedEvent,
     shownEventRecords,
     calendarTimeZone,
     now,

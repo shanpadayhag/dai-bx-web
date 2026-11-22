@@ -10,6 +10,7 @@ import EmptyState from '@/core/components/molecules/empty-state';
 import PageHeader from '@/core/components/molecules/page-header';
 import SegmentedControl from '@/core/components/molecules/segmented-control';
 import RenameEventsDialog from '@/core/components/organisms/rename-events-dialog';
+import JUMP_HIGHLIGHT_MILLIS from '@/core/jump-highlight';
 import DeleteGroupDialog from '@/features/tasks/components/delete-group-dialog';
 import DeleteTaskDialog from '@/features/tasks/components/delete-task-dialog';
 import EmptyGroupState from '@/features/tasks/components/empty-group-state';
@@ -20,6 +21,7 @@ import NoGroupsState from '@/features/tasks/components/no-groups-state';
 import TaskActionsMenu from '@/features/tasks/components/task-actions-menu';
 import TaskGroupList from '@/features/tasks/components/task-group-list';
 import TaskPlanningDialog from '@/features/tasks/components/task-planning-dialog';
+import { taskRowId } from '@/features/tasks/components/task-row';
 import TaskTree from '@/features/tasks/components/task-tree';
 import { describeGroupAvailability } from '@/features/tasks/entities/group-schedule';
 import { visibleGroupTasks } from '@/features/tasks/entities/optimistic-group-tasks';
@@ -48,7 +50,8 @@ const NEW_TASK_INPUT_ID = 'new-task-name';
 const TasksPage = () => {
   const states = useTasksStates();
   const events = useTasksEvents(states);
-  const { handleLoadPage } = events;
+  const { handleLoadPage, handleClearTaskHighlight } = events;
+  const { highlightedTaskId } = states;
 
   const { runningSourceIds, lastFinishedItem, handleStartTask, calendarTimeZone } = useTracking();
   const { now } = states;
@@ -60,6 +63,13 @@ const TasksPage = () => {
   useEffect(() => {
     void handleLoadPage();
   }, [handleLoadPage]);
+
+  useEffect(() => {
+    if (highlightedTaskId === null) return;
+    document.getElementById(taskRowId(highlightedTaskId))?.scrollIntoView?.({ block: 'center' });
+    const highlightTimer = window.setTimeout(handleClearTaskHighlight, JUMP_HIGHLIGHT_MILLIS);
+    return () => window.clearTimeout(highlightTimer);
+  }, [handleClearTaskHighlight, highlightedTaskId]);
 
   useEffect(() => {
     if (lastFinishedItem?.groupTasks !== undefined) {
@@ -282,6 +292,7 @@ const TasksPage = () => {
               onDropTask={events.handleDropTask}
               onStartTask={handleStartTask}
               runningListId={RUNNING_LIST_ID}
+              highlightedTaskId={states.highlightedTaskId}
             />
           )}
         </section>

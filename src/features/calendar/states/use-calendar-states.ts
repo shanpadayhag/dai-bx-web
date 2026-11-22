@@ -21,6 +21,7 @@ const useCalendarStates = () => {
   const [scheduledMoves, setScheduledMoves] = useState<readonly ScheduledMove[]>([]);
   const [pageLoadError, setPageLoadError] = useState<AppError | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [jumpedEventId, setJumpedEventId] = useState<string | null>(null);
   const [newEventDraft, setNewEventDraft] = useState<EventTimes | null>(null);
   const [isSavingNewEvent, setIsSavingNewEvent] = useState(false);
   const [occurrenceScopeRequest, setOccurrenceScopeRequest] =
@@ -48,6 +49,8 @@ const useCalendarStates = () => {
     setPageLoadError,
     selectedEventId,
     setSelectedEventId,
+    jumpedEventId,
+    setJumpedEventId,
     newEventDraft,
     setNewEventDraft,
     isSavingNewEvent,

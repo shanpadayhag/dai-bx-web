@@ -2,17 +2,21 @@ import { Archive, ArchiveRestore, Trash2, X } from 'lucide-react';
 import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
 import PopoverPanel from '@/core/components/molecules/popover-panel';
+import joinClassNames from '@/core/class-names';
 import {
   archiveHowLabels,
   formatArchiveDay,
   type ArchivedCard,
 } from '@/features/board/entities/card-archive';
 
+const archivedCardRowId = (cardId: string) => `archived-card-${cardId}`;
+
 type ArchivedCardsDialogProps = {
   dialogId: string;
   deleteDialogId: string;
   boardName: string;
   archivedCards: readonly ArchivedCard[] | null;
+  highlightedCardId: string | null;
   hasOlderCards: boolean;
   calendarTimeZone: string;
   onRestoreCard: (cardId: string) => void;
@@ -25,6 +29,7 @@ const ArchivedCardsDialog = ({
   deleteDialogId,
   boardName,
   archivedCards,
+  highlightedCardId,
   hasOlderCards,
   calendarTimeZone,
   onRestoreCard,
@@ -66,7 +71,12 @@ const ArchivedCardsDialog = ({
             {archivedCards.map((archivedCard) => (
               <li
                 key={archivedCard.id}
-                className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5"
+                id={archivedCardRowId(archivedCard.id)}
+                aria-current={archivedCard.id === highlightedCardId ? 'true' : undefined}
+                className={joinClassNames(
+                  'flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 transition-colors duration-500',
+                  archivedCard.id === highlightedCardId && 'bg-primary-soft',
+                )}
               >
                 <div className="grid min-w-0 flex-1 basis-48 gap-0.5">
                   <p className="truncate text-sm font-medium text-foreground">
@@ -119,4 +129,5 @@ const ArchivedCardsDialog = ({
   </PopoverPanel>
 );
 
+export { archivedCardRowId };
 export default ArchivedCardsDialog;

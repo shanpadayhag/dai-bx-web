@@ -29,6 +29,8 @@ const useBoardStates = () => {
   const [cardRenameCancelCount, setCardRenameCancelCount] = useState(0);
   const [moveDialogListId, setMoveDialogListId] = useState<string | null>(null);
   const [addressedCardId, setAddressedCardId] = useState<string | null>(null);
+  const [addressedArchivedCardId, setAddressedArchivedCardId] = useState<string | null>(null);
+  const [highlightedArchivedCardId, setHighlightedArchivedCardId] = useState<string | null>(null);
   const [openCardSchedules, setOpenCardSchedules] = useState<readonly CardSchedule[] | null>(null);
   const [scheduleRunsPages, setScheduleRunsPages] = useState<
     Readonly<Record<string, ScheduleRunsPage>>
@@ -74,6 +76,10 @@ const useBoardStates = () => {
     setMoveDialogListId,
     addressedCardId,
     setAddressedCardId,
+    addressedArchivedCardId,
+    setAddressedArchivedCardId,
+    highlightedArchivedCardId,
+    setHighlightedArchivedCardId,
     openCardSchedules,
     setOpenCardSchedules,
     scheduleRunsPages,

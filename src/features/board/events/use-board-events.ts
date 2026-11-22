@@ -6,6 +6,7 @@ import readFormText from '@/core/form-text';
 import hidePopover, { showPopover } from '@/core/popover';
 import { trackedEventCountOf, type RenameEventsAnswer } from '@/core/rename-events';
 import reportAppError from '@/core/report-app-error';
+import reportMissingItem from '@/core/report-missing-item';
 import archiveCard from '@/features/board/actions/archive-card';
 import clearCardValue from '@/features/board/actions/clear-card-value';
 import createBoard, { readBoardName } from '@/features/board/actions/create-board';
@@ -25,6 +26,7 @@ import deleteCardSchedule from '@/features/board/actions/delete-card-schedule';
 import deletePropertyOption from '@/features/board/actions/delete-property-option';
 import findBoard from '@/features/board/actions/find-board';
 import findArchivedCards from '@/features/board/actions/find-archived-cards';
+import findArchivedCardsThrough from '@/features/board/actions/find-archived-cards-through';
 import findBoards from '@/features/board/actions/find-boards';
 import findCardDetail from '@/features/board/actions/find-card-detail';
 import findCardHistory from '@/features/board/actions/find-card-history';
@@ -93,6 +95,7 @@ export const SCHEDULE_BLOCK_CATEGORY_FIELD = `${SCHEDULE_FORM_DIALOG_ID}-field-b
 const BOARD_PATH = '/board';
 const BOARD_QUERY_NAME = 'board';
 const CARD_QUERY_NAME = 'card';
+const ARCHIVED_CARD_QUERY_NAME = 'archived-card';
 
 const boardPath = (boardId: string | null) =>
   boardId === null ? BOARD_PATH : `${BOARD_PATH}?${BOARD_QUERY_NAME}=${boardId}`;
@@ -135,6 +138,7 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     boards,
     selectedBoardId,
     addressedCardId,
+    addressedArchivedCardId,
     optimisticBoard,
     renameTargetListId,
     deleteTargetListId,
@@ -153,6 +157,8 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     setBoards,
     setPageLoadError,
     setAddressedCardId,
+    setAddressedArchivedCardId,
+    setHighlightedArchivedCardId,
     setSelectedBoardId,
     setOptimisticBoard,
     setSubmittingDialogId,
@@ -224,13 +230,15 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     try {
       const loadedBoards = await findBoards();
       setBoards(loadedBoards);
-      setAddressedCardId(new URLSearchParams(window.location.search).get(CARD_QUERY_NAME));
+      const addressSearch = new URLSearchParams(window.location.search);
+      setAddressedCardId(addressSearch.get(CARD_QUERY_NAME));
+      setAddressedArchivedCardId(addressSearch.get(ARCHIVED_CARD_QUERY_NAME));
       await openBoard(pickStartingBoardId(loadedBoards));
     } catch (pageError) {
       if (!(pageError instanceof AppError)) throw pageError;
       setPageLoadError(pageError);
     }
-  }, [openBoard, setAddressedCardId, setBoards, setPageLoadError]);
+  }, [openBoard, setAddressedArchivedCardId, setAddressedCardId, setBoards, setPageLoadError]);
 
   const handleSelectBoard = useCallback(
     (boardId: string) => {
@@ -780,14 +788,57 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     [reloadShownBoard, setOpenCardSchedules],
   );
 
+  const openAddressedArchivedCard = useCallback(
+    async (boardId: string, archivedCardId: string) => {
+      setArchivedCardsPage(null);
+      showPopover(ARCHIVED_CARDS_DIALOG_ID);
+      try {
+        const loadedPage = await findArchivedCardsThrough(boardId, archivedCardId);
+        setArchivedCardsPage(loadedPage);
+        if (loadedPage.cards.some((archivedCard) => archivedCard.id === archivedCardId)) {
+          setHighlightedArchivedCardId(archivedCardId);
+          return;
+        }
+        hidePopover(ARCHIVED_CARDS_DIALOG_ID);
+        reportMissingItem('card');
+      } catch (loadError) {
+        reportAppError(loadError);
+      }
+    },
+    [setArchivedCardsPage, setHighlightedArchivedCardId],
+  );
+
   const handleOpenAddressedCard = useCallback(() => {
-    if (addressedCardId === null || shownBoard === null) return;
+    if (shownBoard === null) return;
+    if (addressedCardId === null && addressedArchivedCardId === null) return;
     setAddressedCardId(null);
+    setAddressedArchivedCardId(null);
     router.replace(boardPath(shownBoard.board.id), { scroll: false });
+    if (addressedArchivedCardId !== null) {
+      void openAddressedArchivedCard(shownBoard.board.id, addressedArchivedCardId);
+      return;
+    }
+    if (addressedCardId === null) return;
     if (shownBoard.cards.some((cardRecord) => cardRecord.id === addressedCardId)) {
       void handleOpenCard(addressedCardId);
+      return;
     }
-  }, [addressedCardId, handleOpenCard, router, setAddressedCardId, shownBoard]);
+    reportMissingItem('card');
+  }, [
+    addressedArchivedCardId,
+    addressedCardId,
+    handleOpenCard,
+    openAddressedArchivedCard,
+    router,
+    setAddressedArchivedCardId,
+    setAddressedCardId,
+    shownBoard,
+  ]);
+
+  const handleClearArchivedHighlight = useCallback(
+    () => setHighlightedArchivedCardId(null),
+    [setHighlightedArchivedCardId],
+  );
 
   const handleCopyListForPlanning = useCallback(async (listId: string) => {
     const planningText = findListForPlanning(listId);
@@ -1199,6 +1250,7 @@ const useBoardEvents = (states: ReturnType<typeof useBoardStates>) => {
     handleAddCard,
     handleOpenCard,
     handleOpenAddressedCard,
+    handleClearArchivedHighlight,
     handleCopyListForPlanning,
     handleRenameCard,
     handleAnswerCardRename,

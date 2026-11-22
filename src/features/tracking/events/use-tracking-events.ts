@@ -75,7 +75,7 @@ const useTrackingEvents = (states: ReturnType<typeof useTrackingStates>) => {
   const handleTick = useCallback(() => setNow(new Date()), [setNow]);
 
   const startSource = useCallback(
-    async (sourceKind: RunningItemSourceKind, sourceId: string) => {
+    async (sourceKind: RunningItemSourceKind, sourceId: string): Promise<boolean> => {
       setStartingSourceIds((currentIds) => new Set(currentIds).add(sourceId));
       try {
         const startedItem = await startTracking({ sourceKind, sourceId });
@@ -84,8 +84,10 @@ const useTrackingEvents = (states: ReturnType<typeof useTrackingStates>) => {
           ...currentItems.filter((runningItem) => runningItem.id !== startedItem.id),
         ]);
         setTrackingRevision((currentRevision) => currentRevision + 1);
+        return true;
       } catch (startError) {
         reportAppError(startError);
+        return false;
       } finally {
         setStartingSourceIds((currentIds) => withoutId(currentIds, sourceId));
       }
@@ -94,12 +96,12 @@ const useTrackingEvents = (states: ReturnType<typeof useTrackingStates>) => {
   );
 
   const handleStartTask = useCallback(
-    (taskId: string) => void startSource('task', taskId),
+    (taskId: string) => startSource('task', taskId),
     [startSource],
   );
 
   const handleStartCard = useCallback(
-    (cardId: string) => void startSource('card', cardId),
+    (cardId: string) => startSource('card', cardId),
     [startSource],
   );
 

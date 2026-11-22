@@ -150,6 +150,41 @@ test('opens the group named in the address, and remembers it', async () => {
   expect(window.localStorage.getItem('daibx:last-task-group-id')).toBe('group-daibx');
 });
 
+test('a task named in the address is shown highlighted, then the address drops it', async () => {
+  window.history.replaceState(null, '', '/tasks?group=group-today&task=task-supabase');
+  renderWithToaster(<TasksPage />);
+
+  const subtaskText = await screen.findByText('Create the Supabase project');
+  await waitFor(() =>
+    expect(subtaskText.closest('[id^="task-row-"]')).toHaveAttribute('aria-current', 'true'),
+  );
+  expect(routerReplace).toHaveBeenCalledWith('/tasks?group=group-today', { scroll: false });
+  await waitFor(
+    () => expect(subtaskText.closest('[id^="task-row-"]')).not.toHaveAttribute('aria-current'),
+    { timeout: 3000 },
+  );
+});
+
+test('a done task named in the address shows even when the Open view is remembered', async () => {
+  window.localStorage.setItem('daibx:task-view', 'open');
+  currentTasksByGroupId['group-today'] = todayTasks.map((task) =>
+    task.id === 'task-review' ? { ...task, isDone: true } : task,
+  );
+  window.history.replaceState(null, '', '/tasks?group=group-today&task=task-review');
+  renderWithToaster(<TasksPage />);
+
+  expect(await screen.findByText('Review the check-in flow')).toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: 'All' })).toBeChecked();
+});
+
+test('a task named in the address that is gone says so', async () => {
+  window.history.replaceState(null, '', '/tasks?group=group-today&task=task-gone');
+  renderWithToaster(<TasksPage />);
+
+  expect(await screen.findByText('That task isn’t here any more')).toBeInTheDocument();
+  expect(screen.getByText('Plan the backend')).toBeInTheDocument();
+});
+
 test('choosing a group in the list opens it and puts it in the address', async () => {
   const user = await openTasksPage();
 

@@ -15,7 +15,10 @@ import Button from '@/core/components/atoms/button';
 import IconButton from '@/core/components/atoms/icon-button';
 import EmptyState from '@/core/components/molecules/empty-state';
 import PageHeader from '@/core/components/molecules/page-header';
-import ArchivedCardsDialog from '@/features/board/components/archived-cards-dialog';
+import JUMP_HIGHLIGHT_MILLIS from '@/core/jump-highlight';
+import ArchivedCardsDialog, {
+  archivedCardRowId,
+} from '@/features/board/components/archived-cards-dialog';
 import BoardColumn from '@/features/board/components/board-column';
 import BoardColumnsSettings from '@/features/board/components/board-columns-settings';
 import BoardNameDialog from '@/features/board/components/board-name-dialog';
@@ -75,7 +78,8 @@ const BoardPage = () => {
   const events = useBoardEvents(states);
   const { handleLoadPage, handleOpenAddressedCard, shownBoard } = events;
   const { runningSourceIds, calendarTimeZone, handleStartCard, trackingRevision } = useTracking();
-  const { handleReloadAfterTracking } = events;
+  const { handleReloadAfterTracking, handleClearArchivedHighlight } = events;
+  const { highlightedArchivedCardId } = states;
   const shownTrackingRevisionRef = useRef(trackingRevision);
 
   useEffect(() => {
@@ -85,6 +89,15 @@ const BoardPage = () => {
   useEffect(() => {
     handleOpenAddressedCard();
   }, [handleOpenAddressedCard]);
+
+  useEffect(() => {
+    if (highlightedArchivedCardId === null) return;
+    document
+      .getElementById(archivedCardRowId(highlightedArchivedCardId))
+      ?.scrollIntoView?.({ block: 'center' });
+    const highlightTimer = window.setTimeout(handleClearArchivedHighlight, JUMP_HIGHLIGHT_MILLIS);
+    return () => window.clearTimeout(highlightTimer);
+  }, [handleClearArchivedHighlight, highlightedArchivedCardId]);
 
   useEffect(() => {
     if (shownTrackingRevisionRef.current === trackingRevision) return;
@@ -327,6 +340,7 @@ const BoardPage = () => {
         deleteDialogId={DELETE_ARCHIVED_CARD_DIALOG_ID}
         boardName={board.name}
         archivedCards={states.archivedCardsPage?.cards ?? null}
+        highlightedCardId={states.highlightedArchivedCardId}
         hasOlderCards={states.archivedCardsPage?.hasOlderCards ?? false}
         calendarTimeZone={calendarTimeZone}
         onRestoreCard={(cardId) => void events.handleRestoreArchivedCard(cardId)}

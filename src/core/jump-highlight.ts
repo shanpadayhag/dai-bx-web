@@ -1,0 +1,3 @@
+const JUMP_HIGHLIGHT_MILLIS = 2000;
+
+export default JUMP_HIGHLIGHT_MILLIS;
